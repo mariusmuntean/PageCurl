@@ -1,6 +1,4 @@
-﻿using System;
-using Xamarin.Forms;
-using Xamarin.Forms.Xaml;
+﻿using Xamarin.Forms;
 
 namespace PageCurl.Sample
 {
@@ -10,6 +8,7 @@ namespace PageCurl.Sample
         {
             InitializeComponent();
 
+            // MainPage = new ExperimentalPage();
             MainPage = new MainPage();
         }
 

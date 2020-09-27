@@ -28,8 +28,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="media\page.jpg" />
+    <None Remove="media\page2.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="media\page.jpg" />
+    <EmbeddedResource Include="media\page2.png" />
   </ItemGroup>
 </Project>
