@@ -9,29 +9,30 @@ namespace PageCurl.Sample
 {
     public partial class MainPage : ContentPage
     {
-        readonly MediaTool _mediaTool;
+        private readonly MediaTool _mediaTool;
 
         private SKBitmap _pageBitmap;
-        readonly SKCanvasView _sKCanvasView;
-        Slider _slider;
+        private readonly SKCanvasView _sKCanvasView;
+        private Switch _fileSwitch;
+        private readonly Slider _slider;
 
         private const float PI = (float) Math.PI;
 
-        private SKPaint _pagePaint = new SKPaint
+        private readonly SKPaint _pagePaint = new SKPaint
         {
-            //ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
-            //{
-            //    0.21f, 0.72f, 0.07f, 0, 0,
-            //    0.21f, 0.72f, 0.07f, 0, 0,
-            //    0.21f, 0.72f, 0.07f, 0, 0,
-            //    0, 0, 0, 1, 0
-            //})
+            ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
+            {
+                0.21f, 0.72f, 0.07f, 0, 0,
+                0.21f, 0.72f, 0.07f, 0, 0,
+                0.21f, 0.72f, 0.07f, 0, 0,
+                0, 0, 0, 1, 0
+            })
         };
 
-        float d = 0.0f;
-        int sliceCount = 10;
-        float s = 0.0f;
-        float r = 120.0f;
+        private float d = 0.0f;
+        private readonly int sliceCount = 10;
+        private float s = 0.0f;
+        private readonly float r = 120.0f;
 
         public MainPage()
         {
@@ -55,6 +56,12 @@ namespace PageCurl.Sample
                 _sKCanvasView.InvalidateSurface();
             };
             grid.Children.Add(_slider);
+            _fileSwitch = new Switch();
+            _fileSwitch.Toggled += (sender, args) => ReloadImage();
+            _fileSwitch.VerticalOptions = LayoutOptions.Start;
+            _fileSwitch.HorizontalOptions = LayoutOptions.End;
+            _fileSwitch.Margin = new Thickness(10.0f);
+            grid.Children.Add(_fileSwitch);
             Content = grid;
         }
 
@@ -62,8 +69,13 @@ namespace PageCurl.Sample
         {
             base.OnAppearing();
 
-            // using var imageStream = _mediaTool.GetMedia("page2.png");
-            using var imageStream = _mediaTool.GetMedia("page.jpg");
+            ReloadImage();
+        }
+
+        private void ReloadImage()
+        {
+            var fileName = _fileSwitch.IsToggled ? "page3.jpeg" : "page.jpg";
+            using var imageStream = _mediaTool.GetMedia(fileName);
             _pageBitmap = SKBitmap.Decode(imageStream ?? Stream.Null);
             _slider.Maximum = _pageBitmap.Width;
             _slider.Value = _pageBitmap.Width / 2.0f;
@@ -127,7 +139,7 @@ namespace PageCurl.Sample
                     transform.PostConcat(SKMatrix44.CreateScale(scale, scale, 1));
 
                     // Translate to curl point
-                    transform.PostConcat(SKMatrix44.CreateTranslate(cHalfWidth - (x * scale) + (d * scale) - (s / 2.0f), cHalfHeight, 0.0f));
+                    transform.PostConcat(SKMatrix44.CreateTranslate(cHalfWidth - (x * scale) + (d * scale) - (s * scale / 2.0f), cHalfHeight, 0.0f));
 
                     // Perspective?
                     // var perspectiveMatrix = SKMatrix44.CreateIdentity();
@@ -154,11 +166,11 @@ namespace PageCurl.Sample
                 var restTransform = SKMatrix44.CreateIdentity();
                 // restTransform.PostConcat(SKMatrix44.CreateRotationDegrees(0,1,0,180.0f));
                 restTransform.PostConcat(SKMatrix44.CreateScale(scale, scale, 1));
-                restTransform.PostConcat(SKMatrix44.CreateTranslate(cHalfWidth - (x * scale) + (d * scale) - (s / 2.0f), cHalfHeight, 0.0f));
+                restTransform.PostConcat(SKMatrix44.CreateTranslate(cHalfWidth - (x * scale) + (d * scale) - (s * scale / 2.0f), cHalfHeight, 0.0f));
 
                 canvas.SetMatrix(canvas.TotalMatrix.PostConcat(restTransform.Matrix));
 
-                var restImageWidth = Math.Max(0.0f, _pageBitmap.Width - d - (s / 2.0f) - (cylinderLength / 2.0f));
+                var restImageWidth = Math.Max(0.0f, _pageBitmap.Width - d - (cylinderLength / 2.0f));
                 var mirrored = GetMirrored(_pageBitmap);
                 var restImage = GetRegion(mirrored, SKRectI.Create(0, 0, (int) restImageWidth, mirrored.Height));
 
