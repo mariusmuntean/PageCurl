@@ -60,7 +60,7 @@ namespace PageCurl.Sample
             _fileSwitch.Toggled += (sender, args) => ReloadImage();
             _fileSwitch.VerticalOptions = LayoutOptions.Start;
             _fileSwitch.HorizontalOptions = LayoutOptions.End;
-            _fileSwitch.Margin = new Thickness(10.0f);
+            _fileSwitch.Margin = new Thickness(22.0f);
             grid.Children.Add(_fileSwitch);
             Content = grid;
         }
@@ -154,7 +154,11 @@ namespace PageCurl.Sample
                     // Draw
                     canvas.DrawBitmap(_pageBitmap,
                         source: SKRect.Create(d - (s / 2.0f) + (s * (i - 0.5f)), 0, s, _pageBitmap.Height),
-                        dest: SKRect.Create(-(s / 2.0f), -(_pageBitmap.Height / 2.0f), s, _pageBitmap.Height),
+                        dest: SKRect.Create(
+                            -(s / 2.0f), 
+                            -(_pageBitmap.Height / 2.0f),
+                            s * 1.01f, // 1% wider to cover up the gaps in between the slices
+                            _pageBitmap.Height),
                         paint: _pagePaint);
 
                     canvas.Restore();
