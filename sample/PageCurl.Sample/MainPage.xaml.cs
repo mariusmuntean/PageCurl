@@ -20,13 +20,13 @@ namespace PageCurl.Sample
 
         private readonly SKPaint _pagePaint = new SKPaint
         {
-            ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
-            {
-                0.21f, 0.72f, 0.07f, 0, 0,
-                0.21f, 0.72f, 0.07f, 0, 0,
-                0.21f, 0.72f, 0.07f, 0, 0,
-                0, 0, 0, 1, 0
-            })
+            // ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
+            // {
+            //     0.21f, 0.72f, 0.07f, 0, 0,
+            //     0.21f, 0.72f, 0.07f, 0, 0,
+            //     0.21f, 0.72f, 0.07f, 0, 0,
+            //     0, 0, 0, 1, 0
+            // })
         };
 
         private float d = 0.0f;
@@ -74,7 +74,7 @@ namespace PageCurl.Sample
 
         private void ReloadImage()
         {
-            var fileName = _fileSwitch.IsToggled ? "page3.jpeg" : "page.jpg";
+            var fileName = _fileSwitch.IsToggled ? "page3.jpeg" : "page2.png";
             using var imageStream = _mediaTool.GetMedia(fileName);
             _pageBitmap = SKBitmap.Decode(imageStream ?? Stream.Null);
             _slider.Maximum = _pageBitmap.Width;
@@ -115,13 +115,13 @@ namespace PageCurl.Sample
 
                 canvas.Scale(scale);
 
-                canvas.DrawBitmap(_pageBitmap, SKRect.Create(d, _pageBitmap.Height), SKRect.Create(-x, -y, d, _pageBitmap.Height));
+                canvas.DrawBitmap(_pageBitmap, SKRect.Create(d - (s / 2.0f), _pageBitmap.Height), SKRect.Create(-x, -y, d - (s / 2.0f), _pageBitmap.Height));
 
                 canvas.Restore();
 
                 // b
                 var rotationStepDegrees = 180.0f / sliceCount;
-                for (var i = 1; i < sliceCount + 1; i++)
+                for (var i = 0; i < sliceCount + 1; i++)
                 {
                     // 3D stuff
                     var transform = SKMatrix44.CreateIdentity();
@@ -153,7 +153,7 @@ namespace PageCurl.Sample
 
                     // Draw
                     canvas.DrawBitmap(_pageBitmap,
-                        source: SKRect.Create(d - (s / 2.0f) + (s * i), 0, s, _pageBitmap.Height),
+                        source: SKRect.Create(d - (s / 2.0f) + (s * (i - 0.5f)), 0, s, _pageBitmap.Height),
                         dest: SKRect.Create(-(s / 2.0f), -(_pageBitmap.Height / 2.0f), s, _pageBitmap.Height),
                         paint: _pagePaint);
 
@@ -170,7 +170,7 @@ namespace PageCurl.Sample
 
                 canvas.SetMatrix(canvas.TotalMatrix.PostConcat(restTransform.Matrix));
 
-                var restImageWidth = Math.Max(0.0f, _pageBitmap.Width - d - (cylinderLength / 2.0f));
+                var restImageWidth = Math.Max(0.0f, _pageBitmap.Width - d - (cylinderLength / 2.0f) + (s / 2.0f));
                 var mirrored = GetMirrored(_pageBitmap);
                 var restImage = GetRegion(mirrored, SKRectI.Create(0, 0, (int) restImageWidth, mirrored.Height));
 
