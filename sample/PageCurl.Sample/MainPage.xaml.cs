@@ -26,7 +26,7 @@ namespace PageCurl.Sample
             //     0.21f, 0.72f, 0.07f, 0, 0,
             //     0.21f, 0.72f, 0.07f, 0, 0,
             //     0, 0, 0, 1, 0
-            // })
+            // }),
         };
 
         private float d = 0.0f;
@@ -155,7 +155,7 @@ namespace PageCurl.Sample
                     canvas.DrawBitmap(_pageBitmap,
                         source: SKRect.Create(d - (s / 2.0f) + (s * (i - 0.5f)), 0, s, _pageBitmap.Height),
                         dest: SKRect.Create(
-                            -(s / 2.0f), 
+                            -(s / 2.0f),
                             -(_pageBitmap.Height / 2.0f),
                             s * 1.01f, // 1% wider to cover up the gaps in between the slices
                             _pageBitmap.Height),
@@ -180,6 +180,15 @@ namespace PageCurl.Sample
 
                 canvas.DrawBitmap(restImage,
                     SKRect.Create(-restImageWidth, -restImage.Height / 2.0f, restImageWidth, restImage.Height));
+
+                // Create linear gradient from left to right
+                // _pagePaint.Shader = SKShader.CreateLinearGradient(
+                //     new SKPoint(-restImageWidth, 0.0f),
+                //     new SKPoint(r, 0.0f),
+                //     new SKColor[] {SKColors.Transparent, SKColors.Black},
+                //     new[] {0.3f, 1.0f},
+                //     SKShaderTileMode.Repeat);
+                // canvas.DrawRect(SKRect.Create(-restImageWidth, -restImage.Height / 2.0f, restImageWidth + r, restImage.Height), _pagePaint);
 
                 canvas.Restore();
             }
