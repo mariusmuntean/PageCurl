@@ -4,7 +4,6 @@ using Xamarin.Forms;
 using SkiaSharp;
 using System.IO;
 using System;
-using System.Numerics;
 
 namespace PageCurl.Sample
 {
@@ -20,13 +19,13 @@ namespace PageCurl.Sample
 
         private SKPaint _pagePaint = new SKPaint
         {
-            ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
-            {
-                0.21f, 0.72f, 0.07f, 0, 0,
-                0.21f, 0.72f, 0.07f, 0, 0,
-                0.21f, 0.72f, 0.07f, 0, 0,
-                0, 0, 0, 1, 0
-            })
+            //ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
+            //{
+            //    0.21f, 0.72f, 0.07f, 0, 0,
+            //    0.21f, 0.72f, 0.07f, 0, 0,
+            //    0.21f, 0.72f, 0.07f, 0, 0,
+            //    0, 0, 0, 1, 0
+            //})
         };
 
         float d = 0.0f;
@@ -83,7 +82,6 @@ namespace PageCurl.Sample
             if (_pageBitmap != null && d > 0.0f)
             {
                 // Compute curl parameters
-                //d = _pageBitmap.Width / 2.0f;
                 var cylinderLength = 2 * PI * r;
                 s = cylinderLength * 0.5f / sliceCount;
 
@@ -111,7 +109,7 @@ namespace PageCurl.Sample
 
                 // b
                 var rotationStepDegrees = 180.0f / sliceCount;
-                for (var i = 0; i < sliceCount + 1; i++)
+                for (var i = 1; i < sliceCount + 1; i++)
                 {
                     // 3D stuff
                     var transform = SKMatrix44.CreateIdentity();
@@ -149,7 +147,53 @@ namespace PageCurl.Sample
 
                     canvas.Restore();
                 }
+
+                // c
+                canvas.Save();
+
+                var restTransform = SKMatrix44.CreateIdentity();
+                // restTransform.PostConcat(SKMatrix44.CreateRotationDegrees(0,1,0,180.0f));
+                restTransform.PostConcat(SKMatrix44.CreateScale(scale, scale, 1));
+                restTransform.PostConcat(SKMatrix44.CreateTranslate(cHalfWidth - (x * scale) + (d * scale) - (s / 2.0f), cHalfHeight, 0.0f));
+
+                canvas.SetMatrix(canvas.TotalMatrix.PostConcat(restTransform.Matrix));
+
+                var restImageWidth = Math.Max(0.0f, _pageBitmap.Width - d - (s / 2.0f) - (cylinderLength / 2.0f));
+                var mirrored = GetMirrored(_pageBitmap);
+                var restImage = GetRegion(mirrored, SKRectI.Create(0, 0, (int) restImageWidth, mirrored.Height));
+
+                canvas.DrawBitmap(restImage,
+                    SKRect.Create(-restImageWidth, -restImage.Height / 2.0f, restImageWidth, restImage.Height));
+
+                canvas.Restore();
             }
+        }
+
+        private SKBitmap GetMirrored(SKBitmap original)
+        {
+            var flippedBitmap = new SKBitmap(original.Width, original.Height);
+
+            using (var canvas = new SKCanvas(flippedBitmap))
+            {
+                canvas.Clear();
+                canvas.Scale(-1, 1, original.Width / 2.0f, 0.0f);
+                canvas.DrawBitmap(original, new SKPoint());
+            }
+
+            return flippedBitmap;
+        }
+
+        private SKBitmap GetRegion(SKBitmap original, SKRectI rect)
+        {
+            var flippedBitmap = new SKBitmap(rect.Width, rect.Height);
+
+            using (var canvas = new SKCanvas(flippedBitmap))
+            {
+                canvas.Clear();
+                canvas.DrawBitmap(original, rect, SKRect.Create(0, 0, rect.Width, rect.Height));
+            }
+
+            return flippedBitmap;
         }
     }
 }
