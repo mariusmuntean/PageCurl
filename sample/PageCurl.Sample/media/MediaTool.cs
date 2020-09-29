@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Reflection;
-using Xamarin.Forms;
 
 namespace PageCurl.Sample.media
 {

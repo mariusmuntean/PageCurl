@@ -4,6 +4,7 @@ using Xamarin.Forms;
 using SkiaSharp;
 using System.IO;
 using System;
+using System.Linq;
 
 namespace PageCurl.Sample
 {
@@ -13,7 +14,6 @@ namespace PageCurl.Sample
 
         private SKBitmap _pageBitmap;
         private readonly SKCanvasView _sKCanvasView;
-        private readonly Switch _fileSwitch;
         private readonly Slider _slider;
 
         private const float PI = (float) Math.PI;
@@ -53,14 +53,26 @@ namespace PageCurl.Sample
 
             _mediaTool = new MediaTool();
 
-            _sKCanvasView = new SKCanvasView();
+            _sKCanvasView = new SKCanvasView
+            {
+                VerticalOptions = LayoutOptions.FillAndExpand
+            };
             _sKCanvasView.PaintSurface += Paint;
 
-            var grid = new Grid();
-            grid.Children.Add(_sKCanvasView);
+            var stackLayout = new StackLayout
+            {
+                VerticalOptions = LayoutOptions.FillAndExpand,
+            };
+            stackLayout.AddImages(new[] {new MyFile {Name = "simple_page.png"}, new MyFile {Name = "dark_page.png"}, new MyFile {Name = "page.jpg"}, new MyFile {Name = "page2.png"}, new MyFile {Name = "page3.jpeg"}},
+                (o, args) =>
+                {
+                    var myFile = args.CurrentSelection.FirstOrDefault() as MyFile;
+                    ReloadImage(myFile.Name);
+                });
+            stackLayout.Children.Add(_sKCanvasView);
             _slider = new Slider
             {
-                VerticalOptions = LayoutOptions.End,
+                HeightRequest = 30.0d,
                 Margin = new Thickness(10.0d)
             };
             _slider.ValueChanged += (object sender, ValueChangedEventArgs e) =>
@@ -68,26 +80,20 @@ namespace PageCurl.Sample
                 d = (float) e.NewValue;
                 _sKCanvasView.InvalidateSurface();
             };
-            grid.Children.Add(_slider);
-            _fileSwitch = new Switch();
-            _fileSwitch.Toggled += (sender, args) => ReloadImage();
-            _fileSwitch.VerticalOptions = LayoutOptions.Start;
-            _fileSwitch.HorizontalOptions = LayoutOptions.End;
-            _fileSwitch.Margin = new Thickness(22.0f);
-            grid.Children.Add(_fileSwitch);
-            Content = grid;
+            stackLayout.Children.Add(_slider);
+            Content = stackLayout;
         }
 
         protected override void OnAppearing()
         {
             base.OnAppearing();
 
-            ReloadImage();
+            ReloadImage(null);
         }
 
-        private void ReloadImage()
+        private void ReloadImage(string imageName)
         {
-            var fileName = _fileSwitch.IsToggled ? "page3.jpeg" : "page2.png";
+            var fileName = imageName ?? "simple_page.png";
             using var imageStream = _mediaTool.GetMedia(fileName);
             _pageBitmap = SKBitmap.Decode(imageStream ?? Stream.Null);
             _slider.Maximum = _pageBitmap.Width;

@@ -35,5 +35,9 @@
     <EmbeddedResource Include="media\page2.png" />
     <None Remove="media\page3.jpeg" />
     <EmbeddedResource Include="media\page3.jpeg" />
+    <None Remove="media\simple_page.png" />
+    <EmbeddedResource Include="media\simple_page.png" />
+    <None Remove="media\dark_page.png" />
+    <EmbeddedResource Include="media\dark_page.png" />
   </ItemGroup>
 </Project>
