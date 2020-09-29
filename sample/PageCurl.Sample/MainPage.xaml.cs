@@ -13,12 +13,12 @@ namespace PageCurl.Sample
 
         private SKBitmap _pageBitmap;
         private readonly SKCanvasView _sKCanvasView;
-        private Switch _fileSwitch;
+        private readonly Switch _fileSwitch;
         private readonly Slider _slider;
 
         private const float PI = (float) Math.PI;
 
-        private readonly SKPaint _pagePaint = new SKPaint
+        private readonly SKPaint _topSidePagePaint = new SKPaint
         {
             // ColorFilter = SKColorFilter.CreateColorMatrix(new float[]
             // {
@@ -28,6 +28,19 @@ namespace PageCurl.Sample
             //     0, 0, 0, 1, 0
             // }),
         };
+
+        private readonly SKPaint _backSidePagePaint = new SKPaint
+        {
+            ColorFilter = SKColorFilter.CreateColorMatrix(new[]
+            {
+                0.75f, 0.25f, 0.25f, 0, 0,
+                0.25f, 0.75f, 0.25f, 0, 0,
+                0.25f, 0.25f, 0.75f, 0, 0,
+                0, 0, 0, 1, 0
+            })
+        };
+
+        private SKPaint _currentPaint = new SKPaint();
 
         private float d = 0.0f;
         private readonly int sliceCount = 10;
@@ -150,8 +163,9 @@ namespace PageCurl.Sample
 
                     // Apply transform
                     canvas.SetMatrix(canvas.TotalMatrix.PostConcat(transform.Matrix));
-
+                    _currentPaint = (i * rotationStepDegrees) <= 90.0f ? _topSidePagePaint : _backSidePagePaint;
                     // Draw
+
                     canvas.DrawBitmap(_pageBitmap,
                         source: SKRect.Create(d - (s / 2.0f) + (s * (i - 0.5f)), 0, s, _pageBitmap.Height),
                         dest: SKRect.Create(
@@ -159,7 +173,7 @@ namespace PageCurl.Sample
                             -(_pageBitmap.Height / 2.0f),
                             s * 1.01f, // 1% wider to cover up the gaps in between the slices
                             _pageBitmap.Height),
-                        paint: _pagePaint);
+                        paint: _currentPaint);
 
                     canvas.Restore();
                 }
@@ -179,7 +193,8 @@ namespace PageCurl.Sample
                 var restImage = GetRegion(mirrored, SKRectI.Create(0, 0, (int) restImageWidth, mirrored.Height));
 
                 canvas.DrawBitmap(restImage,
-                    SKRect.Create(-restImageWidth, -restImage.Height / 2.0f, restImageWidth, restImage.Height));
+                    SKRect.Create(-restImageWidth, -restImage.Height / 2.0f, restImageWidth, restImage.Height),
+                    _backSidePagePaint);
 
                 // Create linear gradient from left to right
                 // _pagePaint.Shader = SKShader.CreateLinearGradient(
