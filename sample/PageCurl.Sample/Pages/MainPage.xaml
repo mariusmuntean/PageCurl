@@ -46,7 +46,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <pageCurl:PageCurlView x:Name="PageCurlView"
+        <pageCurl:PageCurlView2 x:Name="PageCurlView"
                                VerticalOptions="FillAndExpand" />
 
         <Slider x:Name="Slider" ValueChanged="OnSliderOnValueChanged"
