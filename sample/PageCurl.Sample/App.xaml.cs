@@ -9,7 +9,7 @@ namespace PageCurl.Sample
             InitializeComponent();
 
             // MainPage = new ExperimentalPage();
-            MainPage = new MainPage();
+            MainPage = new NavigationPage(new HomePage());
         }
 
         protected override void OnStart()

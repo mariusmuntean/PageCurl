@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage
+    xmlns="http://xamarin.com/schemas/2014/forms"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pageCurl="clr-namespace:PageCurl;assembly=PageCurl"
+    xmlns:sample="clr-namespace:PageCurl.Sample;assembly=PageCurl.Sample"
+    xmlns:converters="clr-namespace:PageCurl.Sample.Converters;assembly=PageCurl.Sample"
+    xmlns:models="clr-namespace:PageCurl.Sample.Models;assembly=PageCurl.Sample"
+    x:Class="PageCurl.Sample.Pages.MainPage"
+    Background="#efefef"
+    Visual="Material">
+
+    <ContentPage.Resources>
+        <converters:NameToImageSourceConverter x:Key="ImageSourceConverter" />
+        <x:Array Type="{x:Type models:MyFile}" x:Key="Images">
+            <models:MyFile Name="dark_page.png" />
+            <models:MyFile Name="page.jpg" />
+            <models:MyFile Name="page2.png" />
+            <models:MyFile Name="page3.jpeg" />
+            <models:MyFile Name="simple_page.png" />
+        </x:Array>
+    </ContentPage.Resources>
+
+    <!-- look at the code behind file -->
+
+    <StackLayout VerticalOptions="FillAndExpand"
+                 HorizontalOptions="CenterAndExpand">
+        <CollectionView ItemsSource="{StaticResource Images}"
+                        SelectionMode="Single"
+                        SelectionChanged="Images_OnSelectionChanged"
+                        VerticalOptions="Center"
+                        HeightRequest="100"
+                        HorizontalOptions="CenterAndExpand"
+                        Margin="20">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="2.0" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Image WidthRequest="100"
+                           HeightRequest="100"
+                           Aspect="AspectFill"
+                           Source="{Binding Path=Name, Converter={StaticResource ImageSourceConverter}}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <pageCurl:PageCurlView x:Name="PageCurlView"
+                               VerticalOptions="FillAndExpand" />
+
+        <Slider x:Name="Slider" ValueChanged="OnSliderOnValueChanged"
+                HeightRequest="30"
+                Margin="10" />
+    </StackLayout>
+
+</ContentPage>

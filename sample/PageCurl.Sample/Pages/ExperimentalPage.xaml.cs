@@ -4,7 +4,7 @@ using SkiaSharp.Views.Forms;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 
-namespace PageCurl.Sample
+namespace PageCurl.Sample.Pages
 {
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class ExperimentalPage : ContentPage
