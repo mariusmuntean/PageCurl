@@ -11,7 +11,8 @@ namespace PageCurl
         private readonly Slider _slider;
 
         private const float PI = (float) Math.PI;
-        private const double MaxAbsoluteTheta = 20.0d;
+        private const double MaxAbsoluteTheta = 15.0d;
+        private const double MinDragVectorLength = 30.0d;
 
         private readonly SKPaint _topSidePagePaint = new SKPaint
         {
@@ -55,6 +56,7 @@ namespace PageCurl
 
         public SKBitmap PageBitmap { get; set; }
         public float D { get; set; } = 0.0f;
+        public float G { get; set; } = 0.0f;
 
         protected override void OnPaintSurface(SKPaintSurfaceEventArgs e)
         {
@@ -72,13 +74,23 @@ namespace PageCurl
                 var cylinderCircumference = 2 * PI * r;
                 sliceWidth = cylinderCircumference * 0.5f / sliceCount;
 
-                S = new SKPoint(PageBitmap.Width, PageBitmap.Height / 2.0f);
-                C = new SKPoint(D, S.Y);
+                S = new SKPoint(PageBitmap.Width / 2.0f, PageBitmap.Height / 2.0f);
+                C = new SKPoint(D, G);
                 ah = S.X - C.X;
 
-                theta = 180.0f - AngleToOxDegrees(S, C);
-                theta = theta % 180.0f;
-                theta = (float) (Math.Sign(theta) * Math.Min(theta, MaxAbsoluteTheta));
+                if (ah < MinDragVectorLength)
+                {
+                    theta = 0.0f;
+                }
+                else
+                {
+                    theta = AngleToOxDegrees(S, C);
+                    Console.WriteLine($"Raw theta: {theta}");
+                    theta = theta >= 0.0f ? 180.0f - theta : -(180 + theta);
+                    // theta = theta % 180.0f;
+                    theta = (float) (Math.Sign(theta) * Math.Min(Math.Abs(theta), MaxAbsoluteTheta));
+                }
+
 
                 // Draw image
                 var pageHalfWidth = PageBitmap.Width / 2.0f;
@@ -103,6 +115,18 @@ namespace PageCurl
                     bottomRegion,
                     // SKRect.Create(D - (sliceWidth / 2.0f), PageBitmap.Height),
                     SKRect.Create(-pageHalfWidth, -pageHalfHeight, bottomRegion.Width, bottomRegion.Height));
+
+                // Debug
+                canvas.DrawCircle(-pageHalfWidth + S.X, -pageHalfHeight + S.Y, 60, new SKPaint()
+                {
+                    Color = SKColors.Green,
+                    Style = SKPaintStyle.Fill
+                });
+                canvas.DrawCircle(-pageHalfWidth + C.X, -pageHalfHeight + C.Y, 30, new SKPaint()
+                {
+                    Color = SKColors.Red,
+                    Style = SKPaintStyle.Fill
+                });
 
                 canvas.Restore();
 

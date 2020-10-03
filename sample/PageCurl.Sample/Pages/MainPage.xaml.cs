@@ -31,15 +31,24 @@ namespace PageCurl.Sample.Pages
             using var imageStream = _mediaTool.GetMedia(fileName);
             PageCurlView.PageBitmap = SKBitmap.Decode(imageStream ?? Stream.Null);
 
-            Slider.Maximum = PageCurlView.PageBitmap.Width;
-            Slider.Value = PageCurlView.PageBitmap.Width / 2.0f;
+            DSlider.Maximum = PageCurlView.PageBitmap.Width;
+            DSlider.Value = PageCurlView.PageBitmap.Width / 2.0f;
+
+            GSlider.Maximum = PageCurlView.PageBitmap.Height;
+            GSlider.Value = PageCurlView.PageBitmap.Height / 2.0f;
 
             PageCurlView.InvalidateSurface();
         }
 
-        private void OnSliderOnValueChanged(object sender, ValueChangedEventArgs e)
+        private void OnDSliderOnValueChanged(object sender, ValueChangedEventArgs e)
         {
             PageCurlView.D = (float) e.NewValue;
+            PageCurlView.InvalidateSurface();
+        }
+
+        private void OnGSliderOnValueChanged(object sender, ValueChangedEventArgs e)
+        {
+            PageCurlView.G = (float) e.NewValue;
             PageCurlView.InvalidateSurface();
         }
 

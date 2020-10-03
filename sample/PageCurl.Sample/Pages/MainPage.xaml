@@ -49,7 +49,11 @@
         <pageCurl:PageCurlView2 x:Name="PageCurlView"
                                VerticalOptions="FillAndExpand" />
 
-        <Slider x:Name="Slider" ValueChanged="OnSliderOnValueChanged"
+        <Slider x:Name="DSlider" ValueChanged="OnDSliderOnValueChanged"
+                HeightRequest="30"
+                Margin="10" />      
+        
+        <Slider x:Name="GSlider" ValueChanged="OnGSliderOnValueChanged"
                 HeightRequest="30"
                 Margin="10" />
     </StackLayout>
