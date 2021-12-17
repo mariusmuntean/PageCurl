@@ -9,7 +9,7 @@
                      Spacing="5"
                      Margin="20">
             <Button Text="Demo 1" BackgroundColor="DeepSkyBlue" Clicked="Demo1_OnClicked" />
-            <Button Text="Demo 2" Clicked="Demo1_OnClicked" />
+            <Button Text="Demo 2" BackgroundColor="Gold" Clicked="Demo2_OnClicked" />
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>

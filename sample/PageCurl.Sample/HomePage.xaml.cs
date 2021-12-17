@@ -16,6 +16,11 @@ namespace PageCurl.Sample
         private async void Demo1_OnClicked(object sender, EventArgs e)
         {
             await Navigation.PushAsync(new MainPage());
+        }        
+        
+        private async void Demo2_OnClicked(object sender, EventArgs e)
+        {
+            await Navigation.PushAsync(new ExperimentalPage());
         }
     }
 }

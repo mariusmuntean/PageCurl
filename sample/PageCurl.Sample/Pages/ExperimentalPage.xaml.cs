@@ -1,4 +1,5 @@
 using System;
+using PageCurl.Sample.media;
 using SkiaSharp;
 using SkiaSharp.Views.Forms;
 using Xamarin.Forms;
@@ -9,11 +10,16 @@ namespace PageCurl.Sample.Pages
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class ExperimentalPage : ContentPage
     {
+        private MediaTool _mediaTool = new MediaTool();
+
         public ExperimentalPage()
         {
             InitializeComponent();
 
-            var canvasView = new SKCanvasView();
+            var canvasView = new SKCanvasView()
+            {
+                Margin = new Thickness(15.0d)
+            };
             canvasView.PaintSurface += CanvasViewOnPaintSurface;
             Content = canvasView;
         }
@@ -24,44 +30,31 @@ namespace PageCurl.Sample.Pages
             var surface = e.Surface;
             var canvas = surface.Canvas;
 
+            canvas.Clear();
 
-            var r = 300.0f;
-            var side = 100.0f;
-            var sliceCount = (float) Math.PI * r / side;
-            var stepSizeDegrees = 180.0f / sliceCount;
+            var origBitmap = SKBitmap.Decode(_mediaTool.GetMedia("page3.jpeg"));
 
-            for (var i = 1; i < sliceCount; i++)
-            {
-                var transform = new SKMatrix44();
-                transform.SetIdentity();
-                
-                transform.PostConcat(SKMatrix44.CreateTranslate(0.0f, 0.0f, r));
-                transform.PostConcat(SKMatrix44.CreateRotationDegrees(0, 1, 0, i * stepSizeDegrees));
-                transform.PostConcat(SKMatrix44.CreateTranslate(0f, 0.0f, -r));
-                transform.PostConcat(SKMatrix44.CreateScale(1.1f, 1.1f, 1.1f));
-                transform.PostConcat(SKMatrix44.CreateTranslate(info.Width / 2.0f, info.Height / 2.0f, 0.0f));
+            var scale = Math.Min((float) info.Width / origBitmap.Width, (float) info.Height / origBitmap.Height);
 
-                canvas.Save();
-                canvas.SetMatrix(canvas.TotalMatrix.PostConcat(transform.Matrix));
+            var transform = SKMatrix44.CreateIdentity();
 
-                var x = -side / 2.0f;
-                var y = -side / 2.0f;
-                var innerPaint = new SKPaint
-                {
-                    Color = SKColors.Gold,
-                    Style = SKPaintStyle.Fill
-                };
-                var outerPaint = new SKPaint
-                {
-                    Color = SKColors.Red,
-                    StrokeWidth = 5,
-                    Style = SKPaintStyle.Stroke
-                };
-                canvas.DrawRect(SKRect.Create(x, y, side, side), innerPaint);
-                canvas.DrawRect(SKRect.Create(x, y, side, side), outerPaint);
+            transform.PostConcat(SKMatrix44.CreateTranslate(-origBitmap.Width * 0.5f, -origBitmap.Height * 0.5f, 0.0f));
+            transform.PostConcat(SKMatrix44.CreateRotationDegrees(1, 1, 0, 45));
+            transform.PostConcat(SKMatrix44.CreateTranslate(origBitmap.Width * 0.5f, origBitmap.Height * 0.5f, 0.0f));
 
-                canvas.Restore();
-            }
+            transform.PostConcat(SKMatrix44.CreateTranslate(info.Width * 0.5f, info.Height * 0.5f, 0.0f));
+
+            transform.PostConcat(SKMatrix44.CreateScale(scale, scale, 1.0f));
+
+            canvas.Save();
+            canvas.SetMatrix(transform.Matrix);
+            canvas.DrawBitmap(origBitmap, -info.Width * 0.5f, -info.Height * 0.5f);
+            canvas.Restore();
+            
+            var newBitmap = SKBitmap.Decode(_mediaTool.GetMedia("page3.jpeg"));
+            transform.SetIdentity();
+            
+            
         }
     }
 }
