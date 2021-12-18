@@ -45,9 +45,9 @@ namespace PageCurl
 
 
         // new approach
-        private SKPoint S;
-        private SKPoint C;
-        private float ah = 0.0f;
+        private SKPoint _bitmapCenterPoint;
+        private SKPoint _touchPoint;
+        private float hDragDelta = 0.0f;
         private float theta = 0.0f;
 
         public PageCurlView2()
@@ -74,17 +74,17 @@ namespace PageCurl
                 var cylinderCircumference = 2 * PI * r;
                 sliceWidth = cylinderCircumference * 0.5f / sliceCount;
 
-                S = new SKPoint(PageBitmap.Width / 2.0f, PageBitmap.Height / 2.0f);
-                C = new SKPoint(D, G);
-                ah = S.X - C.X;
+                _bitmapCenterPoint = new SKPoint(PageBitmap.Width / 2.0f, PageBitmap.Height / 2.0f);
+                _touchPoint = new SKPoint(D, G);
+                hDragDelta = _bitmapCenterPoint.X - _touchPoint.X;
 
-                if (ah < MinDragVectorLength)
+                if (hDragDelta < MinDragVectorLength)
                 {
                     theta = 0.0f;
                 }
                 else
                 {
-                    theta = AngleToOxDegrees(S, C);
+                    theta = AngleToOxDegrees(_bitmapCenterPoint, _touchPoint);
                     Console.WriteLine($"Raw theta: {theta}");
                     theta = theta >= 0.0f ? 180.0f - theta : -(180 + theta);
                     // theta = theta % 180.0f;
@@ -104,31 +104,32 @@ namespace PageCurl
                 var scale = Math.Min(hScale, vScale);
 
                 // a
-                canvas.Save();
+                 canvas.Save();
 
                 canvas.Translate(canvasHalfWidth, canvasHalfHeight);
 
                 canvas.Scale(scale);
 
-                var bottomRegion = GetBottomRegion(PageBitmap, S, ah, theta);
+                var bottomPageRegion = GetBottomPageRegion(PageBitmap, _bitmapCenterPoint, hDragDelta, theta);
                 canvas.DrawBitmap(
-                    bottomRegion,
+                    bottomPageRegion,
                     // SKRect.Create(D - (sliceWidth / 2.0f), PageBitmap.Height),
-                    SKRect.Create(-pageHalfWidth, -pageHalfHeight, bottomRegion.Width, bottomRegion.Height));
+                    SKRect.Create(-pageHalfWidth, -pageHalfHeight, bottomPageRegion.Width, bottomPageRegion.Height));
 
                 // Debug
-                canvas.DrawCircle(-pageHalfWidth + S.X, -pageHalfHeight + S.Y, 60, new SKPaint()
+                canvas.DrawCircle(-pageHalfWidth + _bitmapCenterPoint.X, -pageHalfHeight + _bitmapCenterPoint.Y, 60, new SKPaint()
                 {
                     Color = SKColors.Green,
                     Style = SKPaintStyle.Fill
                 });
-                canvas.DrawCircle(-pageHalfWidth + C.X, -pageHalfHeight + C.Y, 30, new SKPaint()
+                canvas.DrawCircle(-pageHalfWidth + _touchPoint.X, -pageHalfHeight + _touchPoint.Y, 30, new SKPaint()
                 {
                     Color = SKColors.Red,
                     Style = SKPaintStyle.Fill
                 });
 
                 canvas.Restore();
+
 
                 // b
                 // var rotationStepDegrees = 180.0f / sliceCount;
@@ -247,7 +248,7 @@ namespace PageCurl
             return angleToOyDegrees;
         }
 
-        private SKBitmap GetBottomRegion(SKBitmap original, SKPoint S, float ah, float theta)
+        private SKBitmap GetBottomPageRegion(SKBitmap original, SKPoint S, float ah, float theta)
         {
             var flippedBitmap = new SKBitmap(original.Width, original.Height);
 
