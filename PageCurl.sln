@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PageCurl.Sample.iOS", "samp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PageCurl.Sample", "sample\PageCurl.Sample\PageCurl.Sample.csproj", "{571815BA-5895-4BA9-9BFC-13CE995CF74A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PageCurl.macOS", "sample\PageCurl.macOS\PageCurl.macOS.csproj", "{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,7 @@ Global
 		{CFF33B0E-962A-4A86-8DC1-6E0A64409131} = {7FCD8BDD-0FB5-41C9-8958-10B1A6F79294}
 		{3173AA9F-D19D-4FE3-8CB7-93B6B71C6D8B} = {7FCD8BDD-0FB5-41C9-8958-10B1A6F79294}
 		{571815BA-5895-4BA9-9BFC-13CE995CF74A} = {7FCD8BDD-0FB5-41C9-8958-10B1A6F79294}
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55} = {7FCD8BDD-0FB5-41C9-8958-10B1A6F79294}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1D20E381-503C-4743-9D6C-79D734AD7F4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -78,5 +81,17 @@ Global
 		{571815BA-5895-4BA9-9BFC-13CE995CF74A}.Debug|iPhone.Build.0 = Debug|Any CPU
 		{571815BA-5895-4BA9-9BFC-13CE995CF74A}.Release|iPhone.ActiveCfg = Release|Any CPU
 		{571815BA-5895-4BA9-9BFC-13CE995CF74A}.Release|iPhone.Build.0 = Release|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{89E22F6E-FD71-4C64-AEE4-D4F5F3514B55}.Release|iPhone.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
