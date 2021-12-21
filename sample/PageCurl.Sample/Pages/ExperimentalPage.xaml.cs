@@ -15,16 +15,34 @@ namespace PageCurl.Sample.Pages
         readonly SKBitmap _origBitmap;
         private double _d = 0.0d;
 
+        Slider xSlider = new Slider(0, 180, 0);
+        Slider ySlider = new Slider(0, 180, 0);
+        Slider zSlider = new Slider(0, 180, 0);
+
         public ExperimentalPage()
         {
             InitializeComponent();
 
             var canvasView = new SKCanvasView()
             {
-                Margin = new Thickness(15.0d)
+                Margin = new Thickness(15.0d),
+                VerticalOptions = LayoutOptions.FillAndExpand
             };
             canvasView.PaintSurface += CanvasViewOnPaintSurface;
-            Content = canvasView;
+            xSlider = new Slider(0, 180, 0);
+            ySlider = new Slider(0, 180, 0);
+            zSlider = new Slider(0, 180, 0);
+
+            var stackLayout = new StackLayout()
+            {
+                VerticalOptions = LayoutOptions.FillAndExpand,
+                Margin = new Thickness(5)
+            };
+            stackLayout.Children.Add(canvasView);
+            stackLayout.Children.Add(xSlider);
+            stackLayout.Children.Add(ySlider);
+            stackLayout.Children.Add(zSlider);
+            Content = stackLayout;
 
             _origBitmap = SKBitmap.Decode(_mediaTool.GetMedia("page3.jpeg"));
 
@@ -33,7 +51,7 @@ namespace PageCurl.Sample.Pages
                 _d = d;
                 canvasView.InvalidateSurface();
             }, easing: Easing.Linear);
-            a.Commit(this, "LinearDoubleAnimation", length: 10000, repeat: () => true);
+            a.Commit(this, "LinearDoubleAnimation", length: 20000, repeat: () => true);
         }
 
         private void CanvasViewOnPaintSurface(object sender, SKPaintSurfaceEventArgs e)
@@ -49,32 +67,98 @@ namespace PageCurl.Sample.Pages
             // Transform2D(scale, canvas, origBitmap);
 
             // Transform3D(canvas, _origBitmap, scale);
-            
+
             Cylinder3D(canvas, _origBitmap, scale);
         }
 
         private void Cylinder3D(SKCanvas canvas, SKBitmap origBitmap, float scale)
         {
+            SKBitmap GetCurrentSliceOld(SKBitmap parentBitmap, int sliceIndex, int sliceCount)
+            {
+                var sliceWidth = parentBitmap.Width / sliceCount;
+                var sliceBitmap = new SKBitmap(sliceWidth, origBitmap.Height, parentBitmap.ColorType, parentBitmap.AlphaType);
+                var result = parentBitmap.ExtractSubset(sliceBitmap, SKRectI.Create(sliceIndex * sliceWidth, 0, sliceWidth, parentBitmap.Height));
+
+                if (!result)
+                {
+                    Console.WriteLine($"Extracting slice result failed");
+                }
+
+                return sliceBitmap;
+            }
+            SKColor NewRandomColor(int sliceIndex)
+            {
+                var rand = new Random(sliceIndex * 100);
+                return new SKColor((byte)rand.Next(255), (byte)rand.Next(255), (byte)rand.Next(255));
+            }
+
+            SKBitmap GetCurrentSlice(SKBitmap parentBitmap, int sliceIndex, int sliceCount)
+            {
+                var sliceWidth = parentBitmap.Width / sliceCount;
+                var sliceBitmap = new SKBitmap(sliceWidth, origBitmap.Height, parentBitmap.ColorType, parentBitmap.AlphaType);
+                var result = parentBitmap.ExtractSubset(sliceBitmap, SKRectI.Create(sliceIndex * sliceWidth, 0, sliceWidth, parentBitmap.Height));
+                sliceBitmap.Erase(NewRandomColor(sliceIndex));
+                return sliceBitmap;
+            }
+
+            var sliceCount = 20;
+            var sliceWidth = origBitmap.Width / (float)sliceCount;
+            var sliceAngularOffset = 360.0f / sliceCount;
+            var radius = origBitmap.Width / (float)(2 * Math.PI);
+
             canvas.Save();
 
-            var scaleMat = SKMatrix44.CreateScale(scale, scale, scale);
-            var translateForwardMat = SKMatrix44.CreateTranslate(origBitmap.Width / 2.0f, origBitmap.Height / 2.0f, 0);
-            var rotateSomeMore = SKMatrix44.CreateRotationDegrees(0, 0, 1, 45);
-            var rotationMat = SKMatrix44.CreateRotationDegrees(0.0f, 1.0f, 0.0f, (float)(360.0 * _d));
-            var translateBackMat = SKMatrix44.CreateTranslate(-origBitmap.Width / 2.0f, -origBitmap.Height / 2.0f, 0);
-
             var mat = SKMatrix44.CreateIdentity();
+            var scaleMat = SKMatrix44.CreateScale(scale, scale, scale);
             mat.PreConcat(scaleMat);
-            mat.PreConcat(translateForwardMat);
-            mat.PreConcat(rotateSomeMore);
-            mat.PreConcat(rotationMat);
-            mat.PreConcat(translateBackMat);
+            var translateToSliceLocationMat = SKMatrix44.CreateTranslate(origBitmap.Width / 2.0f, origBitmap.Height / 2.0f, 0);
+            mat.PreConcat(translateToSliceLocationMat);
 
+            // Tilt forward
+            var translateToTiltLocationMat = SKMatrix44.CreateTranslate(0, 0, radius);
+            mat.PreConcat(translateToTiltLocationMat);
+            var tiltMatX = SKMatrix44.CreateRotationDegrees(1.0f, 0.0f, 0.0f, (float)xSlider.Value);
+            var tiltMatY = SKMatrix44.CreateRotationDegrees(0.0f, 1.0f, 0.0f, (float)ySlider.Value);
+            var tiltMatZ = SKMatrix44.CreateRotationDegrees(0.0f, 0.0f, 1.0f, (float)zSlider.Value);
+            mat.PreConcat(tiltMatX);
+            mat.PreConcat(tiltMatY);
+            mat.PreConcat(tiltMatZ);
+            var translateFromTiltLocationMat = SKMatrix44.CreateTranslate(0, 0, -radius);
+            mat.PreConcat(translateFromTiltLocationMat);
             canvas.SetMatrix(mat.Matrix);
-            canvas.DrawBitmap(origBitmap, 0, 0);
+
+            // Rotate to animate
+            var translateAwayFromDrawLocationMat = SKMatrix44.CreateTranslate(0, 0, radius);
+            mat.PreConcat(translateAwayFromDrawLocationMat);
+            var rotationMat = SKMatrix44.CreateRotationDegrees(0.0f, 1.0f, 0.0f, (float)(_d * 360.0f));
+            mat.PreConcat(rotationMat);
+            var translateToDrawLocationMat = SKMatrix44.CreateTranslate(0, 0, -radius);
+            mat.PreConcat(translateToDrawLocationMat);
+            canvas.SetMatrix(mat.Matrix);
+
+            for (var sliceIndex = 0; sliceIndex < sliceCount; sliceIndex++)
+            {
+                var currentSlice = GetCurrentSlice(origBitmap, sliceIndex, sliceCount);
+
+                canvas.SetMatrix(mat.Matrix);
+                canvas.DrawBitmap(currentSlice, -sliceWidth / 2.0f, 0);
+
+                var translateAwayFromDrawLocationMat2 = SKMatrix44.CreateTranslate(0, 0, radius);
+                mat.PreConcat(translateAwayFromDrawLocationMat2);
+                var rotationMat2 = SKMatrix44.CreateRotationDegrees(0.0f, 1.0f, 0.0f, -(sliceAngularOffset));
+                mat.PreConcat(rotationMat2);
+                var translateToDrawLocationMat2 = SKMatrix44.CreateTranslate(0, 0, -radius);
+                mat.PreConcat(translateToDrawLocationMat2);
+                canvas.SetMatrix(mat.Matrix);
+            }
+
+            var translateBackMat = SKMatrix44.CreateTranslate(-origBitmap.Width / 2.0f, -origBitmap.Height / 2.0f, 0);
+            mat.PreConcat(translateBackMat);
+            canvas.SetMatrix(mat.Matrix);
+
             canvas.Restore();
         }
-        
+
         private void Transform3D(SKCanvas canvas, SKBitmap origBitmap, float scale)
         {
             canvas.Save();

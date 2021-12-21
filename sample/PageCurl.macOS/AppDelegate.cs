@@ -15,7 +15,7 @@ namespace PageCurl.macOS
         {
             var style = NSWindowStyle.Closable | NSWindowStyle.Resizable | NSWindowStyle.Titled;
 
-            var rect = new CoreGraphics.CGRect(20, 300, 700, 1024);
+            var rect = new CoreGraphics.CGRect(0, 300, 400, 1024);
             window = new NSWindow(rect, style, NSBackingStore.Buffered, false);
             window.Title = "Xamarin.Forms on Mac!"; // choose your own Title here
             window.TitleVisibility = NSWindowTitleVisibility.Hidden;
