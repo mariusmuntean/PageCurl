@@ -15,8 +15,9 @@ The repository contains a working core state machine, analytic page mesh, MAUI
 Skia adapter, modular demo, deterministic tests, pinned SDK/workloads, package
 metadata, and an iOS simulator smoke workflow. The local macOS validation has
 passed the core suite, neutral MAUI build, explicit iOS Release demo build,
-iOS simulator install/launch, and light/dark portrait captures. Android
-packaging and physical-device profiling remain separate evidence gates.
+iOS simulator install/launch, light/dark portrait captures, explicit Android
+Release packaging, and the simulator accessibility/rotation pass. Physical
+device profiling and hardware smoke remain separate evidence gates.
 
 This is a strong engineering baseline, not a claim of Kindle-level polish.
 

@@ -34,10 +34,10 @@ it, and captures light/dark portrait screenshots.
 | Light appearance | Pass | `.artifacts/ios-smoke/latest/light.png` |
 | Dark appearance | Pass | `.artifacts/ios-smoke/latest/dark.png` |
 | Portrait frame | Pass | iPhone 17 Pro simulator screenshot |
-| Previous/Next commands | Manual review required | Button labels and semantic descriptions are in the demo XAML |
-| Reduced motion | Manual review required | Switch maps to `PageTurnView.ReduceMotion` |
-| Rotation and safe area | Manual review required | Rotate the simulator to landscape and inspect the safe-area layout |
-| Large page | Manual review required | Navigate to the fourth generated page |
+| Previous/Next commands | Pass | Accessibility tree exposed both labeled commands; Next advanced Page 1 to Page 2 |
+| Reduced motion | Pass | Switch reported Value 1; Next advanced Page 2 to Page 3 without the settle path |
+| Rotation and safe area | Pass | Landscape rotation kept controls/page inside the safe-area container |
+| Large page | Pass | Page 4 of 4 was reached and displayed the generated large page |
 | Image replacement/lifecycle | Code-validated | `MainPage.OnDisappearing` clears images, cancels interaction, unsubscribes, and disposes the page set |
 
 ## Manual simulator review
