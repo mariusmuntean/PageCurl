@@ -1,0 +1,62 @@
+---
+type: Testing Strategy
+title: Testing and validation
+description: The test layers, invariants, commands, and device checks needed to keep page turning smooth and correct.
+tags:
+  - testing
+  - quality
+  - performance
+timestamp: 2026-07-16T00:00:00Z
+---
+
+# Why testing matters
+
+A page turn is continuously visible: a one-pixel discontinuity, a reversed
+texture, a missed cancellation, or a frame-time spike is immediately apparent
+to a reader. Deterministic tests protect the geometry and state transitions
+while visual and device tests protect the feel. Both are required for a
+high-profile reading app; passing unit tests alone is not a performance claim.
+
+## Current automated coverage
+
+[`PageCurl.Core.Tests`](../../tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj)
+is a dependency-free executable runner. It checks:
+
+- edge selection, non-finite input rejection, and pointer clamping;
+- forward and backward normalized progress;
+- threshold snapping, cancellation, spring convergence, and one-shot
+  completion events;
+- finite and bounded mesh coordinates, UV and shading ranges, and front/back
+  triangle counts;
+- reuse of mesh buffers so a frame does not allocate geometry arrays.
+
+Run it with:
+
+```bash
+dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
+```
+
+The core and neutral MAUI builds should also be part of pull-request CI:
+
+```bash
+dotnet build src/PageCurl.Core/PageCurl.Core.csproj -c Release
+dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release
+```
+
+## Device and visual validation
+
+On every supported release target, exercise a short drag, a reversal, a
+threshold release in both directions, cancellation during settling, repeated
+turns, rotation, background/foreground transitions, and image replacement.
+Profile cold and warm frames on representative low-end Android and current iOS
+hardware. Record frame time, allocations, memory growth, and GPU/CPU usage.
+Review texture orientation, backside readability, shadows, touch ownership,
+reduced-motion behavior, VoiceOver/TalkBack alternatives, and dynamic page
+sizes. Add an emulator or device UI test when the test infrastructure is
+available; keep the core tests fast enough to run on every commit.
+
+## Regression policy
+
+Every geometry or interaction bug should gain a small deterministic regression
+case before the fix is merged. Changes that alter visual output should include
+before/after captures or a reproducible manual test note in the pull request.

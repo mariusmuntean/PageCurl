@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="PageCurl.Demo.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:curl="clr-namespace:PageCurl.Maui;assembly=PageCurl.Maui"
+    BackgroundColor="#E5E5E5">
+    <Grid RowDefinitions="Auto,*" Padding="24">
+        <VerticalStackLayout Spacing="4" Margin="0,0,0,16">
+            <Label Text="PageCurl.Maui" FontSize="24" FontAttributes="Bold" />
+            <Label x:Name="StatusLabel" Text="Drag from either page edge" FontSize="14" />
+        </VerticalStackLayout>
+        <Border Grid.Row="1" Stroke="#B9B9B9" StrokeThickness="1" Background="#FAFAFA" Padding="0">
+            <curl:PageTurnView x:Name="PageView" />
+        </Border>
+    </Grid>
+</ContentPage>
