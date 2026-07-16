@@ -8,6 +8,8 @@
 .nuget/
 .dotnet-home/
 .artifacts/
+.artifacts/ios-smoke/
+*.xcresult
 TestResults/
 *.userprefs
 *.pidb

@@ -1,0 +1,87 @@
+---
+title: iOS release-readiness validation
+description: Repeatable simulator smoke evidence for the PageCurl.Maui demo.
+---
+
+# Scope
+
+This record covers the iOS simulator gates from
+[`knowledge/project/release-readiness.md`](../../knowledge/project/release-readiness.md).
+It separates repeatable simulator evidence from physical-device and store-signing
+work that cannot be proven by this local run.
+
+## Command
+
+From the repository root:
+
+```sh
+./tools/ios-smoke.sh
+```
+
+The optional first argument is an iPhone simulator UDID. Set
+`IOS_SMOKE_OUTPUT` to choose a durable output directory. The script uses the
+user-local SDK at `/Users/marius/.dotnet`, builds the explicit
+`net10.0-ios` simulator target, installs `com.example.pagecurldemo`, launches
+it, and captures light/dark portrait screenshots.
+
+## Latest simulator run
+
+| Evidence | Result | Location/notes |
+| --- | --- | --- |
+| SDK/workload alignment | Pass | `.NET --version` = `10.0.301`; `maui-ios` and `maui-android` installed |
+| iOS simulator build | Pass | Release `iossimulator-arm64`; 0 warnings, 0 errors |
+| Install and launch | Pass | Bundle `com.example.pagecurldemo` |
+| Light appearance | Pass | `.artifacts/ios-smoke/latest/light.png` |
+| Dark appearance | Pass | `.artifacts/ios-smoke/latest/dark.png` |
+| Portrait frame | Pass | iPhone 17 Pro simulator screenshot |
+| Previous/Next commands | Manual review required | Button labels and semantic descriptions are in the demo XAML |
+| Reduced motion | Manual review required | Switch maps to `PageTurnView.ReduceMotion` |
+| Rotation and safe area | Manual review required | Rotate the simulator to landscape and inspect the safe-area layout |
+| Large page | Manual review required | Navigate to the fourth generated page |
+| Image replacement/lifecycle | Code-validated | `MainPage.OnDisappearing` clears images, cancels interaction, unsubscribes, and disposes the page set |
+
+## Manual simulator review
+
+After the script launches the app:
+
+1. Use the Previous and Next buttons and confirm their enabled states at the
+   first and last pages.
+2. Enable Reduce motion and confirm a command changes page state without a
+   settle animation; disable it and confirm the animated turn returns.
+3. Drag from both edges, cancel a drag, repeat turns, and navigate through the
+   large fourth page.
+4. Use the Simulator menu `Device > Rotate Left` and `Device > Rotate Right`,
+   then repeat the command and drag checks in landscape.
+5. Switch light/dark appearance and inspect page edges, surface contrast,
+   labels, shadows, and texture scaling.
+
+## Performance evidence
+
+The platform-free core guard measures 1,000 warmed geometry builds and 1,000
+warmed controller drag/settle cycles. It currently passes with zero managed
+bytes allocated on the measured thread. The MAUI control exposes opt-in
+`PageTurnPerformanceSnapshot` metrics; enabling them is intentionally excluded
+from the default render path.
+
+The installed Instruments templates available for a follow-up run are
+`Time Profiler` and `Allocations`. No timed profile is claimed by this smoke
+run.
+
+For an interactive simulator profile, use an installed Instruments template:
+
+```sh
+xcrun xctrace list templates | rg 'Time Profiler|Allocations'
+```
+
+Record the selected template and run duration here after exercising the manual
+review scenarios. Simulator timing is evidence for correctness and relative
+regressions, not a physical-device frame-rate claim.
+
+## Not proven locally
+
+- Physical-device GPU frame pacing, low-end Android performance, and texture
+  pressure remain release gates.
+- VoiceOver/TalkBack behavior needs a screen-reader pass on supported hardware
+  or a clearly documented simulator accessibility run.
+- App Store signing, archive validation, provisioning, and distribution are not
+  part of the local smoke script.
