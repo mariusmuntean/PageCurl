@@ -10,7 +10,7 @@ Provide a .NET MAUI control that lets a user grab a page image, drag it with pre
 
 The solution is split into three projects:
 
-1. `PageCurl.Core` targets `net8.0` and contains all interaction state, curl-pose calculation, mesh generation and deterministic tests. It has no MAUI or SkiaSharp dependency.
+1. `PageCurl.Core` targets `net10.0` and contains all interaction state, curl-pose calculation, mesh generation and deterministic tests. It has no MAUI or SkiaSharp dependency.
 2. `PageCurl.Maui` targets MAUI mobile/desktop platforms and exposes `PageTurnView`, backed by SkiaSharp's GPU view. It owns image shaders, touch event translation, invalidation and settle timing.
 3. `PageCurl.Demo` is a MAUI single-project sample that creates front, back and under-page images and consumes the control through XAML/code-behind.
 

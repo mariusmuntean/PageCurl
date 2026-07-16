@@ -6,7 +6,7 @@
 
 **Architecture:** A pure `PageCurl.Core` project owns the interaction state, cylinder pose and reusable mesh buffers. `PageCurl.Maui` adapts that core to an `SKGLView`, while `PageCurl.Demo` consumes the control. Tests target the core so they run without a mobile device.
 
-**Tech Stack:** C#/.NET 8, .NET MAUI, SkiaSharp.Views.Maui.Controls, a dependency-free core test runner, System.Numerics.
+**Tech Stack:** C#/.NET 10, .NET MAUI 10, SkiaSharp.Views.Maui.Controls 4.150.1, a dependency-free core test runner, System.Numerics.
 
 ## Global Constraints
 

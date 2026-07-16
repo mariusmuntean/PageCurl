@@ -4,26 +4,36 @@
 book page. It separates interaction, geometry and drawing so the math can be
 tested without a device or UI toolkit:
 
-* `src/PageCurl.Core` targets `net8.0` and contains the allocation-free drag
+* `src/PageCurl.Core` targets `net10.0` and contains the allocation-free drag
   state machine, spring settling and cylinder page mesh.
 * `src/PageCurl.Maui` exposes `PageTurnView`, a GPU-backed `SKGLView` that
   draws the mesh with SkiaSharp texture coordinates and per-vertex shading.
+  It also exposes a neutral `net10.0` target for source-level CI builds.
 * `src/PageCurl.Demo` is a MAUI sample with three generated pages.
 * `tests/PageCurl.Core.Tests` is a dependency-free executable test runner. It
   does not require an internet package feed or a test adapter.
 
 ## Try the demo
 
-Install the .NET 8 SDK and the MAUI workloads for the target you want, then:
+Install the .NET 10 SDK and the matching MAUI workload for the target you want,
+then (on Linux):
 
 ```bash
-dotnet workload restore PageCurl.sln
-dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -f net8.0-android
+dotnet workload install maui-android
+dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -f net10.0-android
 ```
 
-The control pins `SkiaSharp.Views.Maui.Controls` 3.116.1, the net8-compatible
-SkiaSharp.Views release. Move the pin forward together with the MAUI workload
-when upgrading the application to a newer .NET line.
+On macOS or Windows, install the full `maui` workload when building the
+additional Apple or Windows targets.
+
+The control pins `SkiaSharp.Views.Maui.Controls` 4.150.1, the current stable
+SkiaSharp.Views release with `net10.0-*` assets and MAUI 10 dependencies.
+Keep the package and MAUI workload on the same .NET major line when upgrading.
+
+The project selects Android automatically on Linux. iOS and Mac Catalyst
+targets are added on macOS, and the Windows target is added on Windows. This
+keeps a Linux restore/build from evaluating native workloads that cannot run on
+that host.
 
 The demo supports Android, iOS, Mac Catalyst and Windows. The minimum
 requirement in the question (Android and iOS) is covered by the first two
@@ -78,16 +88,18 @@ Run the platform-independent checks with:
 
 ```bash
 dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj
+dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
 ```
 
 The checks cover edge selection and clamping, normalized progress in both
 directions, threshold snapping, cancellation, completion events, finite and
 bounded mesh coordinates, UV/shading ranges, and mesh-buffer reuse.
 
-The repository runner used to prepare this sample did not have MAUI workloads
-or access to NuGet, so it could execute the core build and test runner but not
-the platform project. On a developer machine, `dotnet workload restore` and a
-normal NuGet restore provide the remaining MAUI/SkiaSharp build verification.
+The platform build must be run on a host with the matching .NET 10 MAUI
+workload and native SDKs. On Linux, validate the Android target explicitly with
+`-f net10.0-android`; do not ask Linux to evaluate the iOS, Mac Catalyst or
+Windows targets. The .NET 10 Android toolchain defaults to API 36, so install
+the API 36 platform and an appropriate JDK alongside the workload.
 
 ## Project knowledge
 

@@ -12,12 +12,13 @@ timestamp: 2026-07-16T00:00:00Z
 # Tooling and build workarounds
 
 The core project is intentionally independent of MAUI so it can be built and
-tested on any machine with the .NET SDK. MAUI projects still require the
-matching workload and native SDKs. On Linux, the Android workload can compile
-the project sources while final APK packaging may fail in the workload's RID or
-apphost stage; this is a tooling limitation, not evidence that the control is
-ready for an Android device. Validate packaging on a supported MAUI host or in
-CI and keep the complete diagnostic log.
+tested on any machine with the .NET 10 SDK. MAUI projects still require the
+matching .NET 10 workload and native SDKs. On Linux, install
+`maui-android` and build the explicit `net10.0-android` target. The project
+also selects targets conditionally so Linux does not evaluate iOS, Mac Catalyst
+or Windows workload packs. Final APK/device validation still needs the Android
+SDK, JDK and a device or emulator. Keep the complete diagnostic log for CI and
+packaging failures.
 
 The demo references the MAUI library through a single-target Android project
 reference when building on a host that cannot evaluate all Apple target
@@ -28,8 +29,8 @@ the project files.
 
 Package restores may need the configured NuGet feed to be reachable. A local
 cache or an approved internal mirror can make reproducible offline checks
-possible; it must not silently change the SkiaSharp or MAUI version selected by
-the project.
+possible; it must not silently change the .NET 10 MAUI or
+`SkiaSharp.Views.Maui.Controls` 4.150.1 version selected by the project.
 
 # Runtime workarounds
 

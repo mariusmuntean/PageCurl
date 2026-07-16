@@ -14,7 +14,7 @@ timestamp: 2026-07-16T00:00:00Z
 The solution has four deliberately narrow layers:
 
 1. [`PageCurl.Core`](../../src/PageCurl.Core/PageCurl.Core.csproj) is a
-   `net8.0` library with no UI dependency. [`PageTurnController`](../../src/PageCurl.Core/PageTurnController.cs)
+   `net10.0` library with no UI dependency. [`PageTurnController`](../../src/PageCurl.Core/PageTurnController.cs)
    owns pointer state, direction, progress, cancellation, spring settling, and
    completion events. [`PageCurlGeometry`](../../src/PageCurl.Core/PageCurlGeometry.cs)
    turns a snapshot into a bounded cylinder-like mesh.
@@ -51,6 +51,11 @@ dependency.
 This boundary is the principal portability strategy: Android and iOS share the
 same tested math while the adapter follows the graphics implementation supplied
 by the MAUI workload.
+
+The MAUI library also exposes a neutral `net10.0` target for source-level
+compilation and keeps native target frameworks conditional by host OS. Linux
+therefore builds Android without trying to restore Apple or Windows workload
+packs; macOS and Windows add the targets they can evaluate.
 
 ## Performance constraints
 

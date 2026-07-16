@@ -3,5 +3,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Keep package references aligned with the .NET 10 MAUI workload. -->
+    <MauiVersion>10.0.20</MauiVersion>
   </PropertyGroup>
 </Project>

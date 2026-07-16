@@ -22,8 +22,8 @@ This is a strong engineering baseline, not a claim of Kindle-level polish.
 
 Before shipping a package or embedding the control in a flagship reader:
 
-1. Build and package Android and iOS in clean CI environments with pinned .NET,
-   MAUI, and SkiaSharp versions.
+1. Build and package Android and iOS in clean CI environments with pinned .NET
+   10, MAUI 10, and SkiaSharp 4.150.1 versions.
 2. Run the automated core suite and device smoke tests on supported OS versions.
 3. Profile gesture and settle paths on low-end Android and current iOS devices;
    verify no sustained frame drops, allocations, or texture leaks.

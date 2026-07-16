@@ -38,11 +38,15 @@ Run it with:
 dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
 ```
 
-The core and neutral MAUI builds should also be part of pull-request CI:
+The core and explicit .NET 10 Android MAUI builds should also be part of
+pull-request CI:
 
 ```bash
 dotnet build src/PageCurl.Core/PageCurl.Core.csproj -c Release
-dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release
+dotnet workload install maui-android
+dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
+dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0-android
+dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
 ```
 
 ## Device and visual validation

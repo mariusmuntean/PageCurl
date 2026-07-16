@@ -37,8 +37,10 @@ public sealed class PageTurnView : SKGLView
 
     private readonly PageCurlOptions _options;
     private readonly PageMeshBuffer _meshBuffer;
+    private static readonly SKSamplingOptions ImageSampling = new(SKFilterMode.Linear, SKMipmapMode.Linear);
     private SKPaint? _frontPaint;
     private SKPaint? _backPaint;
+    private SKPaint? _imagePaint;
     private SKPaint? _placeholderPaint;
     private readonly SKPoint[] _frontPoints;
     private readonly SKPoint[] _frontTexturePoints;
@@ -55,7 +57,7 @@ public sealed class PageTurnView : SKGLView
     private bool _animationLoopActive;
     private int _animationGeneration;
     private bool _eventsAttached;
-    private bool _disposed;
+    private bool _handlerDisconnected;
 
     public PageTurnView()
         : this(new PageCurlOptions())
@@ -133,13 +135,9 @@ public sealed class PageTurnView : SKGLView
     protected override void OnHandlerChanged()
     {
         base.OnHandlerChanged();
-        if (_disposed)
-        {
-            return;
-        }
-
         if (Handler is null)
         {
+            _handlerDisconnected = true;
             _pointerCapture.Cancel();
             Controller.Cancel();
             StopAnimationLoop();
@@ -148,6 +146,7 @@ public sealed class PageTurnView : SKGLView
             return;
         }
 
+        _handlerDisconnected = false;
         AttachViewHandlers();
         EnsureGraphicsResources();
         StartAnimationLoop();
@@ -157,7 +156,7 @@ public sealed class PageTurnView : SKGLView
     private static void OnImageChanged(BindableObject bindable, object? oldValue, object? newValue)
     {
         var view = (PageTurnView)bindable;
-        if (!view._disposed)
+        if (!view._handlerDisconnected)
         {
             view.InvalidateSurface();
         }
@@ -165,7 +164,7 @@ public sealed class PageTurnView : SKGLView
 
     private void OnPaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
-        if (_disposed)
+        if (_handlerDisconnected)
         {
             return;
         }
@@ -197,7 +196,7 @@ public sealed class PageTurnView : SKGLView
 
     private void OnTouch(object? sender, SKTouchEventArgs e)
     {
-        if (_disposed)
+        if (_handlerDisconnected)
         {
             return;
         }
@@ -263,7 +262,7 @@ public sealed class PageTurnView : SKGLView
 
     private void StartAnimationLoop()
     {
-        if (_disposed || _animationLoopActive || Controller.Snapshot.State != PageTurnState.Settling || Dispatcher is null)
+        if (_handlerDisconnected || _animationLoopActive || Controller.Snapshot.State != PageTurnState.Settling || Dispatcher is null)
         {
             return;
         }
@@ -272,7 +271,7 @@ public sealed class PageTurnView : SKGLView
         var generation = ++_animationGeneration;
         Dispatcher.StartTimer(TimeSpan.FromMilliseconds(16), () =>
         {
-            if (_disposed || Handler is null || generation != _animationGeneration)
+            if (_handlerDisconnected || Handler is null || generation != _animationGeneration)
             {
                 if (generation == _animationGeneration)
                 {
@@ -301,7 +300,7 @@ public sealed class PageTurnView : SKGLView
             return;
         }
 
-        canvas.DrawImage(image, destination);
+        canvas.DrawImage(image, destination, ImageSampling, _imagePaint!);
     }
 
     private static void DrawMesh(
@@ -371,7 +370,7 @@ public sealed class PageTurnView : SKGLView
 
     private void AttachViewHandlers()
     {
-        if (_eventsAttached || _disposed)
+        if (_eventsAttached || _handlerDisconnected)
         {
             return;
         }
@@ -401,6 +400,7 @@ public sealed class PageTurnView : SKGLView
     {
         _frontPaint ??= new SKPaint { IsAntialias = true };
         _backPaint ??= new SKPaint { IsAntialias = true };
+        _imagePaint ??= new SKPaint { Color = SKColors.White, IsAntialias = true };
         _placeholderPaint ??= new SKPaint { Color = new SKColor(250, 250, 250), IsAntialias = true };
     }
 
@@ -416,6 +416,8 @@ public sealed class PageTurnView : SKGLView
         _frontPaint = null;
         _backPaint?.Dispose();
         _backPaint = null;
+        _imagePaint?.Dispose();
+        _imagePaint = null;
         _placeholderPaint?.Dispose();
         _placeholderPaint = null;
     }
