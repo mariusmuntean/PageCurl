@@ -14,6 +14,10 @@ internal static class PageTurnControllerTests
         UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection.Backward);
         Release_before_threshold_settles_back_and_reports_cancelled_turn();
         Release_after_threshold_settles_forward_and_reports_committed_turn();
+        Release_without_animation_completes_immediately();
+        Programmatic_forward_turn_starts_from_the_forward_edge();
+        Programmatic_backward_turn_starts_from_the_backward_edge();
+        Programmatic_turn_rejects_invalid_sizes_and_busy_controller();
         Cancel_always_returns_to_the_start_endpoint();
         Settling_progress_moves_the_curl_pose();
         Invalid_page_size_is_rejected_without_entering_drag();
@@ -88,6 +92,69 @@ internal static class PageTurnControllerTests
         TestAssert.True(completed!.Committed);
         TestAssert.Equal(1f, controller.Snapshot.Progress, 3);
         TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
+    }
+
+    private static void Release_without_animation_completes_immediately()
+    {
+        var controller = new PageTurnController();
+        PageTurnCompletedEventArgs? completed = null;
+        controller.PageTurnCompleted += (_, args) => completed = args;
+
+        controller.BeginDrag(new Vector2(90, 100), PageSize);
+        controller.UpdateDrag(new Vector2(25, 100));
+        controller.EndDrag(animate: false);
+
+        TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
+        TestAssert.Equal(1f, controller.Snapshot.Progress);
+        TestAssert.NotNull(completed);
+        TestAssert.True(completed!.Committed);
+    }
+
+    private static void Programmatic_forward_turn_starts_from_the_forward_edge()
+    {
+        var controller = new PageTurnController();
+        PageTurnCompletedEventArgs? completed = null;
+        controller.PageTurnCompleted += (_, args) => completed = args;
+
+        TestAssert.True(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Forward));
+
+        var snapshot = controller.Snapshot;
+        TestAssert.Equal(PageTurnState.Settling, snapshot.State);
+        TestAssert.Equal(PageTurnDirection.Forward, snapshot.Direction);
+        TestAssert.Equal(0f, snapshot.Progress);
+        TestAssert.Equal(1f, snapshot.TargetProgress);
+        RunUntilIdle(controller);
+
+        TestAssert.NotNull(completed);
+        TestAssert.True(completed!.Committed);
+    }
+
+    private static void Programmatic_backward_turn_starts_from_the_backward_edge()
+    {
+        var controller = new PageTurnController();
+        PageTurnCompletedEventArgs? completed = null;
+        controller.PageTurnCompleted += (_, args) => completed = args;
+
+        TestAssert.True(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Backward));
+
+        var snapshot = controller.Snapshot;
+        TestAssert.Equal(PageTurnState.Settling, snapshot.State);
+        TestAssert.Equal(PageTurnDirection.Backward, snapshot.Direction);
+        TestAssert.Equal(new Vector2(0, 100), snapshot.DragStartPosition);
+        TestAssert.Equal(1f, snapshot.TargetProgress);
+        RunUntilIdle(controller);
+
+        TestAssert.NotNull(completed);
+        TestAssert.True(completed!.Committed);
+    }
+
+    private static void Programmatic_turn_rejects_invalid_sizes_and_busy_controller()
+    {
+        var controller = new PageTurnController();
+
+        TestAssert.False(controller.BeginProgrammaticTurn(Vector2.Zero, PageTurnDirection.Forward));
+        TestAssert.True(controller.BeginDrag(new Vector2(90, 100), PageSize));
+        TestAssert.False(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Forward, animate: false));
     }
 
     private static void Cancel_always_returns_to_the_start_endpoint()

@@ -77,7 +77,7 @@ public sealed class PageTurnController
         _velocity = 0;
     }
 
-    public void EndDrag()
+    public void EndDrag(bool animate = true)
     {
         if (_state != PageTurnState.Dragging)
         {
@@ -85,7 +85,45 @@ public sealed class PageTurnController
         }
 
         _targetProgress = _progress >= _options.SnapThreshold ? 1 : 0;
+        if (!animate)
+        {
+            CompleteAtTarget();
+            return;
+        }
+
         BeginSettling();
+    }
+
+    /// <summary>Starts a full page turn without requiring pointer input.</summary>
+    public bool BeginProgrammaticTurn(Vector2 pageSize, PageTurnDirection direction, bool animate = true)
+    {
+        if (_state != PageTurnState.Idle || !IsValidPageSize(pageSize) ||
+            direction is not (PageTurnDirection.Forward or PageTurnDirection.Backward))
+        {
+            return false;
+        }
+
+        _pageSize = pageSize;
+        _direction = direction;
+        _dragStartPosition = new(
+            direction == PageTurnDirection.Forward ? pageSize.X : 0,
+            pageSize.Y * 0.5f);
+        _pointerPosition = _dragStartPosition;
+        _progress = 0;
+        _targetProgress = 1;
+        _velocity = 0;
+        _completionRaised = false;
+
+        if (!animate)
+        {
+            CompleteAtTarget();
+        }
+        else
+        {
+            BeginSettling();
+        }
+
+        return true;
     }
 
     public void Cancel()
@@ -123,17 +161,7 @@ public sealed class PageTurnController
 
         if (MathF.Abs(_progress - _targetProgress) <= 0.001f && MathF.Abs(_velocity) <= 0.01f)
         {
-            _progress = _targetProgress;
-            _velocity = 0;
-            _state = PageTurnState.Idle;
-            if (!_completionRaised)
-            {
-                _completionRaised = true;
-                PageTurnCompleted?.Invoke(
-                    this,
-                    new PageTurnCompletedEventArgs(_direction, _targetProgress >= 0.5f));
-            }
-
+            CompleteAtTarget();
             return false;
         }
 
@@ -161,6 +189,20 @@ public sealed class PageTurnController
         _velocity = 0;
         _completionRaised = false;
         _state = PageTurnState.Settling;
+    }
+
+    private void CompleteAtTarget()
+    {
+        _progress = _targetProgress;
+        _velocity = 0;
+        _state = PageTurnState.Idle;
+        if (!_completionRaised)
+        {
+            _completionRaised = true;
+            PageTurnCompleted?.Invoke(
+                this,
+                new PageTurnCompletedEventArgs(_direction, _targetProgress >= 0.5f));
+        }
     }
 
     private static bool IsValidPageSize(Vector2 pageSize) =>
