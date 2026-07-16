@@ -85,3 +85,11 @@ The repository runner used to prepare this sample did not have MAUI workloads
 or access to NuGet, so it could execute the core build and test runner but not
 the platform project. On a developer machine, `dotnet workload restore` and a
 normal NuGet restore provide the remaining MAUI/SkiaSharp build verification.
+
+## Project knowledge
+
+The [`knowledge/`](knowledge/index.md) directory is an Open Knowledge Format
+(OKF) bundle for this project. It captures the goal, architecture, rendering
+trade-offs, workarounds, testing strategy, release gates, and roadmap as linked
+Markdown concepts so the reasoning remains easy to inspect and update with the
+code.
