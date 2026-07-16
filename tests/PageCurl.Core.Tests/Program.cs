@@ -10,6 +10,7 @@ internal static class Program
             (nameof(PageCurlGeometryTests), PageCurlGeometryTests.RunAll),
             (nameof(PageTurnPointerCaptureTests), PageTurnPointerCaptureTests.RunAll),
             (nameof(DemoNavigationStateTests), DemoNavigationStateTests.RunAll),
+            (nameof(PageTurnPerformanceTests), PageTurnPerformanceTests.RunAll),
         };
 
         try
