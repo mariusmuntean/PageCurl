@@ -46,4 +46,19 @@ internal static class TestAssert
             throw new InvalidOperationException($"Expected {value} in range [{minimum}, {maximum}].");
         }
     }
+
+    public static void Throws<TException>(Action action)
+        where TException : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (TException)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
+    }
 }

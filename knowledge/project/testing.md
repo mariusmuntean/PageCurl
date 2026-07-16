@@ -27,7 +27,8 @@ is a dependency-free executable runner. It checks:
 - threshold snapping, cancellation, spring convergence, and one-shot
   completion events;
 - immediate reduced-motion completion and forward/backward programmatic turns;
-- pure demo navigation boundaries and direction-aware under-page selection;
+- reusable page-navigation boundaries, property notifications, and
+  direction-aware under-page selection;
 - finite and bounded mesh coordinates, UV and shading ranges, and front/back
   triangle counts;
 - pointer capture accepts one finger, ignores other fingers, and releases the

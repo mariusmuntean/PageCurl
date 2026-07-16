@@ -1,25 +1,29 @@
-using PageCurl.Core;
 using System.ComponentModel;
 
-namespace PageCurl.Demo.Model;
+namespace PageCurl.Core;
 
-public sealed class DemoNavigationState : INotifyPropertyChanged
+/// <summary>
+/// Tracks a bounded page index and exposes direction-aware navigation state.
+/// It is platform-free so a consuming application can keep navigation logic
+/// testable without referencing a UI framework.
+/// </summary>
+public sealed class PageNavigationState : INotifyPropertyChanged
 {
-    private readonly int _pageCount;
-
-    public DemoNavigationState(int pageCount)
+    public PageNavigationState(int pageCount)
     {
         if (pageCount < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(pageCount), "At least one page is required.");
         }
 
-        _pageCount = pageCount;
+        PageCount = pageCount;
     }
+
+    public int PageCount { get; }
 
     public int PageIndex { get; private set; }
 
-    public bool CanTurnForward => PageIndex < _pageCount - 1;
+    public bool CanTurnForward => PageIndex < PageCount - 1;
 
     public bool CanTurnBackward => PageIndex > 0;
 
@@ -44,7 +48,7 @@ public sealed class DemoNavigationState : INotifyPropertyChanged
 
     public int GetUnderPageIndex(PageTurnDirection direction) => direction switch
     {
-        PageTurnDirection.Forward => Math.Min(PageIndex + 1, _pageCount - 1),
+        PageTurnDirection.Forward => Math.Min(PageIndex + 1, PageCount - 1),
         PageTurnDirection.Backward => Math.Max(PageIndex - 1, 0),
         _ => PageIndex,
     };

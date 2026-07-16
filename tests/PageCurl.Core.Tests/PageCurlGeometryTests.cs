@@ -15,6 +15,7 @@ internal static class PageCurlGeometryTests
         Invalid_pose_generates_a_flat_front_page();
         Repeated_builds_reuse_mesh_arrays();
         Sampled_drag_poses_remain_finite_and_bounded();
+        Corner_origin_drag_poses_remain_finite_and_bounded();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -154,6 +155,35 @@ internal static class PageCurlGeometryTests
                 AssertFiniteAndBounded(buffer.FrontVertices, buffer.FrontVertexCount);
                 AssertFiniteAndBounded(buffer.BackVertices, buffer.BackVertexCount);
             }
+        }
+    }
+
+    private static void Corner_origin_drag_poses_remain_finite_and_bounded()
+    {
+        var options = new PageCurlOptions { MeshColumns = 10, MeshRows = 5 };
+        var buffer = new PageMeshBuffer(options);
+        var cases = new[]
+        {
+            (Start: new Vector2(0, 0), Pointer: new Vector2(55, 35), Direction: PageTurnDirection.Backward),
+            (Start: new Vector2(0, PageSize.Y), Pointer: new Vector2(55, 125), Direction: PageTurnDirection.Backward),
+            (Start: new Vector2(PageSize.X, 0), Pointer: new Vector2(45, 35), Direction: PageTurnDirection.Forward),
+            (Start: new Vector2(PageSize.X, PageSize.Y), Pointer: new Vector2(45, 125), Direction: PageTurnDirection.Forward),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var pose = PageCurlGeometry.ComputePose(
+                PageSize,
+                testCase.Start,
+                testCase.Pointer,
+                testCase.Direction,
+                0.5f,
+                options);
+
+            PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+            AssertFiniteAndBounded(buffer.FrontVertices, buffer.FrontVertexCount);
+            AssertFiniteAndBounded(buffer.BackVertices, buffer.BackVertexCount);
         }
     }
 

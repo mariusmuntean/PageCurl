@@ -19,9 +19,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../PageCurl.Demo.Model/PageCurl.Demo.Model.csproj" />
     <ProjectReference Include="../PageCurl.Maui/PageCurl.Maui.csproj" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#0F1020" BaseSize="128,128" />
   </ItemGroup>
 </Project>

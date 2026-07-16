@@ -9,6 +9,5 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/PageCurl.Core/PageCurl.Core.csproj" />
-    <ProjectReference Include="../../src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj" />
   </ItemGroup>
 </Project>

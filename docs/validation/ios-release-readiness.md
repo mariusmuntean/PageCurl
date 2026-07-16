@@ -23,17 +23,21 @@ The optional first argument is an iPhone simulator UDID. Set
 user-local SDK at `/Users/marius/.dotnet`, builds the explicit
 `net10.0-ios` simulator target, installs `com.example.pagecurldemo`, launches
 it, and captures light/dark portrait screenshots.
+The script cleans generated native artifacts before the build, verifies the
+demo is still foregrounded through the accessibility tree when `idb` is
+available, and waits 10 seconds after that check so the first Skia surface has
+completed its simulator compositor warm-up.
 
 ## Latest simulator run
 
 | Evidence | Result | Location/notes |
 | --- | --- | --- |
-| SDK/workload alignment | Pass | `.NET --version` = `10.0.301`; `maui-ios` and `maui-android` installed |
+| SDK/workload alignment | Pass | `.NET --version` = `10.0.301`; Xcode `26.6`; `maui-ios` and `maui-android` installed |
 | iOS simulator build | Pass | Release `iossimulator-arm64`; 0 warnings, 0 errors |
-| Install and launch | Pass | Bundle `com.example.pagecurldemo` |
-| Light appearance | Pass | `.artifacts/ios-smoke/latest/light.png` |
-| Dark appearance | Pass | `.artifacts/ios-smoke/latest/dark.png` |
-| Portrait frame | Pass | iPhone 17 Pro simulator screenshot |
+| Install and launch | Pass | Bundle `com.example.pagecurldemo`; foreground accessibility check passed |
+| Light appearance | Pass | `.artifacts/ios-smoke/latest/light.png` (1206×2622 PNG) |
+| Dark appearance | Pass | `.artifacts/ios-smoke/latest/dark.png` (1206×2622 PNG) |
+| Portrait frame | Pass | iPhone 17 Pro on iOS 26.2 simulator |
 | Previous/Next commands | Pass | Accessibility tree exposed both labeled commands; Next advanced Page 1 to Page 2 |
 | Reduced motion | Pass | Switch reported Value 1; Next advanced Page 2 to Page 3 without the settle path |
 | Rotation and safe area | Pass | Landscape rotation kept controls/page inside the safe-area container |

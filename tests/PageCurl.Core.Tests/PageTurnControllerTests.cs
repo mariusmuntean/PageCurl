@@ -10,6 +10,7 @@ internal static class PageTurnControllerTests
     public static void RunAll()
     {
         BeginDrag_chooses_edge_and_clamps_drag_start_to_page();
+        BeginDrag_supports_all_page_corners();
         UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection.Forward);
         UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection.Backward);
         Release_before_threshold_settles_back_and_reports_cancelled_turn();
@@ -38,6 +39,26 @@ internal static class PageTurnControllerTests
         snapshot = controller.Snapshot;
         TestAssert.Equal(PageTurnDirection.Backward, snapshot.Direction);
         TestAssert.Equal(new Vector2(0, 200), snapshot.DragStartPosition);
+    }
+
+    private static void BeginDrag_supports_all_page_corners()
+    {
+        var cases = new[]
+        {
+            (Pointer: new Vector2(0, 0), Direction: PageTurnDirection.Backward, Start: new Vector2(0, 0)),
+            (Pointer: new Vector2(0, PageSize.Y), Direction: PageTurnDirection.Backward, Start: new Vector2(0, PageSize.Y)),
+            (Pointer: new Vector2(PageSize.X, 0), Direction: PageTurnDirection.Forward, Start: new Vector2(PageSize.X, 0)),
+            (Pointer: new Vector2(PageSize.X, PageSize.Y), Direction: PageTurnDirection.Forward, Start: new Vector2(PageSize.X, PageSize.Y)),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var controller = new PageTurnController();
+
+            TestAssert.True(controller.BeginDrag(testCase.Pointer, PageSize));
+            TestAssert.Equal(testCase.Direction, controller.Snapshot.Direction);
+            TestAssert.Equal(testCase.Start, controller.Snapshot.DragStartPosition);
+        }
     }
 
     private static void UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection direction)
@@ -98,7 +119,12 @@ internal static class PageTurnControllerTests
     {
         var controller = new PageTurnController();
         PageTurnCompletedEventArgs? completed = null;
-        controller.PageTurnCompleted += (_, args) => completed = args;
+        var completionCount = 0;
+        controller.PageTurnCompleted += (_, args) =>
+        {
+            completionCount++;
+            completed = args;
+        };
 
         controller.BeginDrag(new Vector2(90, 100), PageSize);
         controller.UpdateDrag(new Vector2(25, 100));
@@ -108,13 +134,19 @@ internal static class PageTurnControllerTests
         TestAssert.Equal(1f, controller.Snapshot.Progress);
         TestAssert.NotNull(completed);
         TestAssert.True(completed!.Committed);
+        TestAssert.Equal(1, completionCount);
     }
 
     private static void Programmatic_forward_turn_starts_from_the_forward_edge()
     {
         var controller = new PageTurnController();
         PageTurnCompletedEventArgs? completed = null;
-        controller.PageTurnCompleted += (_, args) => completed = args;
+        var completionCount = 0;
+        controller.PageTurnCompleted += (_, args) =>
+        {
+            completionCount++;
+            completed = args;
+        };
 
         TestAssert.True(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Forward));
 
@@ -127,13 +159,19 @@ internal static class PageTurnControllerTests
 
         TestAssert.NotNull(completed);
         TestAssert.True(completed!.Committed);
+        TestAssert.Equal(1, completionCount);
     }
 
     private static void Programmatic_backward_turn_starts_from_the_backward_edge()
     {
         var controller = new PageTurnController();
         PageTurnCompletedEventArgs? completed = null;
-        controller.PageTurnCompleted += (_, args) => completed = args;
+        var completionCount = 0;
+        controller.PageTurnCompleted += (_, args) =>
+        {
+            completionCount++;
+            completed = args;
+        };
 
         TestAssert.True(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Backward));
 
@@ -146,6 +184,7 @@ internal static class PageTurnControllerTests
 
         TestAssert.NotNull(completed);
         TestAssert.True(completed!.Committed);
+        TestAssert.Equal(1, completionCount);
     }
 
     private static void Programmatic_turn_rejects_invalid_sizes_and_busy_controller()

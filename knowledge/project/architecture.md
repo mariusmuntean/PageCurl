@@ -11,24 +11,23 @@ timestamp: 2026-07-16T00:00:00Z
 
 # Layered design
 
-The solution has five deliberately narrow layers:
+The solution has four deliberately narrow layers:
 
 1. [`PageCurl.Core`](../../src/PageCurl.Core/PageCurl.Core.csproj) is a
    `net10.0` library with no UI dependency. [`PageTurnController`](../../src/PageCurl.Core/PageTurnController.cs)
    owns pointer state, direction, progress, cancellation, spring settling, and
    completion events. [`PageCurlGeometry`](../../src/PageCurl.Core/PageCurlGeometry.cs)
-   turns a snapshot into a bounded cylinder-like mesh.
+   turns a snapshot into a bounded cylinder-like mesh. [`PageNavigationState`](../../src/PageCurl.Core/PageNavigationState.cs)
+   keeps page-index and boundary rules reusable and testable without a UI framework.
 2. [`PageCurl.Maui`](../../src/PageCurl.Maui/PageCurl.Maui.csproj) adapts the
    core to MAUI. [`PageTurnView`](../../src/PageCurl.Maui/PageTurnView.cs) owns
    the fixed Skia buffers, image shaders, touch subscription, invalidation, and
    dispatcher-driven settling loop. It does not reimplement page math.
-3. [`PageCurl.Demo.Model`](../../src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj)
-   owns the testable page-index and boundary rules for the sample.
-4. [`PageCurl.Demo`](../../src/PageCurl.Demo/PageCurl.Demo.csproj) shows the
+3. [`PageCurl.Demo`](../../src/PageCurl.Demo/PageCurl.Demo.csproj) shows the
    public API with disposable generated pages, accessible commands, reduced
-   motion, theme resources, and safe-area layout. It is useful for visual
-   inspection but is not a library dependency.
-5. [`PageCurl.Core.Tests`](../../tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj)
+   motion, theme resources, side/corner curl affordances, and safe-area layout.
+   It is useful for visual inspection but is not a library dependency.
+4. [`PageCurl.Core.Tests`](../../tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj)
    exercises the core with a small executable runner. Tests do not need MAUI,
    a graphics context, a device, or a test adapter.
 

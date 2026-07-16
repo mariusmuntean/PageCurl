@@ -23,10 +23,28 @@ APP="$ROOT/src/PageCurl.Demo/bin/Release/net10.0-ios/iossimulator-arm64/PageCurl
 BUNDLE_ID="com.example.pagecurldemo"
 mkdir -p "$OUTPUT"
 
+assert_demo_foreground() {
+    if ! command -v idb >/dev/null 2>&1; then
+        return 0
+    fi
+
+    for _ in 1 2 3 4 5; do
+        if idb ui describe-all --udid "$DEVICE" --json 2>/dev/null | rg -q '"AXLabel":"Page Curl Demo"'; then
+            return 0
+        fi
+        sleep 1
+    done
+
+    echo "The demo did not remain in the foreground after launch." >&2
+    return 1
+}
+
 echo "Building the iOS simulator demo..."
+rm -rf "$ROOT/src/PageCurl.Core/bin" "$ROOT/src/PageCurl.Core/obj" \
+    "$ROOT/src/PageCurl.Maui/bin" "$ROOT/src/PageCurl.Maui/obj" \
+    "$ROOT/src/PageCurl.Demo/bin" "$ROOT/src/PageCurl.Demo/obj"
 dotnet restore "$ROOT/src/PageCurl.Demo/PageCurl.Demo.csproj" -p:TargetFrameworks=net10.0-ios
 dotnet restore "$ROOT/src/PageCurl.Maui/PageCurl.Maui.csproj" -p:TargetFrameworks=net10.0-ios
-dotnet restore "$ROOT/src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj" -p:TargetFrameworks=net10.0
 dotnet restore "$ROOT/src/PageCurl.Core/PageCurl.Core.csproj" -p:TargetFrameworks=net10.0
 dotnet build "$ROOT/src/PageCurl.Demo/PageCurl.Demo.csproj" -c Release -f net10.0-ios --no-restore
 
@@ -43,13 +61,16 @@ xcrun simctl ui "$DEVICE" appearance light
 sleep 2
 xcrun simctl terminate "$DEVICE" "$BUNDLE_ID" >/dev/null 2>&1 || true
 xcrun simctl launch "$DEVICE" "$BUNDLE_ID"
-sleep 5
+assert_demo_foreground
+# Let the first Skia surface finish its simulator compositor warm-up before capture.
+sleep 10
 xcrun simctl io "$DEVICE" screenshot "$OUTPUT/light.png"
 xcrun simctl ui "$DEVICE" appearance dark
 sleep 2
 xcrun simctl terminate "$DEVICE" "$BUNDLE_ID" >/dev/null 2>&1 || true
 xcrun simctl launch "$DEVICE" "$BUNDLE_ID"
-sleep 5
+assert_demo_foreground
+sleep 10
 xcrun simctl io "$DEVICE" screenshot "$OUTPUT/dark.png"
 
 echo "Device: $DEVICE"

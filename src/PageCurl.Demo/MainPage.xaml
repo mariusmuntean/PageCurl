@@ -5,40 +5,215 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:curl="clr-namespace:PageCurl.Maui;assembly=PageCurl.Maui"
     SafeAreaEdges="All"
-    BackgroundColor="{AppThemeBinding Light={StaticResource PageBackgroundLight}, Dark={StaticResource PageBackgroundDark}}">
-    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="24" RowSpacing="16">
-        <VerticalStackLayout Spacing="4">
-            <Label Text="PageCurl.Maui" FontSize="24" FontAttributes="Bold" />
-            <Label x:Name="StatusLabel" Text="Drag from either page edge" FontSize="14" />
-        </VerticalStackLayout>
-        <HorizontalStackLayout Grid.Row="1" Spacing="12">
-            <Button
-                Text="Previous"
-                Clicked="OnPreviousClicked"
-                IsEnabled="{Binding CanTurnBackward}"
-                SemanticProperties.Description="Turn to previous page" />
-            <Button
-                Text="Next"
-                Clicked="OnNextClicked"
-                IsEnabled="{Binding CanTurnForward}"
-                SemanticProperties.Description="Turn to next page" />
-            <Label Text="Reduce motion" VerticalOptions="Center" />
-            <Switch
-                x:Name="ReduceMotionSwitch"
-                IsToggled="{Binding Source={x:Reference PageView}, Path=ReduceMotion, Mode=TwoWay}"
-                SemanticProperties.Description="Reduce page-turn motion"
-                VerticalOptions="Center" />
-        </HorizontalStackLayout>
+    Background="{AppThemeBinding Light={StaticResource PageBackgroundBrushLight}, Dark={StaticResource PageBackgroundBrushDark}}">
+    <Grid Padding="20,18" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14" HorizontalOptions="Fill" VerticalOptions="Fill">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <Border
+                WidthRequest="42"
+                HeightRequest="42"
+                Padding="0"
+                Background="{StaticResource BrandBrush}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 14">
+                <Label
+                    Text="↗"
+                    FontSize="22"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    TextColor="{StaticResource ButtonTextDark}" />
+            </Border>
+            <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                <Label Text="PAGECURL" Style="{StaticResource EyebrowLabel}" />
+                <Label Text="A tactile reading surface" Style="{StaticResource MutedLabel}" />
+            </VerticalStackLayout>
+            <Border
+                Grid.Column="2"
+                Padding="10,7"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 14"
+                VerticalOptions="Center">
+                <Label
+                    x:Name="StatusLabel"
+                    Text="READY TO TURN"
+                    FontSize="10"
+                    FontAttributes="Bold"
+                    CharacterSpacing="1"
+                    TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <VerticalStackLayout Spacing="5" VerticalOptions="Center">
+                <Label Text="The page is the interface." FontSize="27" FontAttributes="Bold" />
+                <Label
+                    x:Name="PageHintLabel"
+                    Text="Drag from a side or corner to reveal the next fold."
+                    Style="{StaticResource MutedLabel}"
+                    LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+            <Border
+                Grid.Column="1"
+                Padding="12,9"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 16"
+                VerticalOptions="Center">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="PAGE" Style="{StaticResource EyebrowLabel}" HorizontalTextAlignment="Center" />
+                    <Label x:Name="PageCounterLabel" Text="01 / 04" FontSize="17" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
         <Border
             Grid.Row="2"
+            Padding="9"
+            BackgroundColor="{AppThemeBinding Light={StaticResource StageLight}, Dark={StaticResource StageDark}}"
             Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}"
             StrokeThickness="1"
-            Background="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
-            Padding="0">
-            <curl:PageTurnView
-                x:Name="PageView"
-                SurfaceColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}" />
+            StrokeShape="RoundRectangle 26">
+            <Grid
+                x:Name="StageGrid"
+                HeightRequest="340"
+                MinimumHeightRequest="260"
+                SizeChanged="OnStageSizeChanged">
+                <curl:PageTurnView
+                    x:Name="PageView"
+                    SurfaceColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}" />
+
+                <Grid
+                    InputTransparent="True"
+                    ColumnDefinitions="42,*,42"
+                    RowDefinitions="42,*,42"
+                    Margin="8">
+                    <Border
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        WidthRequest="34"
+                        HeightRequest="34"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        HorizontalOptions="Start"
+                        VerticalOptions="Start"
+                        Opacity="0.9">
+                        <Label Text="↖" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                    </Border>
+                    <Border
+                        Grid.Row="0"
+                        Grid.Column="2"
+                        WidthRequest="34"
+                        HeightRequest="34"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        HorizontalOptions="End"
+                        VerticalOptions="Start"
+                        Opacity="0.9">
+                        <Label Text="↗" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                    </Border>
+                    <Border
+                        Grid.Row="2"
+                        Grid.Column="0"
+                        WidthRequest="34"
+                        HeightRequest="34"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        HorizontalOptions="Start"
+                        VerticalOptions="End"
+                        Opacity="0.9">
+                        <Label Text="↙" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                    </Border>
+                    <Border
+                        Grid.Row="2"
+                        Grid.Column="2"
+                        WidthRequest="34"
+                        HeightRequest="34"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        HorizontalOptions="End"
+                        VerticalOptions="End"
+                        Opacity="0.9">
+                        <Label Text="↘" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                    </Border>
+                    <Border
+                        Grid.Row="1"
+                        Grid.Column="0"
+                        WidthRequest="30"
+                        HeightRequest="112"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 16"
+                        HorizontalOptions="Start"
+                        VerticalOptions="Center"
+                        Opacity="0.85">
+                        <Label Text="‹" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                    </Border>
+                    <Border
+                        Grid.Row="1"
+                        Grid.Column="2"
+                        WidthRequest="30"
+                        HeightRequest="112"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 16"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Opacity="0.85">
+                        <Label Text="›" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                    </Border>
+                </Grid>
+            </Grid>
         </Border>
-        <Label Grid.Row="3" Text="Swipe from either edge or use the labeled buttons." FontSize="13" />
+
+        <VerticalStackLayout Grid.Row="3" Spacing="12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Label
+                    Text="Side rails and corner markers are touch-through hints."
+                    Style="{StaticResource MutedLabel}"
+                    VerticalOptions="Center"
+                    LineBreakMode="WordWrap" />
+                <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                    <Label Text="Reduce motion" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                    <Switch
+                        x:Name="ReduceMotionSwitch"
+                        IsToggled="{Binding Source={x:Reference PageView}, Path=ReduceMotion, Mode=TwoWay}"
+                        SemanticProperties.Description="Reduce page-turn motion" />
+                </HorizontalStackLayout>
+            </Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button
+                    Text="‹  Previous"
+                    Style="{StaticResource ReaderButton}"
+                    Clicked="OnPreviousClicked"
+                    IsEnabled="{Binding CanTurnBackward}"
+                    SemanticProperties.Description="Turn to previous page" />
+                <Button
+                    Grid.Column="1"
+                    Text="Next page  ›"
+                    Style="{StaticResource PrimaryReaderButton}"
+                    Clicked="OnNextClicked"
+                    IsEnabled="{Binding CanTurnForward}"
+                    SemanticProperties.Description="Turn to next page" />
+            </Grid>
+        </VerticalStackLayout>
     </Grid>
 </ContentPage>
