@@ -40,6 +40,7 @@ public partial class MainPage : ContentPage
         PageView.FrontImage = _pages[_pageIndex];
         PageView.BackImage = _pages[_pageIndex];
         PageView.UnderPageImage = _pages[Math.Clamp(_pageIndex + 1, 0, _pages.Length - 1)];
+        PageView.PreviousPageImage = _pages[Math.Clamp(_pageIndex - 1, 0, _pages.Length - 1)];
         StatusLabel.Text = $"Page {_pageIndex + 1} of {_pages.Length} · drag from either edge";
     }
 

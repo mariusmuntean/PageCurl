@@ -37,8 +37,9 @@ public sealed class PageTurnView : SKGLView
 
     private readonly PageCurlOptions _options;
     private readonly PageMeshBuffer _meshBuffer;
-    private readonly SKPaint _frontPaint = new() { IsAntialias = true };
-    private readonly SKPaint _backPaint = new() { IsAntialias = true };
+    private SKPaint? _frontPaint;
+    private SKPaint? _backPaint;
+    private SKPaint? _placeholderPaint;
     private readonly SKPoint[] _frontPoints;
     private readonly SKPoint[] _frontTexturePoints;
     private readonly SKColor[] _frontColors;
@@ -50,8 +51,11 @@ public sealed class PageTurnView : SKGLView
     private SKImage? _frontShaderImage;
     private SKImage? _backShaderImage;
     private Vector2 _canvasSize;
-    private bool _touchActive;
+    private readonly PageTurnPointerCapture _pointerCapture = new();
     private bool _animationLoopActive;
+    private int _animationGeneration;
+    private bool _eventsAttached;
+    private bool _disposed;
 
     public PageTurnView()
         : this(new PageCurlOptions())
@@ -72,9 +76,8 @@ public sealed class PageTurnView : SKGLView
         _backColors = new SKColor[_meshBuffer.BackVertices.Length];
 
         EnableTouchEvents = true;
-        PaintSurface += OnPaintSurface;
-        Touch += OnTouch;
-        SizeChanged += (_, _) => InvalidateSurface();
+        AttachViewHandlers();
+        EnsureGraphicsResources();
     }
 
     public SKImage? FrontImage
@@ -95,6 +98,20 @@ public sealed class PageTurnView : SKGLView
         set => SetValue(UnderPageImageProperty, value);
     }
 
+    /// <summary>Optional page revealed while the user turns backward.</summary>
+    public static readonly BindableProperty PreviousPageImageProperty = BindableProperty.Create(
+        nameof(PreviousPageImage),
+        typeof(SKImage),
+        typeof(PageTurnView),
+        default(SKImage),
+        propertyChanged: OnImageChanged);
+
+    public SKImage? PreviousPageImage
+    {
+        get => (SKImage?)GetValue(PreviousPageImageProperty);
+        set => SetValue(PreviousPageImageProperty, value);
+    }
+
     public PageTurnController Controller { get; }
 
     public PageCurlOptions Options => _options;
@@ -107,27 +124,66 @@ public sealed class PageTurnView : SKGLView
 
     public void CancelInteraction()
     {
+        _pointerCapture.Cancel();
         Controller.Cancel();
+        StartAnimationLoop();
+        InvalidateSurface();
+    }
+
+    protected override void OnHandlerChanged()
+    {
+        base.OnHandlerChanged();
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (Handler is null)
+        {
+            _pointerCapture.Cancel();
+            Controller.Cancel();
+            StopAnimationLoop();
+            DetachViewHandlers();
+            ReleaseGraphicsResources();
+            return;
+        }
+
+        AttachViewHandlers();
+        EnsureGraphicsResources();
         StartAnimationLoop();
         InvalidateSurface();
     }
 
     private static void OnImageChanged(BindableObject bindable, object? oldValue, object? newValue)
     {
-        ((PageTurnView)bindable).InvalidateSurface();
+        var view = (PageTurnView)bindable;
+        if (!view._disposed)
+        {
+            view.InvalidateSurface();
+        }
     }
 
     private void OnPaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        EnsureGraphicsResources();
         var canvas = e.Surface.Canvas;
         var info = e.Info;
         _canvasSize = new Vector2(MathF.Max(info.Width, 0), MathF.Max(info.Height, 0));
         canvas.Clear(new SKColor(235, 235, 235));
 
         var pageRect = new SKRect(0, 0, _canvasSize.X, _canvasSize.Y);
-        DrawImage(canvas, UnderPageImage, pageRect);
+        var snapshot = Controller.Snapshot;
+        var underPageImage = snapshot.Direction == PageTurnDirection.Backward
+            ? PreviousPageImage ?? UnderPageImage
+            : UnderPageImage;
+        DrawImage(canvas, underPageImage, pageRect);
 
-        if (Controller.Snapshot.State == PageTurnState.Idle)
+        if (snapshot.State == PageTurnState.Idle)
         {
             DrawImage(canvas, FrontImage, pageRect);
             return;
@@ -135,12 +191,17 @@ public sealed class PageTurnView : SKGLView
 
         var pose = Controller.GetCurlPose(_canvasSize);
         PageCurlGeometry.Build(_meshBuffer, _canvasSize, pose, _options);
-        DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors);
-        DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors);
+        DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors);
+        DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint!, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors);
     }
 
     private void OnTouch(object? sender, SKTouchEventArgs e)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         var pageSize = _canvasSize;
         if (!IsValidPageSize(pageSize))
         {
@@ -151,16 +212,25 @@ public sealed class PageTurnView : SKGLView
         switch (e.ActionType)
         {
             case SKTouchAction.Pressed:
-                _touchActive = Controller.BeginDrag(pointer, pageSize);
-                if (_touchActive)
+                if (!_pointerCapture.TryCapture(e.Id))
+                {
+                    e.Handled = true;
+                    break;
+                }
+
+                if (Controller.BeginDrag(pointer, pageSize))
                 {
                     e.Handled = true;
                     InvalidateSurface();
                 }
+                else
+                {
+                    _pointerCapture.Cancel();
+                }
 
                 break;
             case SKTouchAction.Moved:
-                if (_touchActive)
+                if (_pointerCapture.Owns(e.Id))
                 {
                     Controller.UpdateDrag(pointer);
                     e.Handled = true;
@@ -169,10 +239,9 @@ public sealed class PageTurnView : SKGLView
 
                 break;
             case SKTouchAction.Released:
-                if (_touchActive)
+                if (_pointerCapture.Release(e.Id))
                 {
                     Controller.EndDrag();
-                    _touchActive = false;
                     e.Handled = true;
                     StartAnimationLoop();
                     InvalidateSurface();
@@ -180,10 +249,9 @@ public sealed class PageTurnView : SKGLView
 
                 break;
             case SKTouchAction.Cancelled:
-                if (_touchActive)
+                if (_pointerCapture.Release(e.Id))
                 {
                     Controller.Cancel();
-                    _touchActive = false;
                     e.Handled = true;
                     StartAnimationLoop();
                     InvalidateSurface();
@@ -195,27 +263,41 @@ public sealed class PageTurnView : SKGLView
 
     private void StartAnimationLoop()
     {
-        if (_animationLoopActive || Controller.Snapshot.State != PageTurnState.Settling || Dispatcher is null)
+        if (_disposed || _animationLoopActive || Controller.Snapshot.State != PageTurnState.Settling || Dispatcher is null)
         {
             return;
         }
 
         _animationLoopActive = true;
+        var generation = ++_animationGeneration;
         Dispatcher.StartTimer(TimeSpan.FromMilliseconds(16), () =>
         {
+            if (_disposed || Handler is null || generation != _animationGeneration)
+            {
+                if (generation == _animationGeneration)
+                {
+                    _animationLoopActive = false;
+                }
+
+                return false;
+            }
+
             var active = Controller.Tick(1.0 / 60.0);
             InvalidateSurface();
-            _animationLoopActive = active;
+            if (generation == _animationGeneration)
+            {
+                _animationLoopActive = active;
+            }
+
             return active;
         });
     }
 
-    private static void DrawImage(SKCanvas canvas, SKImage? image, SKRect destination)
+    private void DrawImage(SKCanvas canvas, SKImage? image, SKRect destination)
     {
         if (image is null)
         {
-            using var placeholder = new SKPaint { Color = new SKColor(250, 250, 250), IsAntialias = true };
-            canvas.DrawRect(destination, placeholder);
+            canvas.DrawRect(destination, _placeholderPaint!);
             return;
         }
 
@@ -285,6 +367,63 @@ public sealed class PageTurnView : SKGLView
         shader?.Dispose();
         shader = image?.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp);
         shaderImage = image;
+    }
+
+    private void AttachViewHandlers()
+    {
+        if (_eventsAttached || _disposed)
+        {
+            return;
+        }
+
+        PaintSurface += OnPaintSurface;
+        Touch += OnTouch;
+        SizeChanged += OnSizeChanged;
+        _eventsAttached = true;
+    }
+
+    private void DetachViewHandlers()
+    {
+        if (!_eventsAttached)
+        {
+            return;
+        }
+
+        PaintSurface -= OnPaintSurface;
+        Touch -= OnTouch;
+        SizeChanged -= OnSizeChanged;
+        _eventsAttached = false;
+    }
+
+    private void OnSizeChanged(object? sender, EventArgs e) => InvalidateSurface();
+
+    private void EnsureGraphicsResources()
+    {
+        _frontPaint ??= new SKPaint { IsAntialias = true };
+        _backPaint ??= new SKPaint { IsAntialias = true };
+        _placeholderPaint ??= new SKPaint { Color = new SKColor(250, 250, 250), IsAntialias = true };
+    }
+
+    private void ReleaseGraphicsResources()
+    {
+        _frontShader?.Dispose();
+        _frontShader = null;
+        _frontShaderImage = null;
+        _backShader?.Dispose();
+        _backShader = null;
+        _backShaderImage = null;
+        _frontPaint?.Dispose();
+        _frontPaint = null;
+        _backPaint?.Dispose();
+        _backPaint = null;
+        _placeholderPaint?.Dispose();
+        _placeholderPaint = null;
+    }
+
+    private void StopAnimationLoop()
+    {
+        _animationGeneration++;
+        _animationLoopActive = false;
     }
 
     private static bool IsValidPageSize(Vector2 value) =>

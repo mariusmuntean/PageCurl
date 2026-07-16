@@ -67,15 +67,21 @@ public static class PageCurlGeometry
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
 
-        if (!IsValidPageSize(pageSize) || !pose.IsActive || pose.Progress <= Epsilon || pose.Radius <= Epsilon)
+        if (!IsValidPageSize(pageSize)
+            || !pose.IsActive
+            || !IsFinite(pose.Position)
+            || !IsFinite(pose.Direction)
+            || pose.Direction.LengthSquared() <= Epsilon
+            || !float.IsFinite(pose.Progress)
+            || pose.Progress is <= Epsilon or > 1
+            || !float.IsFinite(pose.Radius)
+            || pose.Radius <= Epsilon)
         {
             WriteFlatPage(buffer, pageSize);
             return;
         }
 
-        var direction = IsFinite(pose.Direction) && pose.Direction.LengthSquared() > Epsilon
-            ? Vector2.Normalize(pose.Direction)
-            : Vector2.UnitX;
+        var direction = Vector2.Normalize(pose.Direction);
         var angle = MathF.Atan2(direction.Y, direction.X);
         var cos = MathF.Cos(angle);
         var sin = MathF.Sin(angle);

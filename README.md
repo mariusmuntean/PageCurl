@@ -43,6 +43,7 @@ reuse or dispose them when the view is no longer using them.
 TurnView.FrontImage = currentPage;
 TurnView.BackImage = currentPage; // optional backside texture
 TurnView.UnderPageImage = nextPage;
+TurnView.PreviousPageImage = previousPage; // optional page for backward turns
 TurnView.PageTurnCompleted += (_, e) =>
 {
     if (e.Committed)
@@ -54,6 +55,8 @@ TurnView.PageTurnCompleted += (_, e) =>
 
 `PageTurnController` and `PageCurlGeometry` are public as well, so an app can
 use the tested interaction/mesh layer with another renderer if required.
+Set `PreviousPageImage` when backward turns should reveal a different page;
+when it is not set, the control falls back to `UnderPageImage` for compatibility.
 
 ## Performance choices
 

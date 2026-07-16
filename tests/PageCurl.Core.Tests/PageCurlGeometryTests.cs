@@ -12,6 +12,7 @@ internal static class PageCurlGeometryTests
         Mid_curl_produces_finite_front_and_back_mesh_regions();
         Mesh_texture_coordinates_and_shading_are_valid();
         Inactive_pose_generates_a_flat_front_page();
+        Invalid_pose_generates_a_flat_front_page();
         Repeated_builds_reuse_mesh_arrays();
         Sampled_drag_poses_remain_finite_and_bounded();
     }
@@ -80,6 +81,27 @@ internal static class PageCurlGeometryTests
         TestAssert.Equal(0, buffer.BackVertexCount);
         TestAssert.Equal(new Vector2(0, 0), buffer.FrontVertices[0].Position);
         TestAssert.Equal(new Vector2(PageSize.X, PageSize.Y), buffer.FrontVertices[5].Position);
+    }
+
+    private static void Invalid_pose_generates_a_flat_front_page()
+    {
+        var options = new PageCurlOptions { MeshColumns = 4, MeshRows = 3 };
+        var invalidPoses = new[]
+        {
+            new CurlPose(new(float.NaN, 10), Vector2.UnitX, 25, 0.5f, PageTurnDirection.Forward, true),
+            new CurlPose(new(50, 80), Vector2.UnitX, float.PositiveInfinity, 0.5f, PageTurnDirection.Forward, true),
+            new CurlPose(new(50, 80), Vector2.UnitX, 25, float.NaN, PageTurnDirection.Forward, true),
+        };
+
+        foreach (var pose in invalidPoses)
+        {
+            var buffer = new PageMeshBuffer(options);
+            PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+            TestAssert.Equal(6, buffer.FrontVertexCount);
+            TestAssert.Equal(0, buffer.BackVertexCount);
+            AssertFiniteAndBounded(buffer.FrontVertices, buffer.FrontVertexCount);
+        }
     }
 
     private static void Repeated_builds_reuse_mesh_arrays()

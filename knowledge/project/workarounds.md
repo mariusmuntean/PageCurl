@@ -36,6 +36,9 @@ the project.
 - `PageTurnView.CancelInteraction()` drives the controller back to the resting
   endpoint. Call it when a page is removed, the view is recycled, or navigation
   interrupts a gesture.
+- Supply `PreviousPageImage` as well as `UnderPageImage` when backward turns
+  should reveal a different page. If the former is omitted, the control falls
+  back to the latter for compatibility.
 - The controller ignores non-finite coordinates and clamps all input to the
   current page. This is a defensive boundary for pointer and layout races.
 - The control treats images as caller-owned. Keep them alive until the view no

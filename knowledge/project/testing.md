@@ -28,6 +28,8 @@ is a dependency-free executable runner. It checks:
   completion events;
 - finite and bounded mesh coordinates, UV and shading ranges, and front/back
   triangle counts;
+- pointer capture accepts one finger, ignores other fingers, and releases the
+  owner on completion or cancellation;
 - reuse of mesh buffers so a frame does not allocate geometry arrays.
 
 Run it with:
@@ -47,7 +49,8 @@ dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release
 
 On every supported release target, exercise a short drag, a reversal, a
 threshold release in both directions, cancellation during settling, repeated
-turns, rotation, background/foreground transitions, and image replacement.
+turns, rotation, background/foreground transitions, image replacement, and
+both direction-specific under-pages.
 Profile cold and warm frames on representative low-end Android and current iOS
 hardware. Record frame time, allocations, memory growth, and GPU/CPU usage.
 Review texture orientation, backside readability, shadows, touch ownership,

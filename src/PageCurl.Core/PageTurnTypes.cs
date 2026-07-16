@@ -17,6 +17,41 @@ public enum PageTurnState
     Settling,
 }
 
+/// <summary>
+/// Owns one pointer for the duration of a page gesture so another finger
+/// cannot move or release the active turn.
+/// </summary>
+public sealed class PageTurnPointerCapture
+{
+    private long? _activePointerId;
+
+    public bool TryCapture(long pointerId)
+    {
+        if (_activePointerId.HasValue)
+        {
+            return false;
+        }
+
+        _activePointerId = pointerId;
+        return true;
+    }
+
+    public bool Owns(long pointerId) => _activePointerId == pointerId;
+
+    public bool Release(long pointerId)
+    {
+        if (!Owns(pointerId))
+        {
+            return false;
+        }
+
+        _activePointerId = null;
+        return true;
+    }
+
+    public void Cancel() => _activePointerId = null;
+}
+
 /// <summary>Options shared by the interaction controller and the mesh builder.</summary>
 public sealed class PageCurlOptions
 {

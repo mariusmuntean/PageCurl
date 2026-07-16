@@ -31,19 +31,22 @@ The solution has four deliberately narrow layers:
 
 ## Frame flow
 
-`SKTouchEventArgs` enters the MAUI adapter, which forwards only validated
-coordinates to the controller. A paint callback reads a snapshot, asks the
+`SKTouchEventArgs` enters the MAUI adapter, which captures one pointer ID and
+forwards only that pointer's validated coordinates to the controller. A paint
+callback reads a snapshot, chooses the forward or backward under-page, asks the
 geometry layer to fill a reusable mesh, and draws the under-page followed by
-depth-ordered back and front triangle streams. On release, the adapter starts a
-single 60 Hz timer only while the controller is settling. The timer stops when
-the spring reaches its endpoint and one completion event is raised.
+depth-ordered back and front triangle streams. On release, the adapter starts
+a single 60 Hz timer only while the controller is settling. The timer stops
+when the spring reaches its endpoint and one completion event is raised.
 
 ## Ownership and portability
 
 The view never disposes caller-owned `SKImage` values. Shader instances are
-owned by the view and are replaced when an image reference changes. The core
-uses `System.Numerics` and fixed-size arrays, so another renderer can consume
-the same pose and mesh without taking a MAUI or Skia dependency.
+owned by the view and are replaced when an image reference changes. Paints,
+shaders, and the gesture/timer handlers are released when the MAUI handler is
+disconnected. The core uses `System.Numerics` and fixed-size arrays, so another
+renderer can consume the same pose and mesh without taking a MAUI or Skia
+dependency.
 
 This boundary is the principal portability strategy: Android and iOS share the
 same tested math while the adapter follows the graphics implementation supplied
