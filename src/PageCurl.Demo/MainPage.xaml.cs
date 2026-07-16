@@ -1,86 +1,99 @@
 using PageCurl.Core;
 using PageCurl.Maui;
-using SkiaSharp;
+using PageCurl.Demo.Model;
 
 namespace PageCurl.Demo;
 
 public partial class MainPage : ContentPage
 {
-    private readonly SKImage[] _pages;
-    private int _pageIndex;
+    private readonly DemoNavigationState _navigation;
+    private DemoPageSet? _pageSet;
 
     public MainPage()
     {
         InitializeComponent();
-        _pages =
-        [
-            CreatePage("Page 1", new SKColor(255, 244, 214), new SKColor(213, 137, 48)),
-            CreatePage("Page 2", new SKColor(220, 241, 255), new SKColor(48, 123, 183)),
-            CreatePage("Page 3", new SKColor(229, 246, 227), new SKColor(62, 146, 81)),
-        ];
-        PageView.PageTurnCompleted += OnPageTurnCompleted;
-        ShowPage();
+        _navigation = new DemoNavigationState(4);
+        BindingContext = _navigation;
+        EnsurePageSet();
     }
 
     private void OnPageTurnCompleted(object? sender, PageTurnCompletedEventArgs args)
     {
         if (args.Committed)
         {
-            _pageIndex = args.Direction == PageTurnDirection.Forward
-                ? Math.Min(_pageIndex + 1, _pages.Length - 1)
-                : Math.Max(_pageIndex - 1, 0);
+            if (!_navigation.TryCommit(args.Direction))
+            {
+                StatusLabel.Text = "Turn unavailable";
+                return;
+            }
+
             ShowPage();
+            return;
         }
 
         StatusLabel.Text = args.Committed ? "Turn committed" : "Turn cancelled";
     }
 
-    private void ShowPage()
+    private void OnPreviousClicked(object? sender, EventArgs e) =>
+        RequestTurn(PageTurnDirection.Backward);
+
+    private void OnNextClicked(object? sender, EventArgs e) =>
+        RequestTurn(PageTurnDirection.Forward);
+
+    protected override void OnAppearing()
     {
-        PageView.FrontImage = _pages[_pageIndex];
-        PageView.BackImage = _pages[_pageIndex];
-        PageView.UnderPageImage = _pages[Math.Clamp(_pageIndex + 1, 0, _pages.Length - 1)];
-        PageView.PreviousPageImage = _pages[Math.Clamp(_pageIndex - 1, 0, _pages.Length - 1)];
-        StatusLabel.Text = $"Page {_pageIndex + 1} of {_pages.Length} · drag from either edge";
+        base.OnAppearing();
+        EnsurePageSet();
     }
 
-    private static SKImage CreatePage(string title, SKColor background, SKColor accent)
+    protected override void OnDisappearing()
     {
-        const int width = 900;
-        const int height = 1200;
-        using var bitmap = new SKBitmap(width, height);
-        using var canvas = new SKCanvas(bitmap);
-        canvas.Clear(background);
+        PageView.CancelInteraction();
+        PageView.FrontImage = null;
+        PageView.BackImage = null;
+        PageView.UnderPageImage = null;
+        PageView.PreviousPageImage = null;
+        PageView.PageTurnCompleted -= OnPageTurnCompleted;
+        _pageSet?.Dispose();
+        _pageSet = null;
+        base.OnDisappearing();
+    }
 
-        using var border = new SKPaint
+    private void RequestTurn(PageTurnDirection direction)
+    {
+        var canTurn = direction == PageTurnDirection.Forward
+            ? _navigation.CanTurnForward
+            : _navigation.CanTurnBackward;
+        if (canTurn && !PageView.TryTurn(direction))
         {
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 24,
-            Color = accent,
-            IsAntialias = true,
-        };
-        canvas.DrawRoundRect(new SKRect(42, 42, width - 42, height - 42), 28, 28, border);
+            StatusLabel.Text = "Turn unavailable";
+        }
+    }
 
-        using var titlePaint = new SKPaint
+    private void EnsurePageSet()
+    {
+        if (_pageSet is null)
         {
-            Color = accent,
-            TextSize = 96,
-            Typeface = SKTypeface.Default,
-            IsAntialias = true,
-        };
-        canvas.DrawText(title, 90, 210, titlePaint);
-
-        using var bodyPaint = new SKPaint
-        {
-            Color = new SKColor(45, 45, 45),
-            TextSize = 34,
-            IsAntialias = true,
-        };
-        for (var line = 0; line < 12; line++)
-        {
-            canvas.DrawLine(92, 360 + (line * 54), width - 100, 360 + (line * 54), bodyPaint);
+            _pageSet = DemoPageSet.Create();
+            PageView.PageTurnCompleted += OnPageTurnCompleted;
         }
 
-        return SKImage.FromBitmap(bitmap);
+        ShowPage();
+    }
+
+    private void ShowPage()
+    {
+        if (_pageSet is null)
+        {
+            return;
+        }
+
+        var pages = _pageSet.Pages;
+        var pageIndex = _navigation.PageIndex;
+        PageView.FrontImage = pages[pageIndex];
+        PageView.BackImage = pages[pageIndex];
+        PageView.UnderPageImage = pages[_navigation.GetUnderPageIndex(PageTurnDirection.Forward)];
+        PageView.PreviousPageImage = pages[_navigation.GetUnderPageIndex(PageTurnDirection.Backward)];
+        StatusLabel.Text = $"Page {pageIndex + 1} of {pages.Count} · drag from either edge";
     }
 }

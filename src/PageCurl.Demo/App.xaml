@@ -5,8 +5,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
     <Application.Resources>
         <ResourceDictionary>
+            <Color x:Key="PageBackgroundLight">#F3F5F7</Color>
+            <Color x:Key="PageBackgroundDark">#17191C</Color>
+            <Color x:Key="SurfaceLight">#FFFFFF</Color>
+            <Color x:Key="SurfaceDark">#24282D</Color>
+            <Color x:Key="BorderLight">#B9C0C7</Color>
+            <Color x:Key="BorderDark">#505861</Color>
+            <Color x:Key="TextLight">#202124</Color>
+            <Color x:Key="TextDark">#F2F4F7</Color>
             <Style TargetType="Label">
-                <Setter Property="TextColor" Value="#202124" />
+                <Setter Property="TextColor">
+                    <Setter.Value>
+                        <AppThemeBinding Light="{StaticResource TextLight}" Dark="{StaticResource TextDark}" />
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>
