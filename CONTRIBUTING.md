@@ -22,21 +22,25 @@ and the public API understandable to a MAUI application developer.
 ## Required checks
 
 ```bash
-dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj
-dotnet build src/PageCurl.Core/PageCurl.Core.csproj -c Release
-dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release
+dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
+dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
+dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
 ```
 
-For a machine with the MAUI workloads installed, also build the demo for the
-target platform under review. A successful source build is not a substitute for
-profiling the control on a representative device.
+The repository uses the SDK selected by `global.json`. On macOS, install
+`maui-ios` and `maui-android`, then run `./tools/ios-smoke.sh` for the simulator
+gate. A successful source build is not a substitute for profiling the control
+on a representative physical device.
 
 ## Design boundaries
 
 - Keep input state, geometry, and rendering separate. The core project must not
   depend on MAUI, SkiaSharp, a dispatcher, or a device API.
 - Treat `SKImage` instances supplied to the MAUI control as caller-owned.
-  Document any new ownership rule before changing it.
+  Keep them alive until the view no longer uses them, clear image properties
+  before disposal, and document any new ownership rule before changing it.
+- Keep page-model commits in `PageTurnCompleted`; accessibility commands and
+  gestures must share the same completion path.
 - Avoid per-frame allocations and unbounded mesh growth. If a visual improvement
   needs more work, measure it and expose a deliberate option.
 - Preserve unknown YAML frontmatter fields in OKF documents and use normal
@@ -46,7 +50,9 @@ profiling the control on a representative device.
 
 Reviewers should look for behavior at the edges of a page, cancellation and
 re-entry during settling, multi-touch ownership, image disposal, allocations in
-the paint loop, accessibility alternatives, and platform-specific build or
-workload assumptions. See [`knowledge/project/testing.md`](knowledge/project/testing.md)
-and [`knowledge/project/release-readiness.md`](knowledge/project/release-readiness.md)
+the paint loop, accessibility alternatives, reduced-motion behavior, theme and
+safe-area layout, and platform-specific build or workload assumptions. See
+[`knowledge/project/testing.md`](knowledge/project/testing.md),
+[`docs/compatibility.md`](docs/compatibility.md), and
+[`knowledge/project/release-readiness.md`](knowledge/project/release-readiness.md)
 for the current validation and release gates.

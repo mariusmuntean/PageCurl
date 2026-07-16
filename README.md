@@ -9,22 +9,27 @@ tested without a device or UI toolkit:
 * `src/PageCurl.Maui` exposes `PageTurnView`, a GPU-backed `SKGLView` that
   draws the mesh with SkiaSharp texture coordinates and per-vertex shading.
   It also exposes a neutral `net10.0` target for source-level CI builds.
-* `src/PageCurl.Demo` is a MAUI sample with three generated pages.
+* `src/PageCurl.Demo` is a MAUI sample with four generated pages, including a
+  large-page case and non-gesture page-turn commands.
 * `tests/PageCurl.Core.Tests` is a dependency-free executable test runner. It
   does not require an internet package feed or a test adapter.
 
 ## Try the demo
 
-Install the .NET 10 SDK and the matching MAUI workload for the target you want,
-then (on Linux):
+The repository pins .NET SDK 10.0.301 in [`global.json`](global.json). On a
+macOS development machine, install the mobile workloads and run the iOS smoke
+workflow:
 
 ```bash
-dotnet workload install maui-android
-dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -f net10.0-android
+dotnet workload install maui-ios maui-android
+./tools/ios-smoke.sh
 ```
 
-On macOS or Windows, install the full `maui` workload when building the
-additional Apple or Windows targets.
+To build only Android, use the explicit target:
+
+```bash
+dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
+```
 
 The control pins `SkiaSharp.Views.Maui.Controls` 4.150.1, the current stable
 SkiaSharp.Views release with `net10.0-*` assets and MAUI 10 dependencies.
@@ -35,10 +40,8 @@ targets are added on macOS, and the Windows target is added on Windows. This
 keeps a Linux restore/build from evaluating native workloads that cannot run on
 that host.
 
-The demo supports Android, iOS, Mac Catalyst and Windows. The minimum
-requirement in the question (Android and iOS) is covered by the first two
-target frameworks; the other targets are included because the core and Skia
-control have no platform-specific code.
+The demo supports Android, iOS, Mac Catalyst and Windows. See the
+[compatibility matrix](docs/compatibility.md) for the current evidence status.
 
 ## Use the control
 
@@ -68,6 +71,23 @@ use the tested interaction/mesh layer with another renderer if required.
 Set `PreviousPageImage` when backward turns should reveal a different page;
 when it is not set, the control falls back to `UnderPageImage` for compatibility.
 
+For users who need an alternate to gesture input, call `TryTurn` from a labeled
+button or command. `ReduceMotion` maps both gesture releases and programmatic
+turns to immediate endpoint completion:
+
+```csharp
+TurnView.ReduceMotion = true;
+if (TurnView.TryTurn(PageTurnDirection.Forward))
+{
+    // Commit the page model from PageTurnCompleted, as with a gesture turn.
+}
+```
+
+Set image properties and invoke commands on the UI thread. `PageTurnView` does
+not dispose caller-owned `SKImage` values; keep each image alive until it is no
+longer assigned, clear the properties before disposing a recycled image set,
+and call `CancelInteraction` when removing or recycling the view.
+
 ## Performance choices
 
 The view uses `SKGLView` and invalidates only while a finger is moving or a
@@ -93,13 +113,24 @@ dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:Tar
 
 The checks cover edge selection and clamping, normalized progress in both
 directions, threshold snapping, cancellation, completion events, finite and
-bounded mesh coordinates, UV/shading ranges, and mesh-buffer reuse.
+bounded mesh coordinates, UV/shading ranges, mesh-buffer reuse, immediate and
+programmatic turns, direction-aware demo navigation, and warmed 1,000-iteration
+core allocation loops. The MAUI control exposes opt-in
+`PageTurnPerformanceSnapshot` values for interactive render diagnostics; the
+default render path does not collect those metrics.
 
 The platform build must be run on a host with the matching .NET 10 MAUI
 workload and native SDKs. On Linux, validate the Android target explicitly with
 `-f net10.0-android`; do not ask Linux to evaluate the iOS, Mac Catalyst or
 Windows targets. The .NET 10 Android toolchain defaults to API 36, so install
 the API 36 platform and an appropriate JDK alongside the workload.
+
+For the full iOS validation record, including simulator screenshots and
+physical-device limitations, see
+[`docs/validation/ios-release-readiness.md`](docs/validation/ios-release-readiness.md).
+
+The project is released under the [MIT License](LICENSE) with the policy in
+[`SUPPORT.md`](SUPPORT.md).
 
 ## Project knowledge
 

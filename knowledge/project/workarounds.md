@@ -32,6 +32,13 @@ cache or an approved internal mirror can make reproducible offline checks
 possible; it must not silently change the .NET 10 MAUI or
 `SkiaSharp.Views.Maui.Controls` 4.150.1 version selected by the project.
 
+`global.json` pins SDK 10.0.301. On a machine where the system SDK is
+root-owned or has no workloads, use `/Users/marius/.dotnet` (or an equivalent
+user-local installation) and install `maui-ios maui-android` there. Explicit
+mobile restores/builds keep each referenced project on its own target assets;
+overriding a multi-target root project can otherwise leave a referenced
+`net10.0` core assets file without its neutral target.
+
 # Runtime workarounds
 
 - `PageTurnView.CancelInteraction()` drives the controller back to the resting
@@ -48,6 +55,9 @@ possible; it must not silently change the .NET 10 MAUI or
 - `SKGLView` is a pragmatic baseline. If a target deprecates its OpenGL path or
   the measured frame budget is missed, retain the core API and replace only the
   adapter with a Metal, Canvas, or platform-native renderer.
+- Enable `PageTurnView.PerformanceDiagnosticsEnabled` only while collecting
+  render evidence. The default paint path avoids stopwatch/allocation reads and
+  the diagnostics values are exposed as an immutable snapshot.
 
 These workarounds are recorded so they are visible during review rather than
 being mistaken for invisible production guarantees.

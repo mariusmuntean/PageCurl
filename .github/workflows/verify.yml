@@ -1,0 +1,67 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.301
+      - name: Run platform-free tests
+        run: dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
+      - name: Build neutral MAUI target
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
+          dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0
+          dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 --no-restore
+      - name: Pack the library metadata
+        shell: bash
+        run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -p:TargetFrameworks=net10.0 --no-restore --output .artifacts/packages
+
+  mobile:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.301
+      - name: Install MAUI workloads
+        run: dotnet workload install maui-ios maui-android
+      - name: Run platform-free tests
+        run: dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
+      - name: Build neutral MAUI target
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0
+          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
+          dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 --no-restore
+      - name: Build iOS demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-ios
+          dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0-ios
+          dotnet restore src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj -p:TargetFrameworks=net10.0
+          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
+          dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-ios --no-restore
+      - name: Build Android demo
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-android
+          dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0-android
+          dotnet restore src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj -p:TargetFrameworks=net10.0
+          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
+          dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android --no-restore

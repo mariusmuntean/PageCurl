@@ -26,11 +26,15 @@ is a dependency-free executable runner. It checks:
 - forward and backward normalized progress;
 - threshold snapping, cancellation, spring convergence, and one-shot
   completion events;
+- immediate reduced-motion completion and forward/backward programmatic turns;
+- pure demo navigation boundaries and direction-aware under-page selection;
 - finite and bounded mesh coordinates, UV and shading ranges, and front/back
   triangle counts;
 - pointer capture accepts one finger, ignores other fingers, and releases the
   owner on completion or cancellation;
-- reuse of mesh buffers so a frame does not allocate geometry arrays.
+- reuse of mesh buffers so a frame does not allocate geometry arrays;
+- warmed geometry and controller loops that assert zero managed allocations over
+  1,000 iterations.
 
 Run it with:
 
@@ -47,7 +51,13 @@ dotnet workload install maui-android
 dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
 dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0-android
 dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
+./tools/ios-smoke.sh
 ```
+
+The iOS smoke script builds the explicit simulator target, installs and launches
+the demo, and captures light/dark portrait screenshots. Manual follow-up still
+covers button activation, reduced motion, cancellation, repeated turns,
+rotation, large pages, image replacement, and safe-area review.
 
 ## Device and visual validation
 

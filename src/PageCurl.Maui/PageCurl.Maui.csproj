@@ -24,4 +24,8 @@
     <!-- 4.150.1 is the current stable SkiaSharp.Views.Maui line with net10.0 assets. -->
     <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="4.150.1" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
 </Project>

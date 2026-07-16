@@ -11,7 +11,7 @@ timestamp: 2026-07-16T00:00:00Z
 
 # Layered design
 
-The solution has four deliberately narrow layers:
+The solution has five deliberately narrow layers:
 
 1. [`PageCurl.Core`](../../src/PageCurl.Core/PageCurl.Core.csproj) is a
    `net10.0` library with no UI dependency. [`PageTurnController`](../../src/PageCurl.Core/PageTurnController.cs)
@@ -22,10 +22,13 @@ The solution has four deliberately narrow layers:
    core to MAUI. [`PageTurnView`](../../src/PageCurl.Maui/PageTurnView.cs) owns
    the fixed Skia buffers, image shaders, touch subscription, invalidation, and
    dispatcher-driven settling loop. It does not reimplement page math.
-3. [`PageCurl.Demo`](../../src/PageCurl.Demo/PageCurl.Demo.csproj) shows the
-   public API with generated pages. It is useful for visual inspection but is
-   not a library dependency.
-4. [`PageCurl.Core.Tests`](../../tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj)
+3. [`PageCurl.Demo.Model`](../../src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj)
+   owns the testable page-index and boundary rules for the sample.
+4. [`PageCurl.Demo`](../../src/PageCurl.Demo/PageCurl.Demo.csproj) shows the
+   public API with disposable generated pages, accessible commands, reduced
+   motion, theme resources, and safe-area layout. It is useful for visual
+   inspection but is not a library dependency.
+5. [`PageCurl.Core.Tests`](../../tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj)
    exercises the core with a small executable runner. Tests do not need MAUI,
    a graphics context, a device, or a test adapter.
 
@@ -38,6 +41,9 @@ geometry layer to fill a reusable mesh, and draws the under-page followed by
 depth-ordered back and front triangle streams. On release, the adapter starts
 a single 60 Hz timer only while the controller is settling. The timer stops
 when the spring reaches its endpoint and one completion event is raised.
+Programmatic turns use the same controller completion path, so command-driven
+and gesture-driven navigation commit the page model in one place. Optional
+render diagnostics measure only when explicitly enabled.
 
 ## Ownership and portability
 
@@ -47,6 +53,10 @@ shaders, and the gesture/timer handlers are released when the MAUI handler is
 disconnected. The core uses `System.Numerics` and fixed-size arrays, so another
 renderer can consume the same pose and mesh without taking a MAUI or Skia
 dependency.
+
+Image assignment and page-model commands belong on the UI thread. A consuming
+page clears the bindable image properties, cancels interaction, unsubscribes
+completion handlers, and only then disposes a recycled image set.
 
 This boundary is the principal portability strategy: Android and iOS share the
 same tested math while the adapter follows the graphics implementation supplied
