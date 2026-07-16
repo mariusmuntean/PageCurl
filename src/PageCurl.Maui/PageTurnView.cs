@@ -1,5 +1,7 @@
 using System.Numerics;
+using System.Diagnostics;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 using PageCurl.Core;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
@@ -35,6 +37,19 @@ public sealed class PageTurnView : SKGLView
         default(SKImage),
         propertyChanged: OnImageChanged);
 
+    public static readonly BindableProperty ReduceMotionProperty = BindableProperty.Create(
+        nameof(ReduceMotion),
+        typeof(bool),
+        typeof(PageTurnView),
+        false);
+
+    public static readonly BindableProperty SurfaceColorProperty = BindableProperty.Create(
+        nameof(SurfaceColor),
+        typeof(Color),
+        typeof(PageTurnView),
+        Color.FromArgb("#EBEBEB"),
+        propertyChanged: OnVisualPropertyChanged);
+
     private readonly PageCurlOptions _options;
     private readonly PageMeshBuffer _meshBuffer;
     private static readonly SKSamplingOptions ImageSampling = new(SKFilterMode.Linear, SKMipmapMode.Linear);
@@ -58,6 +73,11 @@ public sealed class PageTurnView : SKGLView
     private int _animationGeneration;
     private bool _eventsAttached;
     private bool _handlerDisconnected;
+    private long _frameCount;
+    private double _lastFrameMilliseconds;
+    private double _totalFrameMilliseconds;
+    private long _lastFrameAllocatedBytes;
+    private long _maxFrameAllocatedBytes;
 
     public PageTurnView()
         : this(new PageCurlOptions())
@@ -100,6 +120,18 @@ public sealed class PageTurnView : SKGLView
         set => SetValue(UnderPageImageProperty, value);
     }
 
+    public bool ReduceMotion
+    {
+        get => (bool)GetValue(ReduceMotionProperty);
+        set => SetValue(ReduceMotionProperty, value);
+    }
+
+    public Color SurfaceColor
+    {
+        get => (Color)GetValue(SurfaceColorProperty);
+        set => SetValue(SurfaceColorProperty, value);
+    }
+
     /// <summary>Optional page revealed while the user turns backward.</summary>
     public static readonly BindableProperty PreviousPageImageProperty = BindableProperty.Create(
         nameof(PreviousPageImage),
@@ -118,10 +150,51 @@ public sealed class PageTurnView : SKGLView
 
     public PageCurlOptions Options => _options;
 
+    public bool PerformanceDiagnosticsEnabled { get; set; }
+
+    public PageTurnPerformanceSnapshot PerformanceSnapshot => new(
+        _frameCount,
+        _lastFrameMilliseconds,
+        _frameCount == 0 ? 0 : _totalFrameMilliseconds / _frameCount,
+        _lastFrameAllocatedBytes,
+        _maxFrameAllocatedBytes);
+
+    public void ResetPerformanceSnapshot()
+    {
+        _frameCount = 0;
+        _lastFrameMilliseconds = 0;
+        _totalFrameMilliseconds = 0;
+        _lastFrameAllocatedBytes = 0;
+        _maxFrameAllocatedBytes = 0;
+    }
+
     public event EventHandler<PageTurnCompletedEventArgs>? PageTurnCompleted
     {
         add => Controller.PageTurnCompleted += value;
         remove => Controller.PageTurnCompleted -= value;
+    }
+
+    public bool TryTurn(PageTurnDirection direction)
+    {
+        if (_handlerDisconnected)
+        {
+            return false;
+        }
+
+        var pageSize = _canvasSize;
+        if (!IsValidPageSize(pageSize))
+        {
+            pageSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+        }
+
+        if (!Controller.BeginProgrammaticTurn(pageSize, direction, animate: !ReduceMotion))
+        {
+            return false;
+        }
+
+        StartAnimationLoop();
+        InvalidateSurface();
+        return true;
     }
 
     public void CancelInteraction()
@@ -162,6 +235,15 @@ public sealed class PageTurnView : SKGLView
         }
     }
 
+    private static void OnVisualPropertyChanged(BindableObject bindable, object? oldValue, object? newValue)
+    {
+        var view = (PageTurnView)bindable;
+        if (!view._handlerDisconnected)
+        {
+            view.InvalidateSurface();
+        }
+    }
+
     private void OnPaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
         if (_handlerDisconnected)
@@ -169,29 +251,48 @@ public sealed class PageTurnView : SKGLView
             return;
         }
 
-        EnsureGraphicsResources();
-        var canvas = e.Surface.Canvas;
-        var info = e.Info;
-        _canvasSize = new Vector2(MathF.Max(info.Width, 0), MathF.Max(info.Height, 0));
-        canvas.Clear(new SKColor(235, 235, 235));
-
-        var pageRect = new SKRect(0, 0, _canvasSize.X, _canvasSize.Y);
-        var snapshot = Controller.Snapshot;
-        var underPageImage = snapshot.Direction == PageTurnDirection.Backward
-            ? PreviousPageImage ?? UnderPageImage
-            : UnderPageImage;
-        DrawImage(canvas, underPageImage, pageRect);
-
-        if (snapshot.State == PageTurnState.Idle)
+        var measure = PerformanceDiagnosticsEnabled;
+        var startTimestamp = measure ? Stopwatch.GetTimestamp() : 0;
+        var startAllocatedBytes = measure ? GC.GetAllocatedBytesForCurrentThread() : 0;
+        try
         {
-            DrawImage(canvas, FrontImage, pageRect);
-            return;
-        }
+            EnsureGraphicsResources();
+            var canvas = e.Surface.Canvas;
+            var info = e.Info;
+            _canvasSize = new Vector2(MathF.Max(info.Width, 0), MathF.Max(info.Height, 0));
+            canvas.Clear(ToSkColor(SurfaceColor));
 
-        var pose = Controller.GetCurlPose(_canvasSize);
-        PageCurlGeometry.Build(_meshBuffer, _canvasSize, pose, _options);
-        DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors);
-        DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint!, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors);
+            var pageRect = new SKRect(0, 0, _canvasSize.X, _canvasSize.Y);
+            var snapshot = Controller.Snapshot;
+            var underPageImage = snapshot.Direction == PageTurnDirection.Backward
+                ? PreviousPageImage ?? UnderPageImage
+                : UnderPageImage;
+            DrawImage(canvas, underPageImage, pageRect);
+
+            if (snapshot.State == PageTurnState.Idle)
+            {
+                DrawImage(canvas, FrontImage, pageRect);
+                return;
+            }
+
+            var pose = Controller.GetCurlPose(_canvasSize);
+            PageCurlGeometry.Build(_meshBuffer, _canvasSize, pose, _options);
+            DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors);
+            DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint!, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors);
+        }
+        finally
+        {
+            if (measure)
+            {
+                var elapsedMilliseconds = (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
+                var allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - startAllocatedBytes;
+                _frameCount++;
+                _lastFrameMilliseconds = elapsedMilliseconds;
+                _totalFrameMilliseconds += elapsedMilliseconds;
+                _lastFrameAllocatedBytes = allocatedBytes;
+                _maxFrameAllocatedBytes = Math.Max(_maxFrameAllocatedBytes, allocatedBytes);
+            }
+        }
     }
 
     private void OnTouch(object? sender, SKTouchEventArgs e)
@@ -240,7 +341,7 @@ public sealed class PageTurnView : SKGLView
             case SKTouchAction.Released:
                 if (_pointerCapture.Release(e.Id))
                 {
-                    Controller.EndDrag();
+                    Controller.EndDrag(animate: !ReduceMotion);
                     e.Handled = true;
                     StartAnimationLoop();
                     InvalidateSurface();
@@ -430,4 +531,13 @@ public sealed class PageTurnView : SKGLView
 
     private static bool IsValidPageSize(Vector2 value) =>
         float.IsFinite(value.X) && float.IsFinite(value.Y) && value.X > 0 && value.Y > 0;
+
+    private static SKColor ToSkColor(Color color) => new(
+        ToByte(color.Red),
+        ToByte(color.Green),
+        ToByte(color.Blue),
+        ToByte(color.Alpha));
+
+    private static byte ToByte(float component) =>
+        (byte)Math.Clamp((int)MathF.Round(component * 255), 0, 255);
 }
