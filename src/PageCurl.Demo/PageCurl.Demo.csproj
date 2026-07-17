@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- Android builds everywhere. Apple targets (iOS/MacCatalyst) require a Mac,
+         so they are only added on macOS. Windows is only added on Windows. This
+         keeps `dotnet build` from pulling in targets the current OS can't build. -->
     <TargetFrameworks>net10.0-android</TargetFrameworks>
-    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>PageCurl.Demo</RootNamespace>
@@ -16,6 +19,14 @@
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+  </PropertyGroup>
+
+  <!-- The MacCatalyst build names the .app bundle after ApplicationTitle ("Page Curl Demo.app"),
+       but Rider's MacCatalyst runner launches "$(AssemblyName).app" and so can't find the app.
+       Pin the bundle folder name to the assembly name (matching iOS) so Rider can launch it.
+       The visible name is unaffected: it comes from CFBundleDisplayName (ApplicationTitle). -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+    <_AppBundleName>$(AssemblyName)</_AppBundleName>
   </PropertyGroup>
 
   <ItemGroup>

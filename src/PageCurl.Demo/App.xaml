@@ -34,29 +34,17 @@
                 <GradientStop Color="#F3B66F" Offset="1" />
             </LinearGradientBrush>
             <Style TargetType="Label">
-                <Setter Property="TextColor">
-                    <Setter.Value>
-                        <AppThemeBinding Light="{StaticResource TextLight}" Dark="{StaticResource TextDark}" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
             </Style>
             <Style x:Key="EyebrowLabel" TargetType="Label">
                 <Setter Property="FontSize" Value="11" />
                 <Setter Property="FontAttributes" Value="Bold" />
                 <Setter Property="CharacterSpacing" Value="1.8" />
-                <Setter Property="TextColor">
-                    <Setter.Value>
-                        <AppThemeBinding Light="{StaticResource AccentLight}" Dark="{StaticResource AccentDark}" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
             </Style>
             <Style x:Key="MutedLabel" TargetType="Label">
                 <Setter Property="FontSize" Value="13" />
-                <Setter Property="TextColor">
-                    <Setter.Value>
-                        <AppThemeBinding Light="{StaticResource MutedLight}" Dark="{StaticResource MutedDark}" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource MutedLight}, Dark={StaticResource MutedDark}}" />
             </Style>
             <Style x:Key="ReaderButton" TargetType="Button">
                 <Setter Property="HeightRequest" Value="46" />
@@ -64,16 +52,8 @@
                 <Setter Property="Padding" Value="18,0" />
                 <Setter Property="FontAttributes" Value="Bold" />
                 <Setter Property="FontSize" Value="14" />
-                <Setter Property="BackgroundColor">
-                    <Setter.Value>
-                        <AppThemeBinding Light="{StaticResource SurfaceLight}" Dark="{StaticResource SurfaceDark}" />
-                    </Setter.Value>
-                </Setter>
-                <Setter Property="TextColor">
-                    <Setter.Value>
-                        <AppThemeBinding Light="{StaticResource TextLight}" Dark="{StaticResource TextDark}" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
             </Style>
             <Style x:Key="PrimaryReaderButton" TargetType="Button" BasedOn="{StaticResource ReaderButton}">
                 <Setter Property="Background" Value="{StaticResource BrandBrush}" />
