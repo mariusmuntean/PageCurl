@@ -43,6 +43,14 @@ that host.
 The demo supports Android, iOS, Mac Catalyst and Windows. See the
 [compatibility matrix](docs/compatibility.md) for the current evidence status.
 
+### Demo testing mode
+
+Enable `Testing mode` in the sample app when validating a gesture or tuning the
+renderer. The opt-in panel reports the controller state, pointer/start
+coordinates, curl pose, completion result, and opt-in render timing/allocation
+metrics. It is demo-only, disabled by default, and does not add polling or
+diagnostic work to normal library usage.
+
 ## Use the control
 
 The control accepts `SKImage` instances. The caller owns those images and can

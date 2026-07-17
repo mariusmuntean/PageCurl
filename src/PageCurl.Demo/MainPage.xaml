@@ -199,6 +199,49 @@
                         SemanticProperties.Description="Reduce page-turn motion" />
                 </HorizontalStackLayout>
             </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                    <Label Text="Testing mode" Style="{StaticResource EyebrowLabel}" />
+                    <Label Text="Live state, pose and frame diagnostics" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+                <Switch
+                    Grid.Column="1"
+                    x:Name="TestingModeSwitch"
+                    Toggled="OnTestingModeToggled"
+                    SemanticProperties.Description="Enable page-turn testing mode" />
+            </Grid>
+            <Border
+                x:Name="TestingPanel"
+                IsVisible="False"
+                Padding="12"
+                BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 16">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="RUNTIME PROBE" Style="{StaticResource EyebrowLabel}" />
+                    <Label
+                        x:Name="TestingStateLabel"
+                        Text="IDLE · FORWARD · 0%"
+                        FontAttributes="Bold" />
+                    <Label
+                        x:Name="TestingPointerLabel"
+                        Text="Pointer — · Start —"
+                        Style="{StaticResource MutedLabel}" />
+                    <Label
+                        x:Name="TestingPoseLabel"
+                        Text="Pose inactive"
+                        Style="{StaticResource MutedLabel}" />
+                    <Label
+                        x:Name="TestingPerformanceLabel"
+                        Text="Frames — · Render —"
+                        Style="{StaticResource MutedLabel}" />
+                    <Label
+                        x:Name="TestingResultLabel"
+                        Text="Last result —"
+                        Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+            </Border>
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <Button
                     Text="‹  Previous"

@@ -29,7 +29,10 @@ assert_demo_foreground() {
     fi
 
     for _ in 1 2 3 4 5; do
-        if idb ui describe-all --udid "$DEVICE" --json 2>/dev/null | rg -q '"AXLabel":"Page Curl Demo"'; then
+        local ui
+        ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
+        if echo "$ui" | rg -q '"AXLabel":"Page Curl Demo"' \
+            && echo "$ui" | rg -q '"AXLabel":"Enable page-turn testing mode"'; then
             return 0
         fi
         sleep 1

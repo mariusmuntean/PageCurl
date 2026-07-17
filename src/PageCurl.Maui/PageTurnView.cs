@@ -150,6 +150,12 @@ public sealed class PageTurnView : SKGLView
 
     public PageCurlOptions Options => _options;
 
+    /// <summary>
+    /// Gets the pixel dimensions of the most recently painted surface. It is
+    /// zero until the view has produced its first paint frame.
+    /// </summary>
+    public Vector2 LastCanvasSize => _canvasSize;
+
     public bool PerformanceDiagnosticsEnabled { get; set; }
 
     public PageTurnPerformanceSnapshot PerformanceSnapshot => new(

@@ -60,6 +60,13 @@ the demo, and captures light/dark portrait screenshots. Manual follow-up still
 covers button activation, reduced motion, cancellation, repeated turns,
 rotation, large pages, image replacement, and safe-area review.
 
+The demo's opt-in `Testing mode` is the repeatable visual-debug surface for
+local development. It polls the controller only while enabled and exposes the
+current state, progress, pointer coordinates, curl pose, last completion result,
+and the control's opt-in frame diagnostics. The panel is accessible through
+the iOS accessibility tree so a simulator pass can assert that the diagnostics
+surface is present without changing the default render path.
+
 ## Device and visual validation
 
 On every supported release target, exercise a short drag, a reversal, a

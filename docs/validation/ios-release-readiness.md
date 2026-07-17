@@ -22,7 +22,8 @@ The optional first argument is an iPhone simulator UDID. Set
 `IOS_SMOKE_OUTPUT` to choose a durable output directory. The script uses the
 user-local SDK at `/Users/marius/.dotnet`, builds the explicit
 `net10.0-ios` simulator target, installs `com.example.pagecurldemo`, launches
-it, and captures light/dark portrait screenshots.
+it, verifies the foreground accessibility surface including the testing-mode
+switch when `idb` is available, and captures light/dark portrait screenshots.
 The script cleans generated native artifacts before the build, verifies the
 demo is still foregrounded through the accessibility tree when `idb` is
 available, and waits 10 seconds after that check so the first Skia surface has
@@ -40,6 +41,7 @@ completed its simulator compositor warm-up.
 | Portrait frame | Pass | iPhone 17 Pro on iOS 26.2 simulator |
 | Previous/Next commands | Pass | Accessibility tree exposed both labeled commands; Next advanced Page 1 to Page 2 |
 | Reduced motion | Pass | Switch reported Value 1; Next advanced Page 2 to Page 3 without the settle path |
+| Testing mode surface | Pass | Opt-in switch and runtime probe labels are exposed through the accessibility tree; diagnostics are disabled by default |
 | Rotation and safe area | Pass | Landscape rotation kept controls/page inside the safe-area container |
 | Large page | Pass | Page 4 of 4 was reached and displayed the generated large page |
 | Image replacement/lifecycle | Code-validated | `MainPage.OnDisappearing` clears images, cancels interaction, unsubscribes, and disposes the page set |
@@ -58,6 +60,9 @@ After the script launches the app:
    then repeat the command and drag checks in landscape.
 5. Switch light/dark appearance and inspect page edges, surface contrast,
    labels, shadows, and texture scaling.
+6. Enable Testing mode and confirm that the runtime probe reports state,
+   pointer coordinates, pose, completion result, and render metrics while a
+   gesture is active or settling. Disable it and confirm the panel disappears.
 
 ## Performance evidence
 
