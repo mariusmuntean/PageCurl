@@ -46,7 +46,8 @@ Validation date: 2026-07-18. Output: `.artifacts/ios-smoke/latest/`.
 | Accessibility surface | Pass | Interactive page, hinge selector, testing switch, and navigation commands exposed; decorative rails/arrows absent |
 | Testing mode surface | Pass | `.artifacts/ios-smoke/latest/testing.png`; runtime probe and navigation commands visible, then switch returned to off |
 | Aspect-preserving page | Pass | Portrait source page remains undistorted in the fitted content rectangle |
-| MacCatalyst responsive build | Pass | Debug `net10.0-maccatalyst` build and resizable-window visual check completed locally |
+| MacCatalyst responsive build | Pass | Debug `net10.0-maccatalyst` build and resizable-window visual check completed locally; wide windows use a centered bounded reading stage |
+| Navigation and reduced motion | Pass | Simulator accessibility taps moved `01 / 04` to `02 / 04` and back, and toggled Reduce Motion `0` to `1` and back to `0` |
 | Rotation, large page, gestures, and device performance | Follow-up | Manual/device gates remain below |
 
 ## Manual simulator review

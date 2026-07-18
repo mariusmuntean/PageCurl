@@ -68,7 +68,9 @@ turns, all four edges and corners, each lock choice, rotation, large pages,
 image replacement, and safe-area review.
 
 MacCatalyst is the fast visual feedback loop on macOS because its window can be
-resized through multiple aspect ratios without waiting for a simulator rebuild:
+resized through multiple aspect ratios without waiting for a simulator rebuild.
+Wide windows keep the stage centered and bounded so the portrait page remains
+readable while its source aspect ratio is preserved:
 
 ```bash
 dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst
