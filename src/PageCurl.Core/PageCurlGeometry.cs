@@ -88,6 +88,8 @@ public static class PageCurlGeometry
         {
             HingeEdge = resolvedHingeEdge,
             FreeEdge = resolvedFreeEdge,
+            DragStart = dragStart,
+            HasDragStart = true,
         };
     }
 
@@ -131,6 +133,15 @@ public static class PageCurlGeometry
         var sin = MathF.Sin(angle);
         var radius = MathF.Max(pose.Radius, 1f);
         var curlLength = MathF.PI * radius;
+        var anchorOffset = GetAnchorOffset(
+            pose,
+            pageSize,
+            freeEdge,
+            localPosition,
+            cos,
+            sin,
+            radius,
+            curlLength);
         var columns = buffer.Columns;
         var rows = buffer.Rows;
 
@@ -164,7 +175,7 @@ public static class PageCurlGeometry
                 }
 
                 var worldLocal = Rotate(new Vector2(transformedX, local.Y), cos, sin) + localPosition;
-                var curled = FromFreeLocal(worldLocal, pageSize, freeEdge);
+                var curled = FromFreeLocal(worldLocal, pageSize, freeEdge) + anchorOffset;
                 var anchorWeight = HingeWeight(source, pageSize, hingeEdge);
                 var world = source + ((curled - source) * anchorWeight);
                 var texture = new Vector2(
@@ -209,6 +220,39 @@ public static class PageCurlGeometry
                 buffer.FrontVertexCount = count;
             }
         }
+    }
+
+    private static Vector2 GetAnchorOffset(
+        CurlPose pose,
+        Vector2 pageSize,
+        PageEdge freeEdge,
+        Vector2 localPosition,
+        float cos,
+        float sin,
+        float radius,
+        float curlLength)
+    {
+        if (!pose.HasDragStart || !IsFinite(pose.DragStart))
+        {
+            return Vector2.Zero;
+        }
+
+        var anchorSource = ToFreeLocal(pose.DragStart, pageSize, freeEdge);
+        var localAnchor = Rotate(anchorSource - localPosition, cos, -sin);
+        var transformedX = localAnchor.X;
+        if (localAnchor.X <= -curlLength)
+        {
+            transformedX = -(curlLength + localAnchor.X);
+        }
+        else if (localAnchor.X < 0)
+        {
+            var theta = MathF.PI * (localAnchor.X / curlLength);
+            transformedX = radius * MathF.Sin(theta);
+        }
+
+        var worldLocal = Rotate(new Vector2(transformedX, localAnchor.Y), cos, sin) + localPosition;
+        var curledAnchor = FromFreeLocal(worldLocal, pageSize, freeEdge);
+        return pose.Position - curledAnchor;
     }
 
     private static PageEdge ResolveFreeEdge(PageEdge hingeEdge, PageEdge freeEdge, PageTurnDirection direction)

@@ -120,6 +120,12 @@ public readonly record struct CurlPose(
 
     public PageEdge FreeEdge { get; init; } = PageEdge.Auto;
 
+    /// <summary>The pointer position projected onto the selected free edge at gesture start.</summary>
+    public Vector2 DragStart { get; init; }
+
+    /// <summary>Indicates that <see cref="DragStart"/> is available for renderer anchoring.</summary>
+    public bool HasDragStart { get; init; }
+
     public static CurlPose Inactive(PageTurnDirection direction) =>
         new(Vector2.Zero, Vector2.UnitX, 0, 0, direction, false);
 }

@@ -33,8 +33,9 @@ is a dependency-free executable runner. It checks:
   direction-aware under-page selection;
 - finite and bounded mesh coordinates, UV and shading ranges, and front/back
   triangle counts;
-- every edge-oriented geometry frame, stationary hinge vertices, aspect-fit
-  viewport sizing, and mesh-buffer reuse;
+- every edge-oriented geometry frame, stationary hinge vertices, pointer-locked
+  free corners before the curl limit, aspect-fit viewport sizing, and
+  mesh-buffer reuse;
 - pointer capture accepts one finger, ignores other fingers, and releases the
   owner on completion or cancellation;
 - reuse of mesh buffers so a frame does not allocate geometry arrays;

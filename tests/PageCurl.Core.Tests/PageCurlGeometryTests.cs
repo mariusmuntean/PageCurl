@@ -23,6 +23,7 @@ internal static class PageCurlGeometryTests
         Repeated_builds_reuse_mesh_arrays();
         Sampled_drag_poses_remain_finite_and_bounded();
         Corner_origin_drag_poses_remain_finite_and_bounded();
+        Dragged_free_corner_tracks_pointer_before_limit();
         Every_free_edge_produces_a_finite_bounded_mesh();
         Every_selected_hinge_edge_remains_stationary();
     }
@@ -193,6 +194,77 @@ internal static class PageCurlGeometryTests
 
             AssertFiniteAndBounded(buffer.FrontVertices, buffer.FrontVertexCount);
             AssertFiniteAndBounded(buffer.BackVertices, buffer.BackVertexCount);
+        }
+    }
+
+    private static void Dragged_free_corner_tracks_pointer_before_limit()
+    {
+        var options = new PageCurlOptions { MeshColumns = 10, MeshRows = 5 };
+        var buffer = new PageMeshBuffer(options);
+        var cases = new[]
+        {
+            (Hinge: PageEdge.Left, Free: PageEdge.Right, Start: new Vector2(PageSize.X, 0), Pointer: new Vector2(60, 40), Texture: new Vector2(1, 0), Progress: 0.4f),
+            (Hinge: PageEdge.Right, Free: PageEdge.Left, Start: new Vector2(0, 0), Pointer: new Vector2(40, 40), Texture: new Vector2(0, 0), Progress: 0.4f),
+            (Hinge: PageEdge.Bottom, Free: PageEdge.Top, Start: new Vector2(PageSize.X, 0), Pointer: new Vector2(60, 40), Texture: new Vector2(1, 0), Progress: 0.25f),
+            (Hinge: PageEdge.Top, Free: PageEdge.Bottom, Start: new Vector2(PageSize.X, PageSize.Y), Pointer: new Vector2(60, 120), Texture: new Vector2(1, 1), Progress: 0.25f),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var pose = PageCurlGeometry.ComputePose(
+                PageSize,
+                testCase.Start,
+                testCase.Pointer,
+                testCase.Hinge,
+                testCase.Free,
+                PageTurnDirection.Forward,
+                testCase.Progress,
+                options);
+
+            TestAssert.True(Vector2.Distance(pose.Position, testCase.Pointer) <= 0.01f);
+            PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+            var closestDistance = FindClosestVertexToTexturePoint(
+                buffer.FrontVertices,
+                buffer.FrontVertexCount,
+                buffer.BackVertices,
+                buffer.BackVertexCount,
+                testCase.Texture,
+                testCase.Pointer);
+            TestAssert.InRange(closestDistance, 0, 1.5f);
+        }
+    }
+
+    private static float FindClosestVertexToTexturePoint(
+        MeshVertex[] first,
+        int firstCount,
+        MeshVertex[] second,
+        int secondCount,
+        Vector2 texturePoint,
+        Vector2 target)
+    {
+        var closest = float.PositiveInfinity;
+        UpdateClosest(first, firstCount, texturePoint, target, ref closest);
+        UpdateClosest(second, secondCount, texturePoint, target, ref closest);
+        return closest;
+    }
+
+    private static void UpdateClosest(
+        MeshVertex[] vertices,
+        int count,
+        Vector2 texturePoint,
+        Vector2 target,
+        ref float closest)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            var vertex = vertices[i];
+            if (Vector2.DistanceSquared(vertex.TextureCoordinate, texturePoint) > 0.0001f)
+            {
+                continue;
+            }
+
+            closest = MathF.Min(closest, Vector2.Distance(vertex.Position, target));
         }
     }
 

@@ -96,6 +96,9 @@ hinge, while the remaining edges and corners can start a gesture. A corner in
 two-argument `BeginDrag` overload remains the horizontal left/right behavior
 for existing callers. `AspectFit` keeps source images undistorted and maps
 touch coordinates into the same fitted content rectangle used by the mesh.
+During a drag, the renderer keeps the grabbed edge point or corner attached to
+the pointer until the cylinder reaches its physical curl limit; beyond that
+limit the pose is bounded rather than stretching without end.
 Set `PreviousPageImage` when backward turns should reveal a different page;
 when it is not set, the control falls back to `UnderPageImage` for compatibility.
 
