@@ -6,6 +6,13 @@ namespace PageCurl.Core.Tests;
 internal static class PageCurlGeometryTests
 {
     private static readonly Vector2 PageSize = new(100, 160);
+    private static readonly PageEdge[] PhysicalEdges =
+    {
+        PageEdge.Top,
+        PageEdge.Right,
+        PageEdge.Bottom,
+        PageEdge.Left,
+    };
 
     public static void RunAll()
     {
@@ -17,7 +24,7 @@ internal static class PageCurlGeometryTests
         Sampled_drag_poses_remain_finite_and_bounded();
         Corner_origin_drag_poses_remain_finite_and_bounded();
         Every_free_edge_produces_a_finite_bounded_mesh();
-        Selected_hinge_edge_remains_stationary();
+        Every_selected_hinge_edge_remains_stationary();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -219,38 +226,85 @@ internal static class PageCurlGeometryTests
         }
     }
 
-    private static void Selected_hinge_edge_remains_stationary()
+    private static void Every_selected_hinge_edge_remains_stationary()
     {
         var options = new PageCurlOptions { MeshColumns = 10, MeshRows = 5 };
         var buffer = new PageMeshBuffer(options);
-        var pose = PageCurlGeometry.ComputePose(
-            PageSize,
-            new Vector2(50, 0),
-            new Vector2(50, 80),
-            PageEdge.Left,
-            PageEdge.Top,
-            PageTurnDirection.Forward,
-            0.5f,
-            options);
-
-        PageCurlGeometry.Build(buffer, PageSize, pose, options);
-
-        foreach (var vertex in buffer.FrontVertices.AsSpan(0, buffer.FrontVertexCount))
+        foreach (var hingeEdge in PhysicalEdges)
         {
-            if (vertex.TextureCoordinate.X <= 0.0001f)
+            foreach (var freeEdge in PhysicalEdges)
             {
-                TestAssert.Equal(0f, vertex.Position.X, 3);
-            }
-        }
+                if (hingeEdge == freeEdge)
+                {
+                    continue;
+                }
 
-        foreach (var vertex in buffer.BackVertices.AsSpan(0, buffer.BackVertexCount))
-        {
-            if (vertex.TextureCoordinate.X <= 0.0001f)
-            {
-                TestAssert.Equal(0f, vertex.Position.X, 3);
+                var pose = PageCurlGeometry.ComputePose(
+                    PageSize,
+                    EdgeCenter(freeEdge),
+                    PageSize * 0.5f,
+                    hingeEdge,
+                    freeEdge,
+                    PageTurnDirection.Forward,
+                    0.5f,
+                    options);
+
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+                var representedVertices = AssertHingeVerticesAreStationary(
+                    buffer.FrontVertices,
+                    buffer.FrontVertexCount,
+                    hingeEdge);
+                representedVertices += AssertHingeVerticesAreStationary(
+                    buffer.BackVertices,
+                    buffer.BackVertexCount,
+                    hingeEdge);
+                TestAssert.True(representedVertices > 0, $"No mesh vertices represented the {hingeEdge} hinge.");
             }
         }
     }
+
+    private static int AssertHingeVerticesAreStationary(MeshVertex[] vertices, int count, PageEdge hingeEdge)
+    {
+        var hingeVertexCount = 0;
+        for (var i = 0; i < count; i++)
+        {
+            var vertex = vertices[i];
+            if (!IsOnHinge(vertex.TextureCoordinate, hingeEdge))
+            {
+                continue;
+            }
+
+            hingeVertexCount++;
+            if (hingeEdge is PageEdge.Left or PageEdge.Right)
+            {
+                TestAssert.Equal(hingeEdge == PageEdge.Left ? 0f : PageSize.X, vertex.Position.X, 3);
+            }
+            else
+            {
+                TestAssert.Equal(hingeEdge == PageEdge.Top ? 0f : PageSize.Y, vertex.Position.Y, 3);
+            }
+        }
+
+        return hingeVertexCount;
+    }
+
+    private static bool IsOnHinge(Vector2 textureCoordinate, PageEdge hingeEdge) => hingeEdge switch
+    {
+        PageEdge.Top => textureCoordinate.Y <= 0.0001f,
+        PageEdge.Right => textureCoordinate.X >= 0.9999f,
+        PageEdge.Bottom => textureCoordinate.Y >= 0.9999f,
+        PageEdge.Left => textureCoordinate.X <= 0.0001f,
+        _ => false,
+    };
+
+    private static Vector2 EdgeCenter(PageEdge edge) => edge switch
+    {
+        PageEdge.Top => new(PageSize.X * 0.5f, 0),
+        PageEdge.Right => new(PageSize.X, PageSize.Y * 0.5f),
+        PageEdge.Bottom => new(PageSize.X * 0.5f, PageSize.Y),
+        PageEdge.Left => new(0, PageSize.Y * 0.5f),
+        _ => PageSize * 0.5f,
+    };
 
     private static void AssertFiniteAndBounded(MeshVertex[] vertices, int count)
     {

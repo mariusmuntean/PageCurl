@@ -248,6 +248,9 @@ public partial class MainPage : ContentPage
 
         var landscape = Width > Height;
         var responsiveLandscapeHeight = Math.Clamp(Height * (TestingPanel.IsVisible ? 0.32 : 0.45), 220, 360);
+        StageGrid.WidthRequest = landscape
+            ? Math.Clamp(Width * 0.58, 420, 720)
+            : -1;
         StageGrid.HeightRequest = TestingPanel.IsVisible
             ? (landscape ? responsiveLandscapeHeight : 225)
             : (landscape ? responsiveLandscapeHeight : 340);

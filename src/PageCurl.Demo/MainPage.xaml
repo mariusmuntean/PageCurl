@@ -87,6 +87,8 @@
                 x:Name="StageGrid"
                 HeightRequest="340"
                 MinimumHeightRequest="260"
+                MaximumWidthRequest="720"
+                HorizontalOptions="Center"
                 VerticalOptions="Center"
                 SizeChanged="OnStageSizeChanged">
                 <curl:PageTurnView

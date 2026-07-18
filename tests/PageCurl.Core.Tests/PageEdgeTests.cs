@@ -5,6 +5,14 @@ namespace PageCurl.Core.Tests;
 
 internal static class PageEdgeTests
 {
+    private static readonly PageEdge[] PhysicalEdges =
+    {
+        PageEdge.Top,
+        PageEdge.Right,
+        PageEdge.Bottom,
+        PageEdge.Left,
+    };
+
     public static void RunAll()
     {
         PageEdge_contract_exists();
@@ -13,6 +21,7 @@ internal static class PageEdgeTests
         Auto_selects_the_nearest_edge_and_opposite_hinge();
         Auto_resolves_corner_ties_from_the_first_drag_vector();
         Explicit_lock_accepts_every_other_edge();
+        Explicit_lock_accepts_every_other_corner();
         Explicit_lock_rejects_a_start_on_the_locked_edge();
         Edge_progress_uses_the_selected_free_edge_normal();
         Every_corner_can_start_an_edge_aware_drag();
@@ -88,21 +97,49 @@ internal static class PageEdgeTests
     private static void Explicit_lock_accepts_every_other_edge()
     {
         var pageSize = new Vector2(100, 200);
-        var cases = new[]
+        foreach (var lockedEdge in PhysicalEdges)
         {
-            (Locked: PageEdge.Left, Pointer: new Vector2(50, 0), Free: PageEdge.Top),
-            (Locked: PageEdge.Top, Pointer: new Vector2(100, 100), Free: PageEdge.Right),
-            (Locked: PageEdge.Right, Pointer: new Vector2(50, 200), Free: PageEdge.Bottom),
-            (Locked: PageEdge.Bottom, Pointer: new Vector2(0, 100), Free: PageEdge.Left),
+            foreach (var freeEdge in PhysicalEdges)
+            {
+                if (freeEdge == lockedEdge)
+                {
+                    continue;
+                }
+
+                var controller = new PageTurnController();
+
+                TestAssert.True(controller.BeginDrag(EdgeCenter(pageSize, freeEdge), pageSize, lockedEdge));
+                TestAssert.Equal(lockedEdge, controller.Snapshot.HingeEdge);
+                TestAssert.Equal(freeEdge, controller.Snapshot.FreeEdge);
+            }
+        }
+    }
+
+    private static void Explicit_lock_accepts_every_other_corner()
+    {
+        var pageSize = new Vector2(100, 200);
+        var corners = new[]
+        {
+            Vector2.Zero,
+            new Vector2(pageSize.X, 0),
+            pageSize,
+            new Vector2(0, pageSize.Y),
         };
 
-        foreach (var testCase in cases)
+        foreach (var lockedEdge in PhysicalEdges)
         {
-            var controller = new PageTurnController();
+            foreach (var corner in corners)
+            {
+                var controller = new PageTurnController();
 
-            TestAssert.True(controller.BeginDrag(testCase.Pointer, pageSize, testCase.Locked));
-            TestAssert.Equal(testCase.Locked, controller.Snapshot.HingeEdge);
-            TestAssert.Equal(testCase.Free, controller.Snapshot.FreeEdge);
+                TestAssert.True(controller.BeginDrag(corner, pageSize, lockedEdge));
+                controller.UpdateDrag(Vector2.Lerp(corner, pageSize * 0.5f, 0.35f));
+                TestAssert.Equal(lockedEdge, controller.Snapshot.HingeEdge);
+                TestAssert.True(controller.Snapshot.FreeEdge is
+                    PageEdge.Top or PageEdge.Right or PageEdge.Bottom or PageEdge.Left);
+                TestAssert.True(controller.Snapshot.FreeEdge != lockedEdge);
+                TestAssert.InRange(controller.Snapshot.Progress, 0, 1);
+            }
         }
     }
 
@@ -157,4 +194,13 @@ internal static class PageEdgeTests
             TestAssert.InRange(controller.Snapshot.Progress, 0, 1);
         }
     }
+
+    private static Vector2 EdgeCenter(Vector2 pageSize, PageEdge edge) => edge switch
+    {
+        PageEdge.Top => new(pageSize.X * 0.5f, 0),
+        PageEdge.Right => new(pageSize.X, pageSize.Y * 0.5f),
+        PageEdge.Bottom => new(pageSize.X * 0.5f, pageSize.Y),
+        PageEdge.Left => new(0, pageSize.Y * 0.5f),
+        _ => pageSize * 0.5f,
+    };
 }
