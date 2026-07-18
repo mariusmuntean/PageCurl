@@ -12,6 +12,7 @@ internal static class Program
             (nameof(PageTurnPointerCaptureTests), PageTurnPointerCaptureTests.RunAll),
             (nameof(PageNavigationStateTests), PageNavigationStateTests.RunAll),
             (nameof(PageTurnPerformanceTests), PageTurnPerformanceTests.RunAll),
+            (nameof(PageViewportTests), PageViewportTests.RunAll),
         };
 
         try

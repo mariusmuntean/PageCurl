@@ -43,6 +43,20 @@ public sealed class PageTurnView : SKGLView
         typeof(PageTurnView),
         false);
 
+    public static readonly BindableProperty LockedEdgeProperty = BindableProperty.Create(
+        nameof(LockedEdge),
+        typeof(PageEdge),
+        typeof(PageTurnView),
+        PageEdge.Auto,
+        propertyChanged: OnVisualPropertyChanged);
+
+    public static readonly BindableProperty ContentScaleProperty = BindableProperty.Create(
+        nameof(ContentScale),
+        typeof(PageContentScale),
+        typeof(PageTurnView),
+        PageContentScale.Fill,
+        propertyChanged: OnVisualPropertyChanged);
+
     public static readonly BindableProperty SurfaceColorProperty = BindableProperty.Create(
         nameof(SurfaceColor),
         typeof(Color),
@@ -68,6 +82,7 @@ public sealed class PageTurnView : SKGLView
     private SKImage? _frontShaderImage;
     private SKImage? _backShaderImage;
     private Vector2 _canvasSize;
+    private PageViewportRect _contentViewport;
     private readonly PageTurnPointerCapture _pointerCapture = new();
     private bool _animationLoopActive;
     private int _animationGeneration;
@@ -126,6 +141,20 @@ public sealed class PageTurnView : SKGLView
         set => SetValue(ReduceMotionProperty, value);
     }
 
+    /// <summary>Locks a physical edge as the stationary hinge for gestures.</summary>
+    public PageEdge LockedEdge
+    {
+        get => (PageEdge)GetValue(LockedEdgeProperty);
+        set => SetValue(LockedEdgeProperty, value);
+    }
+
+    /// <summary>Controls whether page images fill or preserve their aspect ratio.</summary>
+    public PageContentScale ContentScale
+    {
+        get => (PageContentScale)GetValue(ContentScaleProperty);
+        set => SetValue(ContentScaleProperty, value);
+    }
+
     public Color SurfaceColor
     {
         get => (Color)GetValue(SurfaceColorProperty);
@@ -155,6 +184,9 @@ public sealed class PageTurnView : SKGLView
     /// zero until the view has produced its first paint frame.
     /// </summary>
     public Vector2 LastCanvasSize => _canvasSize;
+
+    /// <summary>Gets the most recently painted page-content rectangle.</summary>
+    public PageViewportRect LastContentViewport => _contentViewport;
 
     public bool PerformanceDiagnosticsEnabled { get; set; }
 
@@ -187,10 +219,11 @@ public sealed class PageTurnView : SKGLView
             return false;
         }
 
-        var pageSize = _canvasSize;
+        var pageSize = _contentViewport.Size;
         if (!IsValidPageSize(pageSize))
         {
-            pageSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+            var canvasSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+            pageSize = GetContentViewport(canvasSize).Size;
         }
 
         if (!Controller.BeginProgrammaticTurn(pageSize, direction, animate: !ReduceMotion))
@@ -268,7 +301,9 @@ public sealed class PageTurnView : SKGLView
             _canvasSize = new Vector2(MathF.Max(info.Width, 0), MathF.Max(info.Height, 0));
             canvas.Clear(ToSkColor(SurfaceColor));
 
-            var pageRect = new SKRect(0, 0, _canvasSize.X, _canvasSize.Y);
+            _contentViewport = GetContentViewport(_canvasSize);
+            var pageRect = ToSkRect(_contentViewport);
+            var pageSize = _contentViewport.Size;
             var snapshot = Controller.Snapshot;
             var underPageImage = snapshot.Direction == PageTurnDirection.Backward
                 ? PreviousPageImage ?? UnderPageImage
@@ -281,10 +316,11 @@ public sealed class PageTurnView : SKGLView
                 return;
             }
 
-            var pose = Controller.GetCurlPose(_canvasSize);
-            PageCurlGeometry.Build(_meshBuffer, _canvasSize, pose, _options);
-            DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors);
-            DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint!, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors);
+            var pose = Controller.GetCurlPose(pageSize);
+            PageCurlGeometry.Build(_meshBuffer, pageSize, pose, _options);
+            var offset = new SKPoint(_contentViewport.Origin.X, _contentViewport.Origin.Y);
+            DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors, offset);
+            DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint!, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors, offset);
         }
         finally
         {
@@ -308,23 +344,21 @@ public sealed class PageTurnView : SKGLView
             return;
         }
 
-        var pageSize = _canvasSize;
-        if (!IsValidPageSize(pageSize))
-        {
-            pageSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
-        }
-
-        var pointer = new Vector2(e.Location.X, e.Location.Y);
         switch (e.ActionType)
         {
             case SKTouchAction.Pressed:
+                if (!TryGetPagePointer(e.Location, out var pressedPointer, out var pageSize))
+                {
+                    break;
+                }
+
                 if (!_pointerCapture.TryCapture(e.Id))
                 {
                     e.Handled = true;
                     break;
                 }
 
-                if (Controller.BeginDrag(pointer, pageSize))
+                if (Controller.BeginDrag(pressedPointer, pageSize, LockedEdge))
                 {
                     e.Handled = true;
                     InvalidateSurface();
@@ -338,7 +372,7 @@ public sealed class PageTurnView : SKGLView
             case SKTouchAction.Moved:
                 if (_pointerCapture.Owns(e.Id))
                 {
-                    Controller.UpdateDrag(pointer);
+                    Controller.UpdateDrag(ToPagePointer(e.Location));
                     e.Handled = true;
                     InvalidateSurface();
                 }
@@ -420,7 +454,8 @@ public sealed class PageTurnView : SKGLView
         ref SKImage? shaderImage,
         SKPoint[] points,
         SKPoint[] texturePoints,
-        SKColor[] colors)
+        SKColor[] colors,
+        SKPoint offset)
     {
         if (count < 3)
         {
@@ -434,7 +469,7 @@ public sealed class PageTurnView : SKGLView
         for (var i = 0; i < count; i++)
         {
             var vertex = vertices[i];
-            points[i] = new SKPoint(vertex.Position.X, vertex.Position.Y);
+            points[i] = new SKPoint(vertex.Position.X + offset.X, vertex.Position.Y + offset.Y);
             texturePoints[i] = new SKPoint(
                 vertex.TextureCoordinate.X * imageWidth,
                 vertex.TextureCoordinate.Y * imageHeight);
@@ -534,6 +569,68 @@ public sealed class PageTurnView : SKGLView
         _animationGeneration++;
         _animationLoopActive = false;
     }
+
+    private PageViewportRect GetContentViewport(Vector2 canvasSize)
+    {
+        if (!IsValidPageSize(canvasSize))
+        {
+            return default;
+        }
+
+        var image = FrontImage ?? UnderPageImage;
+        if (ContentScale == PageContentScale.AspectFit && image is not null)
+        {
+            return PageViewportRect.AspectFit(canvasSize, new Vector2(image.Width, image.Height));
+        }
+
+        return new PageViewportRect(Vector2.Zero, canvasSize);
+    }
+
+    private bool TryGetPagePointer(SKPoint location, out Vector2 pointer, out Vector2 pageSize)
+    {
+        if (!_contentViewport.IsValid)
+        {
+            var canvasSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+            _contentViewport = GetContentViewport(canvasSize);
+        }
+
+        pageSize = _contentViewport.Size;
+        if (!IsValidPageSize(pageSize))
+        {
+            pointer = default;
+            return false;
+        }
+
+        var raw = new Vector2(location.X, location.Y);
+        var right = _contentViewport.Origin.X + pageSize.X;
+        var bottom = _contentViewport.Origin.Y + pageSize.Y;
+        if (ContentScale == PageContentScale.AspectFit
+            && (raw.X < _contentViewport.Origin.X
+                || raw.X > right
+                || raw.Y < _contentViewport.Origin.Y
+                || raw.Y > bottom))
+        {
+            pointer = default;
+            return false;
+        }
+
+        pointer = raw - _contentViewport.Origin;
+        return true;
+    }
+
+    private Vector2 ToPagePointer(SKPoint location)
+    {
+        var viewport = _contentViewport.IsValid
+            ? _contentViewport
+            : GetContentViewport(new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0)));
+        return new Vector2(location.X - viewport.Origin.X, location.Y - viewport.Origin.Y);
+    }
+
+    private static SKRect ToSkRect(PageViewportRect viewport) => new(
+        viewport.Origin.X,
+        viewport.Origin.Y,
+        viewport.Origin.X + viewport.Size.X,
+        viewport.Origin.Y + viewport.Size.Y);
 
     private static bool IsValidPageSize(Vector2 value) =>
         float.IsFinite(value.X) && float.IsFinite(value.Y) && value.X > 0 && value.Y > 0;
