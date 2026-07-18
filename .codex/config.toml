@@ -1,0 +1,27 @@
+# Project-scoped role registration and delegation limits.
+# The default built-in agent keeps its user-selected model and reasoning level.
+
+[agents]
+max_threads = 4
+max_depth = 2
+
+[agents.pagecurl-manager]
+description = "Plan and orchestrate PageCurl work, delegating implementation and validation to the project specialists."
+config_file = "./agents/pagecurl-manager.toml"
+nickname_candidates = ["PageCurl Manager"]
+
+[agents.core-engineering]
+description = "Implement and review PageCurl.Core controller, geometry, navigation, and deterministic tests."
+config_file = "./agents/core-engineering.toml"
+
+[agents.rendering-platform]
+description = "Implement and review PageCurl.Maui rendering, lifecycle, platform configuration, and smoke tooling."
+config_file = "./agents/rendering-platform.toml"
+
+[agents.experience-accessibility]
+description = "Implement and review PageCurl demo presentation, interaction affordances, responsive layout, and accessibility behavior."
+config_file = "./agents/experience-accessibility.toml"
+
+[agents.release-validation]
+description = "Perform independent read-only PageCurl review, validation, compatibility checks, and release-gate assessment."
+config_file = "./agents/release-validation.toml"
