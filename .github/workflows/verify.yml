@@ -53,7 +53,6 @@ jobs:
           set -euo pipefail
           dotnet restore src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-ios
           dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0-ios
-          dotnet restore src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj -p:TargetFrameworks=net10.0
           dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
           dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-ios --no-restore
       - name: Build Android demo
@@ -62,6 +61,5 @@ jobs:
           set -euo pipefail
           dotnet restore src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-android
           dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0-android
-          dotnet restore src/PageCurl.Demo.Model/PageCurl.Demo.Model.csproj -p:TargetFrameworks=net10.0
           dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
           dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android --no-restore

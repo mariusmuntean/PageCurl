@@ -1,6 +1,7 @@
 # Page Turning Control Design
 
-**Status:** Approved for implementation by selecting option 1 (shared C# curl core + SkiaSharp).
+**Status:** Historical design record. The implemented architecture is documented
+in `knowledge/project/architecture.md`.
 
 ## Goal
 

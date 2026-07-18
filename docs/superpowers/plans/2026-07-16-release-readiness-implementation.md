@@ -1,5 +1,9 @@
 # PageCurl Release Readiness Implementation Plan
 
+> **Status:** Historical implementation record. Do not execute this plan as
+> current work; use `knowledge/project/release-readiness.md` and the current
+> validation record instead.
+
 > For agentic workers: REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Complete the release gates in knowledge/project/release-readiness.md with an iOS-first local validation path, reusable accessibility and reduced-motion APIs, deterministic performance evidence, lifecycle-safe demo code, and a documented distribution contract.
@@ -502,4 +506,3 @@ Expected: no whitespace errors, all intended implementation commits visible, and
 git add docs/validation/ios-release-readiness.md
 git commit -m "Record local iOS release validation"
 ~~~
-

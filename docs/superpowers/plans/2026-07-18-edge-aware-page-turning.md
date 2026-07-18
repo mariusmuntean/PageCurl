@@ -1,5 +1,9 @@
 # Edge-Aware Page Turning Implementation Plan
 
+> **Status:** Implementation record. The remaining unchecked items are manual
+> or device evidence gates; do not treat this file as the current project
+> policy or validation command source.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Make PageCurl support natural curls from all four edges and corners, optional stationary hinge edges, aspect-preserving content, and a responsive accessible demo.

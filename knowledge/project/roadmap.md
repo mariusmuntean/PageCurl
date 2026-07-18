@@ -6,17 +6,17 @@ tags:
   - roadmap
   - future
   - performance
-timestamp: 2026-07-16T00:00:00Z
+timestamp: 2026-07-18T00:00:00Z
 ---
 
 # Near-term
 
-- Add a small benchmark harness for drag, mesh generation, and settle frames.
 - Run Android and iOS device profiling and tune mesh density, spring frequency,
   and shading from measurements rather than screenshots alone.
 - Add automated gesture/UI coverage on at least one Android emulator and one iOS
   simulator or device.
-- Add explicit reduced-motion and keyboard/accessibility commands.
+- Add a small benchmark or profiler harness for drag, mesh generation, and settle
+  frames when the current opt-in diagnostics are insufficient.
 
 # Medium-term
 
@@ -24,8 +24,7 @@ timestamp: 2026-07-16T00:00:00Z
   keeping `PageTurnController` and `PageCurlGeometry` unchanged.
 - Add optional image-to-texture helpers with documented decode, cache, and
   disposal ownership.
-- Publish a compatibility matrix, package the library as a NuGet artifact, and
-  add API compatibility checks.
+- Add API compatibility checks and document the package publication workflow.
 - Improve optional page-edge shadows and perspective after profiling confirms
   the extra work fits the frame budget.
 

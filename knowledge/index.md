@@ -1,16 +1,3 @@
----
-type: Knowledge Bundle
-title: PageCurl.Maui project knowledge
-description: A navigable OKF bundle for the goals, architecture, decisions, workarounds, testing, and release readiness of PageCurl.Maui.
-tags:
-  - pagecurl
-  - dotnet-maui
-  - skia
-  - open-knowledge-format
-  - testing
-timestamp: 2026-07-16T00:00:00Z
----
-
 # PageCurl.Maui knowledge bundle
 
 This directory records the reasoning behind the library as small, linked
@@ -26,20 +13,28 @@ catalog that inspired the format.
   state machine, page geometry, MAUI adapter, and demo.
 - [Approaches and decision](project/approaches.md) — the alternatives assessed
   and why the current implementation uses a C# core with a Skia renderer.
-- [Workarounds and solutions](project/workarounds.md) — tooling, lifecycle,
-  rendering, and platform issues that need explicit handling.
+- [Workarounds and solutions](project/workarounds.md) — host, workload, and
+  packaging issues that need explicit handling.
+- [Runtime contracts](project/runtime-contracts.md) — image ownership,
+  cancellation, recycling, and diagnostic lifecycle rules.
 - [Testing and validation](project/testing.md) — what is tested, why it matters,
   and what still requires a device.
-- [Release readiness](project/release-readiness.md) — current status, risks, and
-  release gates for a production-quality control.
+- [Release readiness](project/release-readiness.md) — risks and release gates
+  for a production-quality control.
 - [Roadmap](project/roadmap.md) — sensible follow-up work after this baseline.
 
 ## Bundle conventions
 
-Every concept has YAML frontmatter with a required `type` and descriptive
-metadata. Links are ordinary relative Markdown links so the bundle remains
-readable in a checkout, a code browser, or an automated knowledge consumer.
-Unknown metadata keys should be preserved when concepts are transformed.
+Every concept document has YAML frontmatter with a required `type` and
+descriptive metadata. `index.md` files are directory listings, not concepts.
+Links are ordinary relative Markdown links so the bundle remains readable in a
+checkout, a code browser, or an automated knowledge consumer. Unknown metadata
+keys should be preserved when concepts are transformed.
+
+Current validation evidence lives under `docs/validation/`, executable command
+routing lives in `.agents/skills/`, and historical design/implementation
+records live under `docs/superpowers/`. Those locations are intentionally not
+part of the current concept index.
 
 ## Citations
 

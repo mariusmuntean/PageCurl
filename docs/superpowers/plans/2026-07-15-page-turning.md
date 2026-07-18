@@ -1,5 +1,8 @@
 # Page Turning Control Implementation Plan
 
+> **Status:** Historical implementation record. Do not execute this plan as
+> current work; use the repository sources and current task plan instead.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a tested analytic page-curl core, a SkiaSharp MAUI control, and a MAUI demo app.

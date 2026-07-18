@@ -5,6 +5,12 @@ The package targets the .NET 10/MAUI 10 line and pins
 this repository, not a promise that every application renderer behaves the
 same on every device.
 
+The matrix summarizes the latest recorded local evidence. Detailed commands,
+dates, screenshots, and unverified gates belong in
+[`docs/validation/ios-release-readiness.md`](validation/ios-release-readiness.md)
+and the release criteria belong in
+[`knowledge/project/release-readiness.md`](../knowledge/project/release-readiness.md).
+
 | Layer/target | Minimum | Current status | Evidence |
 | --- | --- | --- | --- |
 | PageCurl.Core | .NET 10 | Build | Core tests and allocation guard pass locally |

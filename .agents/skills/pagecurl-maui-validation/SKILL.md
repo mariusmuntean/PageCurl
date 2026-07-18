@@ -13,6 +13,10 @@ Read only the relevant project references before choosing commands:
 - `knowledge/project/workarounds.md`
 - `docs/validation/ios-release-readiness.md` for simulator work
 
+The command matrix below is the authoritative routing for this repository.
+Project knowledge explains why a check matters; it should not duplicate these
+commands.
+
 ## Route changes to checks
 
 - Core geometry, interaction, navigation, or tests:
@@ -24,7 +28,9 @@ Read only the relevant project references before choosing commands:
 - iOS simulator evidence: `./tools/ios-smoke.sh`
 - Mac Catalyst layout:
   `dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst`
-- CI project references: run the workflow path check and `dotnet sln PageCurl.sln list`.
+- CI project references: run `bash tools/check-workflow-projects.sh` and
+  `dotnet sln PageCurl.sln list`. The script scans all workflow YAML files by
+  default; pass one workflow path to narrow the check.
 
 Use explicit target frameworks. Do not evaluate iOS, Mac Catalyst, or Windows targets on Linux.
 
@@ -36,7 +42,11 @@ Use explicit target frameworks. Do not evaluate iOS, Mac Catalyst, or Windows ta
 4. Do not edit source to address a workload-resolution error.
 5. Report unavailable platform checks as not run or not verified.
 
-For CI checks, verify every `.csproj` path referenced by `.github/workflows/verify.yml` exists. Use `dotnet sln PageCurl.sln list` as an informational check of the current solution; the workflow project set does not need to equal the solution project set.
+For CI checks, `bash tools/check-workflow-projects.sh` verifies every `.csproj`
+path referenced by `.github/workflows/verify.yml` exists. Use
+`dotnet sln PageCurl.sln list` as an informational check of the current
+solution; the workflow project set does not need to equal the solution project
+set.
 
 ## Report
 

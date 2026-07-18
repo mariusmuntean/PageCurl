@@ -1,6 +1,12 @@
 ---
+type: Validation Record
 title: iOS release-readiness validation
 description: Repeatable simulator smoke evidence for the PageCurl.Maui demo.
+tags:
+  - validation
+  - ios
+  - release
+timestamp: 2026-07-18T00:00:00Z
 ---
 
 # Scope

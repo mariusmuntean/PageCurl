@@ -1,7 +1,8 @@
 # PageCurl Demo Experience Design
 
 **Date:** 2026-07-16
-**Status:** Approved for implementation
+**Status:** Historical design record. The implemented demo behavior is documented
+in the current source and validation records.
 **Scope:** Simplify the solution, improve automated confidence, and refresh the MAUI sample experience.
 
 ## Goal

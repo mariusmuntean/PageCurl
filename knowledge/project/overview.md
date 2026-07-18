@@ -6,7 +6,7 @@ tags:
   - goals
   - scope
   - maui
-timestamp: 2026-07-16T00:00:00Z
+timestamp: 2026-07-18T00:00:00Z
 ---
 
 # Goals
@@ -38,10 +38,6 @@ navigation system, or physics simulator. It does not promise that a source
 image is safe to dispose while the control is drawing it. It also does not hide
 the need for device profiling, accessibility review, or a native rendering
 backend review before a high-profile release.
-
-The previous contents of the `PageCurl` repository were an experiment. This
-tree is a clean replacement built around the current design and does not depend
-on or copy that experiment.
 
 See the [architecture](architecture.md) and [release gates](release-readiness.md)
 for the practical boundaries.

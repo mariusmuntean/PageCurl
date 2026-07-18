@@ -6,7 +6,7 @@ tags:
   - testing
   - quality
   - performance
-timestamp: 2026-07-16T00:00:00Z
+timestamp: 2026-07-18T00:00:00Z
 ---
 
 # Why testing matters
@@ -42,25 +42,11 @@ is a dependency-free executable runner. It checks:
 - warmed geometry and controller loops that assert zero managed allocations over
   1,000 iterations.
 
-Run it with:
+Use `$pagecurl-maui-validation` for the exact command and target selection. The
+skill is the single command router for local and CI validation; this document
+records what the checks prove rather than copying the command matrix.
 
-```bash
-dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
-```
-
-The core and explicit .NET 10 Android MAUI builds should also be part of
-pull-request CI:
-
-```bash
-dotnet build src/PageCurl.Core/PageCurl.Core.csproj -c Release
-dotnet workload install maui-android
-dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
-dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0-android
-dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
-./tools/ios-smoke.sh
-```
-
-The iOS smoke script builds the explicit simulator target, installs and launches
+The iOS smoke path builds the explicit simulator target, installs and launches
 the demo, asserts the page/lock/testing accessibility surface without exposing
 decorative hint glyphs, captures light/dark portrait screenshots, and captures
 Testing mode with the diagnostics panel and navigation commands visible. Manual
@@ -70,13 +56,9 @@ image replacement, and safe-area review.
 
 MacCatalyst is the fast visual feedback loop on macOS because its window can be
 resized through multiple aspect ratios without waiting for a simulator rebuild.
-Wide windows keep the stage centered and bounded so the portrait page remains
-readable while its source aspect ratio is preserved:
-
-```bash
-dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst
-open src/PageCurl.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Demo.app
-```
+Use `$pagecurl-maui-validation` for the explicit target command. Wide windows
+keep the stage centered and bounded so the portrait page remains readable while
+its source aspect ratio is preserved.
 
 The demo's opt-in `Testing mode` is the repeatable visual-debug surface for
 local development. It polls the controller only while enabled and exposes the

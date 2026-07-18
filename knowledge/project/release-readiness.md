@@ -6,29 +6,25 @@ tags:
   - release
   - risk
   - platform
-timestamp: 2026-07-16T00:00:00Z
+timestamp: 2026-07-18T00:00:00Z
 ---
 
-# Current status
+# Purpose
 
-The repository contains a working core state machine, edge-aware hinge model,
-analytic page mesh, aspect-preserving MAUI Skia adapter, modular demo,
-deterministic tests, pinned SDK/workloads, package metadata, and an iOS
-simulator smoke workflow. MacCatalyst is also used as the fast responsive-layout
-feedback target. Physical-device profiling, Android hardware smoke, and store
-signing remain separate evidence gates.
-
-This is a strong engineering baseline, not a claim of Kindle-level polish.
+This concept defines the release gates and known risks. Dated command output,
+screenshots, and environment details belong in `docs/validation/`; the
+compatibility matrix belongs in `docs/compatibility.md`. This document should
+not be treated as a replacement for fresh evidence.
 
 # Release gates
 
 ## Local evidence
 
-The current local evidence is recorded in
+Current local evidence is recorded in
 [`docs/validation/ios-release-readiness.md`](../../docs/validation/ios-release-readiness.md)
 and the compatibility matrix in [`docs/compatibility.md`](../../docs/compatibility.md).
-The core test runner includes warmed allocation guards for geometry and
-controller loops; both report zero managed bytes over 1,000 iterations.
+The validation record, not this concept, is the source of pass/fail claims for
+the latest local run.
 
 Before shipping a package or embedding the control in a flagship reader:
 
@@ -47,8 +43,9 @@ Before shipping a package or embedding the control in a flagship reader:
 6. Document image lifetime, threading, and navigation/recycling rules in the
    consuming application.
 7. Choose and publish a license, versioning policy, compatibility matrix, and
-   support policy before public distribution. The repository now provides MIT
-   licensing, semver 0.1.0 metadata, a compatibility matrix, and SUPPORT.md.
+   support policy before public distribution. The repository's current
+   distribution artifacts are `LICENSE`, `SUPPORT.md`, `docs/compatibility.md`,
+   and the package metadata; verify them against the release being shipped.
 
 # Known risks
 

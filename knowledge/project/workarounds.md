@@ -6,7 +6,7 @@ tags:
   - workarounds
   - tooling
   - platform
-timestamp: 2026-07-16T00:00:00Z
+timestamp: 2026-07-18T00:00:00Z
 ---
 
 # Tooling and build workarounds
@@ -33,31 +33,14 @@ possible; it must not silently change the .NET 10 MAUI or
 `SkiaSharp.Views.Maui.Controls` 4.150.1 version selected by the project.
 
 `global.json` pins SDK 10.0.301. On a machine where the system SDK is
-root-owned or has no workloads, use `/Users/marius/.dotnet` (or an equivalent
-user-local installation) and install `maui-ios maui-android` there. Explicit
-mobile restores/builds keep each referenced project on its own target assets;
-overriding a multi-target root project can otherwise leave a referenced
-`net10.0` core assets file without its neutral target.
+root-owned or has no workloads, use a writable user-local SDK installation and
+install `maui-ios maui-android` there. Set `DOTNET_ROOT` or `PATH` for that
+installation rather than copying a machine-specific path into shared project
+knowledge. Explicit mobile restores/builds keep each referenced project on its
+own target assets; overriding a multi-target root project can otherwise leave a
+referenced `net10.0` core assets file without its neutral target.
 
-# Runtime workarounds
-
-- `PageTurnView.CancelInteraction()` drives the controller back to the resting
-  endpoint. Call it when a page is removed, the view is recycled, or navigation
-  interrupts a gesture.
-- Supply `PreviousPageImage` as well as `UnderPageImage` when backward turns
-  should reveal a different page. If the former is omitted, the control falls
-  back to the latter for compatibility.
-- The controller ignores non-finite coordinates and clamps all input to the
-  current page. This is a defensive boundary for pointer and layout races.
-- The control treats images as caller-owned. Keep them alive until the view no
-  longer uses them; dispose them from the application image cache, not from a
-  bindable-property callback.
-- `SKGLView` is a pragmatic baseline. If a target deprecates its OpenGL path or
-  the measured frame budget is missed, retain the core API and replace only the
-  adapter with a Metal, Canvas, or platform-native renderer.
-- Enable `PageTurnView.PerformanceDiagnosticsEnabled` only while collecting
-  render evidence. The default paint path avoids stopwatch/allocation reads and
-  the diagnostics values are exposed as an immutable snapshot.
-
-These workarounds are recorded so they are visible during review rather than
-being mistaken for invisible production guarantees.
+Runtime ownership, cancellation, image lifetime, and diagnostics behavior are
+documented in [runtime contracts](runtime-contracts.md). Keeping those rules
+separate from host/toolchain workarounds makes each concept easier to retrieve
+and update.

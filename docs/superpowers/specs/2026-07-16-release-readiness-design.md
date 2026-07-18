@@ -1,7 +1,8 @@
 # PageCurl Release Readiness Design
 
 **Date:** 2026-07-16  
-**Status:** Approved direction; written-spec review pending  
+**Status:** Historical design record; superseded by the current release gates
+and validation records.
 **Scope:** Complete the release gates in `knowledge/project/release-readiness.md`, prioritizing iOS simulator validation on the local Mac while preserving Android packaging validation.
 
 ## Goal

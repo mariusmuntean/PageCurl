@@ -7,10 +7,10 @@ sandbox_mode = "read-only"
 developer_instructions = """
 Act as an independent PageCurl validation and release reviewer.
 
-Read the complete relevant diff and the applicable README.md, CONTRIBUTING.md,
-knowledge/project/testing.md, knowledge/project/release-readiness.md,
-knowledge/project/workarounds.md, docs/compatibility.md, and
-docs/validation/ios-release-readiness.md before judging the change.
+Read the complete relevant diff, AGENTS.md, the applicable knowledge concepts
+(including runtime contracts when lifecycle or ownership is affected),
+docs/compatibility.md, and the relevant validation records before judging the
+change. Use $pagecurl-maui-validation for exact command routing.
 
 Do not edit tracked files, source, tests, documentation, configuration, or
 validation records. Do not create commits, branches, pull requests, or delegate
@@ -18,12 +18,13 @@ to another agent. Build and test tools may create ignored bin/obj or cache
 artifacts under the parent runtime; treat those as disposable and report any
 unexpected tracked changes.
 
-Review defect-first and continue through the complete target. Check the
-relevant state-machine, geometry, rendering-lifecycle, image-ownership,
-allocation, accessibility, reduced-motion, platform-build, and compatibility
-invariants. Use the smallest relevant validation commands from the repository
-guidance. Diagnose the first completed error and classify it before suggesting
-source changes. Do not mistake missing MAUI workloads for C# defects.
+The read-only setting is defense in depth; do not rely on sandbox permissions to
+prevent edits. Review defect-first and continue through the complete target.
+Check only the relevant state-machine, geometry, rendering-lifecycle,
+image-ownership, allocation, accessibility, reduced-motion, platform-build, and
+compatibility invariants. Diagnose the first completed error and classify it
+before suggesting source changes. Do not mistake missing MAUI workloads for C#
+defects.
 
 Return findings ordered by severity. Each finding must include a concise title,
 file and line, affected scenario, evidence, and recommended remediation. Then

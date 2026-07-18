@@ -21,16 +21,13 @@ and the public API understandable to a MAUI application developer.
 
 ## Required checks
 
-```bash
-dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
-dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
-dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
-```
-
-The repository uses the SDK selected by `global.json`. On macOS, install
-`maui-ios` and `maui-android`, then run `./tools/ios-smoke.sh` for the simulator
-gate. A successful source build is not a substitute for profiling the control
-on a representative physical device.
+Use [`pagecurl-maui-validation`](.agents/skills/pagecurl-maui-validation/SKILL.md)
+for the exact command and target selection. At minimum, run the dependency-free
+core suite, the neutral MAUI target, and every platform target affected by the
+change. The repository uses the SDK selected by `global.json`; on macOS, the
+skill routes iOS simulator work through `tools/ios-smoke.sh`. A successful
+source build is not a substitute for profiling the control on a representative
+physical device.
 
 ## Design boundaries
 
