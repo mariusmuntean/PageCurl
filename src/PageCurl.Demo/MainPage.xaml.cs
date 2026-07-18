@@ -17,6 +17,9 @@ public partial class MainPage : ContentPage
         InitializeComponent();
         _navigation = new PageNavigationState(4);
         BindingContext = _navigation;
+        LockedEdgePicker.ItemsSource = new[] { "Auto", "Top", "Right", "Bottom", "Left" };
+        LockedEdgePicker.SelectedIndex = 0;
+        ApplyLockedEdgeVisuals();
         EnsurePageSet();
     }
 
@@ -41,6 +44,8 @@ public partial class MainPage : ContentPage
         }
 
         ShowPage();
+        EdgeHintsOverlay.Opacity = 0.28;
+        HintsButton.IsVisible = true;
         StatusLabel.Text = _navigation.CanTurnForward ? "CURL COMPLETE" : "FINAL PAGE";
         PageHintLabel.Text = args.Direction == PageTurnDirection.Forward
             ? "Forward curl completed from the right side or a corner."
@@ -59,6 +64,7 @@ public partial class MainPage : ContentPage
     {
         TestingPanel.IsVisible = e.Value;
         PageView.PerformanceDiagnosticsEnabled = e.Value;
+        UpdateStageHeight();
 
         if (e.Value)
         {
@@ -80,7 +86,32 @@ public partial class MainPage : ContentPage
             return;
         }
 
-        StageGrid.HeightRequest = Width > Height ? 250 : 340;
+        UpdateStageHeight();
+    }
+
+    private void OnLockedEdgeChanged(object? sender, EventArgs e)
+    {
+        var edge = LockedEdgePicker.SelectedIndex switch
+        {
+            1 => PageEdge.Top,
+            2 => PageEdge.Right,
+            3 => PageEdge.Bottom,
+            4 => PageEdge.Left,
+            _ => PageEdge.Auto,
+        };
+        PageView.LockedEdge = edge;
+        LockedEdgeLabel.Text = edge.ToString().ToUpperInvariant();
+        ApplyLockedEdgeVisuals();
+        PageHintLabel.Text = edge == PageEdge.Auto
+            ? "Auto hinge: the nearest free edge controls the curl."
+            : $"{edge} edge locked. Drag any other edge or corner toward the page.";
+        UpdateTestingPanel();
+    }
+
+    private void OnShowHintsClicked(object? sender, EventArgs e)
+    {
+        EdgeHintsOverlay.Opacity = 1;
+        HintsButton.IsVisible = false;
     }
 
     protected override void OnAppearing()
@@ -94,6 +125,8 @@ public partial class MainPage : ContentPage
         _testingTimer?.Stop();
         PageView.PerformanceDiagnosticsEnabled = false;
         TestingModeSwitch.IsToggled = false;
+        HintsButton.IsVisible = false;
+        EdgeHintsOverlay.Opacity = 1;
         PageView.CancelInteraction();
         PageView.FrontImage = null;
         PageView.BackImage = null;
@@ -158,10 +191,10 @@ public partial class MainPage : ContentPage
         TestingStateLabel.Text = $"{snapshot.State.ToString().ToUpperInvariant()} · {snapshot.Direction.ToString().ToUpperInvariant()} · {snapshot.Progress:P0}";
         TestingPointerLabel.Text = $"Pointer {FormatPoint(snapshot.PointerPosition)} · Start {FormatPoint(snapshot.DragStartPosition)}";
 
-        var pageSize = PageView.LastCanvasSize;
+        var pageSize = PageView.LastContentViewport.Size;
         var pose = PageView.Controller.GetCurlPose(pageSize);
         TestingPoseLabel.Text = pose.IsActive
-            ? $"Pose {FormatPoint(pose.Position)} · Axis {FormatPoint(pose.Direction)} · Radius {pose.Radius:0.0}"
+            ? $"Pose {FormatPoint(pose.Position)} · {pose.FreeEdge}/{pose.HingeEdge} · Radius {pose.Radius:0.0}"
             : "Pose inactive";
 
         var performance = PageView.PerformanceSnapshot;
@@ -190,5 +223,33 @@ public partial class MainPage : ContentPage
         PageCounterLabel.Text = $"{pageIndex + 1:00} / {pages.Count:00}";
         StatusLabel.Text = _navigation.CanTurnForward ? "READY TO TURN" : "FINAL PAGE";
         PageHintLabel.Text = "Drag from a side or corner to reveal the next fold.";
+    }
+
+    private void ApplyLockedEdgeVisuals()
+    {
+        var edge = PageView.LockedEdge;
+        var auto = edge == PageEdge.Auto;
+        TopEdgeHint.Opacity = auto || edge == PageEdge.Top ? 1 : 0.28;
+        RightEdgeHint.Opacity = auto || edge == PageEdge.Right ? 1 : 0.28;
+        BottomEdgeHint.Opacity = auto || edge == PageEdge.Bottom ? 1 : 0.28;
+        LeftEdgeHint.Opacity = auto || edge == PageEdge.Left ? 1 : 0.28;
+        TopLeftCornerHint.Opacity = auto || edge == PageEdge.Top || edge == PageEdge.Left ? 1 : 0.28;
+        TopRightCornerHint.Opacity = auto || edge == PageEdge.Top || edge == PageEdge.Right ? 1 : 0.28;
+        BottomLeftCornerHint.Opacity = auto || edge == PageEdge.Bottom || edge == PageEdge.Left ? 1 : 0.28;
+        BottomRightCornerHint.Opacity = auto || edge == PageEdge.Bottom || edge == PageEdge.Right ? 1 : 0.28;
+    }
+
+    private void UpdateStageHeight()
+    {
+        if (Width <= 0 || Height <= 0)
+        {
+            return;
+        }
+
+        var landscape = Width > Height;
+        var responsiveLandscapeHeight = Math.Clamp(Height * (TestingPanel.IsVisible ? 0.32 : 0.45), 220, 360);
+        StageGrid.HeightRequest = TestingPanel.IsVisible
+            ? (landscape ? responsiveLandscapeHeight : 225)
+            : (landscape ? responsiveLandscapeHeight : 340);
     }
 }

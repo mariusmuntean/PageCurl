@@ -6,7 +6,13 @@
     xmlns:curl="clr-namespace:PageCurl.Maui;assembly=PageCurl.Maui"
     SafeAreaEdges="All"
     Background="{AppThemeBinding Light={StaticResource PageBackgroundBrushLight}, Dark={StaticResource PageBackgroundBrushDark}}">
-    <Grid Padding="20,18" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14" HorizontalOptions="Fill" VerticalOptions="Fill">
+    <Grid
+        x:Name="RootLayout"
+        Padding="20,18"
+        RowDefinitions="Auto,Auto,*,Auto"
+        RowSpacing="14"
+        HorizontalOptions="Fill"
+        VerticalOptions="Fill">
         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
             <Border
                 WidthRequest="42"
@@ -16,12 +22,13 @@
                 StrokeThickness="0"
                 StrokeShape="RoundRectangle 14">
                 <Label
-                    Text="↗"
+                    Text="PC"
                     FontSize="22"
                     FontAttributes="Bold"
                     HorizontalOptions="Center"
                     VerticalOptions="Center"
-                    TextColor="{StaticResource ButtonTextDark}" />
+                    TextColor="{StaticResource ButtonTextDark}"
+                    AutomationProperties.IsInAccessibleTree="False" />
             </Border>
             <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
                 <Label Text="PAGECURL" Style="{StaticResource EyebrowLabel}" />
@@ -80,17 +87,23 @@
                 x:Name="StageGrid"
                 HeightRequest="340"
                 MinimumHeightRequest="260"
+                VerticalOptions="Center"
                 SizeChanged="OnStageSizeChanged">
                 <curl:PageTurnView
                     x:Name="PageView"
+                    ContentScale="AspectFit"
+                    SemanticProperties.Description="Interactive page. Drag from any free edge or corner to turn the page."
                     SurfaceColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}" />
 
                 <Grid
+                    x:Name="EdgeHintsOverlay"
                     InputTransparent="True"
                     ColumnDefinitions="42,*,42"
                     RowDefinitions="42,*,42"
-                    Margin="8">
+                    Margin="8"
+                    AutomationProperties.IsInAccessibleTree="False">
                     <Border
+                        x:Name="TopLeftCornerHint"
                         Grid.Row="0"
                         Grid.Column="0"
                         WidthRequest="34"
@@ -103,9 +116,10 @@
                         HorizontalOptions="Start"
                         VerticalOptions="Start"
                         Opacity="0.9">
-                        <Label Text="↖" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                        <Label Text="↖" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
                     </Border>
                     <Border
+                        x:Name="TopRightCornerHint"
                         Grid.Row="0"
                         Grid.Column="2"
                         WidthRequest="34"
@@ -118,9 +132,10 @@
                         HorizontalOptions="End"
                         VerticalOptions="Start"
                         Opacity="0.9">
-                        <Label Text="↗" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                        <Label Text="↗" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
                     </Border>
                     <Border
+                        x:Name="BottomLeftCornerHint"
                         Grid.Row="2"
                         Grid.Column="0"
                         WidthRequest="34"
@@ -133,9 +148,10 @@
                         HorizontalOptions="Start"
                         VerticalOptions="End"
                         Opacity="0.9">
-                        <Label Text="↙" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                        <Label Text="↙" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
                     </Border>
                     <Border
+                        x:Name="BottomRightCornerHint"
                         Grid.Row="2"
                         Grid.Column="2"
                         WidthRequest="34"
@@ -148,11 +164,28 @@
                         HorizontalOptions="End"
                         VerticalOptions="End"
                         Opacity="0.9">
-                        <Label Text="↘" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                        <Label Text="↘" FontSize="16" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
+                    </Border>
+                    <Border
+                        x:Name="TopEdgeHint"
+                        Grid.Row="0"
+                        Grid.Column="1"
+                        WidthRequest="124"
+                        HeightRequest="28"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 14"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Start"
+                        Opacity="0.85">
+                        <Label Text="⌃  TOP EDGE  ⌃" FontSize="10" CharacterSpacing="1" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
                     </Border>
                     <Border
                         Grid.Row="1"
                         Grid.Column="0"
+                        x:Name="LeftEdgeHint"
                         WidthRequest="30"
                         HeightRequest="112"
                         Padding="0"
@@ -163,11 +196,12 @@
                         HorizontalOptions="Start"
                         VerticalOptions="Center"
                         Opacity="0.85">
-                        <Label Text="‹" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                        <Label Text="‹" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
                     </Border>
                     <Border
                         Grid.Row="1"
                         Grid.Column="2"
+                        x:Name="RightEdgeHint"
                         WidthRequest="30"
                         HeightRequest="112"
                         Padding="0"
@@ -178,7 +212,23 @@
                         HorizontalOptions="End"
                         VerticalOptions="Center"
                         Opacity="0.85">
-                        <Label Text="›" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                        <Label Text="›" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
+                    </Border>
+                    <Border
+                        x:Name="BottomEdgeHint"
+                        Grid.Row="2"
+                        Grid.Column="1"
+                        WidthRequest="124"
+                        HeightRequest="28"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                        Stroke="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 14"
+                        HorizontalOptions="Center"
+                        VerticalOptions="End"
+                        Opacity="0.85">
+                        <Label Text="⌄  BOTTOM EDGE  ⌄" FontSize="10" CharacterSpacing="1" HorizontalOptions="Center" VerticalOptions="Center" TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" AutomationProperties.IsInAccessibleTree="False" />
                     </Border>
                 </Grid>
             </Grid>
@@ -187,7 +237,7 @@
         <VerticalStackLayout Grid.Row="3" Spacing="12">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <Label
-                    Text="Side rails and corner markers are touch-through hints."
+                    Text="Drag any edge or corner. Hints fade after your first curl."
                     Style="{StaticResource MutedLabel}"
                     VerticalOptions="Center"
                     LineBreakMode="WordWrap" />
@@ -198,6 +248,23 @@
                         IsToggled="{Binding Source={x:Reference PageView}, Path=ReduceMotion, Mode=TwoWay}"
                         SemanticProperties.Description="Reduce page-turn motion" />
                 </HorizontalStackLayout>
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <Label Text="HINGE" Style="{StaticResource EyebrowLabel}" VerticalOptions="Center" />
+                <Picker
+                    x:Name="LockedEdgePicker"
+                    Grid.Column="1"
+                    Title="Auto — choose nearest free edge"
+                    FontSize="13"
+                    HeightRequest="42"
+                    SelectedIndexChanged="OnLockedEdgeChanged"
+                    SemanticProperties.Description="Select the stationary page edge" />
+                <Label
+                    x:Name="LockedEdgeLabel"
+                    Grid.Column="2"
+                    Text="AUTO"
+                    Style="{StaticResource EyebrowLabel}"
+                    VerticalOptions="Center" />
             </Grid>
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <VerticalStackLayout Spacing="1" VerticalOptions="Center">
@@ -214,11 +281,12 @@
                 x:Name="TestingPanel"
                 IsVisible="False"
                 Padding="12"
+                MaximumHeightRequest="146"
                 BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
                 Stroke="{AppThemeBinding Light={StaticResource BorderLight}, Dark={StaticResource BorderDark}}"
                 StrokeThickness="1"
                 StrokeShape="RoundRectangle 16">
-                <VerticalStackLayout Spacing="4">
+                <VerticalStackLayout Spacing="2">
                     <Label Text="RUNTIME PROBE" Style="{StaticResource EyebrowLabel}" />
                     <Label
                         x:Name="TestingStateLabel"
@@ -242,6 +310,15 @@
                         Style="{StaticResource MutedLabel}" />
                 </VerticalStackLayout>
             </Border>
+            <Button
+                x:Name="HintsButton"
+                Text="Show edge hints"
+                IsVisible="False"
+                HeightRequest="34"
+                Padding="12,0"
+                HorizontalOptions="Start"
+                Clicked="OnShowHintsClicked"
+                SemanticProperties.Description="Show the page edge and corner hints again" />
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <Button
                     Text="‹  Previous"
