@@ -67,15 +67,21 @@ capture_testing_mode() {
     tap_x="$(awk -v x="$switch_x" -v width="$switch_width" 'BEGIN { printf "%d", x + width / 2 }')"
     tap_y="$(awk -v y="$switch_y" -v height="$switch_height" 'BEGIN { printf "%d", y + height / 2 }')"
     idb ui tap --udid "$DEVICE" --duration 1 "$tap_x" "$tap_y" >/dev/null
-    sleep 1
-
-    local testing_ui
-    testing_ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
-    local next_frame
-    next_frame="$(echo "$testing_ui" | jq -r '.. | objects | select(.AXLabel? == "Turn to next page") | .AXFrame' | head -1)"
-    if ! echo "$testing_ui" | rg -q '"AXLabel":"RUNTIME PROBE"' \
-        || ! echo "$testing_ui" | rg -q '"AXLabel":"Turn to next page"' \
-        || [[ "$next_frame" == "{{0, 0}, {0, 0}}" ]]; then
+    local testing_ui=""
+    local next_frame=""
+    local testing_ready=0
+    for _ in 1 2 3 4 5; do
+        sleep 1
+        testing_ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
+        next_frame="$(echo "$testing_ui" | jq -r '.. | objects | select(.AXLabel? == "Turn to next page") | .AXFrame' | head -1)"
+        if echo "$testing_ui" | rg -q '"AXLabel":"RUNTIME PROBE"' \
+            && echo "$testing_ui" | rg -q '"AXLabel":"Turn to next page"' \
+            && [[ "$next_frame" != "{{0, 0}, {0, 0}}" ]]; then
+            testing_ready=1
+            break
+        fi
+    done
+    if [[ "$testing_ready" != "1" ]]; then
         echo "Testing mode did not expose a complete, visible diagnostics surface." >&2
         return 1
     fi
