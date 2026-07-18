@@ -16,6 +16,8 @@ internal static class PageCurlGeometryTests
         Repeated_builds_reuse_mesh_arrays();
         Sampled_drag_poses_remain_finite_and_bounded();
         Corner_origin_drag_poses_remain_finite_and_bounded();
+        Every_free_edge_produces_a_finite_bounded_mesh();
+        Selected_hinge_edge_remains_stationary();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -184,6 +186,69 @@ internal static class PageCurlGeometryTests
 
             AssertFiniteAndBounded(buffer.FrontVertices, buffer.FrontVertexCount);
             AssertFiniteAndBounded(buffer.BackVertices, buffer.BackVertexCount);
+        }
+    }
+
+    private static void Every_free_edge_produces_a_finite_bounded_mesh()
+    {
+        var options = new PageCurlOptions { MeshColumns = 10, MeshRows = 5 };
+        var buffer = new PageMeshBuffer(options);
+        var cases = new[]
+        {
+            (Hinge: PageEdge.Left, Free: PageEdge.Right, Start: new Vector2(100, 80), Pointer: new Vector2(50, 80)),
+            (Hinge: PageEdge.Right, Free: PageEdge.Left, Start: new Vector2(0, 80), Pointer: new Vector2(50, 80)),
+            (Hinge: PageEdge.Bottom, Free: PageEdge.Top, Start: new Vector2(50, 0), Pointer: new Vector2(50, 80)),
+            (Hinge: PageEdge.Top, Free: PageEdge.Bottom, Start: new Vector2(50, 160), Pointer: new Vector2(50, 80)),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var pose = PageCurlGeometry.ComputePose(
+                PageSize,
+                testCase.Start,
+                testCase.Pointer,
+                testCase.Hinge,
+                testCase.Free,
+                PageTurnDirection.Forward,
+                0.5f,
+                options);
+
+            PageCurlGeometry.Build(buffer, PageSize, pose, options);
+            AssertFiniteAndBounded(buffer.FrontVertices, buffer.FrontVertexCount);
+            AssertFiniteAndBounded(buffer.BackVertices, buffer.BackVertexCount);
+        }
+    }
+
+    private static void Selected_hinge_edge_remains_stationary()
+    {
+        var options = new PageCurlOptions { MeshColumns = 10, MeshRows = 5 };
+        var buffer = new PageMeshBuffer(options);
+        var pose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(50, 0),
+            new Vector2(50, 80),
+            PageEdge.Left,
+            PageEdge.Top,
+            PageTurnDirection.Forward,
+            0.5f,
+            options);
+
+        PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+        foreach (var vertex in buffer.FrontVertices.AsSpan(0, buffer.FrontVertexCount))
+        {
+            if (vertex.TextureCoordinate.X <= 0.0001f)
+            {
+                TestAssert.Equal(0f, vertex.Position.X, 3);
+            }
+        }
+
+        foreach (var vertex in buffer.BackVertices.AsSpan(0, buffer.BackVertexCount))
+        {
+            if (vertex.TextureCoordinate.X <= 0.0001f)
+            {
+                TestAssert.Equal(0f, vertex.Position.X, 3);
+            }
         }
     }
 

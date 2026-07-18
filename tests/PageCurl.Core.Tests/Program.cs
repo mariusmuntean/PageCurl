@@ -8,6 +8,7 @@ internal static class Program
         {
             (nameof(PageTurnControllerTests), PageTurnControllerTests.RunAll),
             (nameof(PageCurlGeometryTests), PageCurlGeometryTests.RunAll),
+            (nameof(PageEdgeTests), PageEdgeTests.RunAll),
             (nameof(PageTurnPointerCaptureTests), PageTurnPointerCaptureTests.RunAll),
             (nameof(PageNavigationStateTests), PageNavigationStateTests.RunAll),
             (nameof(PageTurnPerformanceTests), PageTurnPerformanceTests.RunAll),

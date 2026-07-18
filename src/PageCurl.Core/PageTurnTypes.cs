@@ -9,6 +9,16 @@ public enum PageTurnDirection
     Backward,
 }
 
+/// <summary>The physical edge that anchors or starts a page curl.</summary>
+public enum PageEdge
+{
+    Auto,
+    Top,
+    Right,
+    Bottom,
+    Left,
+}
+
 /// <summary>The interaction/animation phase of a page turn.</summary>
 public enum PageTurnState
 {
@@ -106,6 +116,10 @@ public readonly record struct CurlPose(
     PageTurnDirection TurnDirection,
     bool IsActive)
 {
+    public PageEdge HingeEdge { get; init; } = PageEdge.Auto;
+
+    public PageEdge FreeEdge { get; init; } = PageEdge.Auto;
+
     public static CurlPose Inactive(PageTurnDirection direction) =>
         new(Vector2.Zero, Vector2.UnitX, 0, 0, direction, false);
 }
@@ -124,7 +138,14 @@ public readonly record struct PageTurnSnapshot(
     Vector2 DragStartPosition,
     Vector2 PointerPosition,
     float Progress,
-    float TargetProgress);
+    float TargetProgress)
+{
+    /// <summary>The physical edge currently acting as the stationary hinge.</summary>
+    public PageEdge HingeEdge { get; init; } = PageEdge.Auto;
+
+    /// <summary>The physical edge or corner the user is pulling from.</summary>
+    public PageEdge FreeEdge { get; init; } = PageEdge.Auto;
+}
 
 /// <summary>Raised once when a release animation reaches its endpoint.</summary>
 public sealed class PageTurnCompletedEventArgs : EventArgs

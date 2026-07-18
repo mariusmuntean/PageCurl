@@ -8,11 +8,17 @@ namespace PageCurl.Core;
 /// </summary>
 public sealed class PageTurnController
 {
+    private const float EdgeEpsilon = 0.001f;
     private readonly PageCurlOptions _options;
     private PageTurnState _state;
     private PageTurnDirection _direction;
+    private PageEdge _hingeEdge = PageEdge.Auto;
+    private PageEdge _freeEdge = PageEdge.Auto;
+    private PageEdge _lockedEdge = PageEdge.Auto;
+    private bool _edgeSelectionPending;
     private Vector2 _pageSize;
     private Vector2 _dragStartPosition;
+    private Vector2 _initialPointerPosition;
     private Vector2 _pointerPosition;
     private float _progress;
     private float _targetProgress;
@@ -35,7 +41,11 @@ public sealed class PageTurnController
         _dragStartPosition,
         _pointerPosition,
         _progress,
-        _targetProgress);
+        _targetProgress)
+    {
+        HingeEdge = _hingeEdge,
+        FreeEdge = _freeEdge,
+    };
 
     public bool BeginDrag(Vector2 pointer, Vector2 pageSize)
     {
@@ -49,6 +59,11 @@ public sealed class PageTurnController
         _direction = clampedPointer.X >= pageSize.X * 0.5f
             ? PageTurnDirection.Forward
             : PageTurnDirection.Backward;
+        _hingeEdge = _direction == PageTurnDirection.Forward ? PageEdge.Left : PageEdge.Right;
+        _freeEdge = _direction == PageTurnDirection.Forward ? PageEdge.Right : PageEdge.Left;
+        _lockedEdge = _hingeEdge;
+        _edgeSelectionPending = false;
+        _initialPointerPosition = clampedPointer;
         _dragStartPosition = new(
             _direction == PageTurnDirection.Forward ? pageSize.X : 0,
             clampedPointer.Y);
@@ -61,6 +76,65 @@ public sealed class PageTurnController
         return true;
     }
 
+    /// <summary>
+    /// Begins a drag using a physical edge-aware interaction model. The
+    /// locked edge is the stationary hinge; <see cref="PageEdge.Auto"/>
+    /// chooses the nearest free edge and its opposite hinge.
+    /// </summary>
+    public bool BeginDrag(Vector2 pointer, Vector2 pageSize, PageEdge lockedEdge)
+    {
+        if (!IsValidPageSize(pageSize) || !IsFinite(pointer) || !IsValidEdge(lockedEdge))
+        {
+            return false;
+        }
+
+        var clampedPointer = ClampToPage(pointer, pageSize);
+        var nearestEdge = SelectNearestEdge(clampedPointer, pageSize);
+        if (lockedEdge != PageEdge.Auto
+            && nearestEdge == lockedEdge
+            && IsOnEdge(clampedPointer, pageSize, lockedEdge)
+            && !IsCorner(clampedPointer, pageSize))
+        {
+            return false;
+        }
+
+        _pageSize = pageSize;
+        _lockedEdge = lockedEdge;
+        _direction = clampedPointer.X >= pageSize.X * 0.5f
+            ? PageTurnDirection.Forward
+            : PageTurnDirection.Backward;
+        _initialPointerPosition = clampedPointer;
+        _pointerPosition = clampedPointer;
+        _progress = 0;
+        _targetProgress = 0;
+        _velocity = 0;
+        _completionRaised = false;
+
+        _edgeSelectionPending = lockedEdge == PageEdge.Auto && IsCorner(clampedPointer, pageSize);
+        if (_edgeSelectionPending)
+        {
+            _freeEdge = PageEdge.Auto;
+            _hingeEdge = PageEdge.Auto;
+            _dragStartPosition = clampedPointer;
+        }
+        else
+        {
+            _freeEdge = lockedEdge == PageEdge.Auto
+                ? nearestEdge
+                : SelectNearestFreeEdge(clampedPointer, pageSize, lockedEdge);
+            if (_freeEdge == PageEdge.Auto)
+            {
+                return false;
+            }
+
+            SelectEdges(_freeEdge);
+            _dragStartPosition = ProjectToEdge(clampedPointer, pageSize, _freeEdge);
+        }
+
+        _state = PageTurnState.Dragging;
+        return true;
+    }
+
     public void UpdateDrag(Vector2 pointer, double timestampSeconds = 0)
     {
         if (_state != PageTurnState.Dragging || !IsFinite(pointer))
@@ -69,9 +143,28 @@ public sealed class PageTurnController
         }
 
         _pointerPosition = ClampToPage(pointer, _pageSize);
-        _progress = _direction == PageTurnDirection.Forward
-            ? 1f - (_pointerPosition.X / _pageSize.X)
-            : _pointerPosition.X / _pageSize.X;
+        if (_edgeSelectionPending)
+        {
+            var selectedEdge = SelectCornerEdge(
+                _initialPointerPosition,
+                _pointerPosition - _initialPointerPosition,
+                _pageSize,
+                _lockedEdge);
+            if (selectedEdge != PageEdge.Auto)
+            {
+                _edgeSelectionPending = false;
+                _freeEdge = selectedEdge;
+                SelectEdges(selectedEdge);
+                _dragStartPosition = ProjectToEdge(
+                    _initialPointerPosition,
+                    _pageSize,
+                    selectedEdge);
+            }
+        }
+
+        _progress = _freeEdge == PageEdge.Auto
+            ? 0
+            : CalculateProgress(_pointerPosition, _pageSize, _freeEdge);
         _progress = Math.Clamp(_progress, 0, 1);
         _targetProgress = _progress;
         _velocity = 0;
@@ -105,9 +198,14 @@ public sealed class PageTurnController
 
         _pageSize = pageSize;
         _direction = direction;
+        _hingeEdge = direction == PageTurnDirection.Forward ? PageEdge.Left : PageEdge.Right;
+        _freeEdge = direction == PageTurnDirection.Forward ? PageEdge.Right : PageEdge.Left;
+        _lockedEdge = _hingeEdge;
+        _edgeSelectionPending = false;
         _dragStartPosition = new(
             direction == PageTurnDirection.Forward ? pageSize.X : 0,
             pageSize.Y * 0.5f);
+        _initialPointerPosition = _dragStartPosition;
         _pointerPosition = _dragStartPosition;
         _progress = 0;
         _targetProgress = 1;
@@ -179,6 +277,8 @@ public sealed class PageTurnController
             pageSize,
             _dragStartPosition,
             _pointerPosition,
+            _hingeEdge,
+            _freeEdge,
             _direction,
             _progress,
             _options);
@@ -208,9 +308,150 @@ public sealed class PageTurnController
     private static bool IsValidPageSize(Vector2 pageSize) =>
         IsFinite(pageSize) && pageSize.X > 0 && pageSize.Y > 0;
 
+    private static bool IsValidEdge(PageEdge edge) =>
+        edge is PageEdge.Auto or PageEdge.Top or PageEdge.Right or PageEdge.Bottom or PageEdge.Left;
+
     private static bool IsFinite(Vector2 value) =>
         float.IsFinite(value.X) && float.IsFinite(value.Y);
 
     private static Vector2 ClampToPage(Vector2 value, Vector2 pageSize) =>
         new(Math.Clamp(value.X, 0, pageSize.X), Math.Clamp(value.Y, 0, pageSize.Y));
+
+    private void SelectEdges(PageEdge freeEdge)
+    {
+        _freeEdge = freeEdge;
+        _hingeEdge = _lockedEdge == PageEdge.Auto ? Opposite(freeEdge) : _lockedEdge;
+    }
+
+    private static PageEdge SelectNearestEdge(Vector2 pointer, Vector2 pageSize)
+    {
+        var top = pointer.Y;
+        var right = pageSize.X - pointer.X;
+        var bottom = pageSize.Y - pointer.Y;
+        var left = pointer.X;
+        var minimum = MathF.Min(MathF.Min(top, right), MathF.Min(bottom, left));
+
+        if (MathF.Abs(top - minimum) <= EdgeEpsilon)
+        {
+            return PageEdge.Top;
+        }
+
+        if (MathF.Abs(right - minimum) <= EdgeEpsilon)
+        {
+            return PageEdge.Right;
+        }
+
+        if (MathF.Abs(bottom - minimum) <= EdgeEpsilon)
+        {
+            return PageEdge.Bottom;
+        }
+
+        return PageEdge.Left;
+    }
+
+    private static PageEdge SelectNearestFreeEdge(Vector2 pointer, Vector2 pageSize, PageEdge lockedEdge)
+    {
+        var selected = PageEdge.Auto;
+        var minimum = float.PositiveInfinity;
+        var top = pointer.Y;
+        var right = pageSize.X - pointer.X;
+        var bottom = pageSize.Y - pointer.Y;
+        var left = pointer.X;
+
+        Consider(PageEdge.Top, top, lockedEdge, ref selected, ref minimum);
+        Consider(PageEdge.Right, right, lockedEdge, ref selected, ref minimum);
+        Consider(PageEdge.Bottom, bottom, lockedEdge, ref selected, ref minimum);
+        Consider(PageEdge.Left, left, lockedEdge, ref selected, ref minimum);
+        return selected;
+    }
+
+    private static void Consider(
+        PageEdge edge,
+        float distance,
+        PageEdge lockedEdge,
+        ref PageEdge selected,
+        ref float minimum)
+    {
+        if (edge == lockedEdge || distance >= minimum)
+        {
+            return;
+        }
+
+        selected = edge;
+        minimum = distance;
+    }
+
+    private static PageEdge SelectCornerEdge(
+        Vector2 corner,
+        Vector2 movement,
+        Vector2 pageSize,
+        PageEdge lockedEdge)
+    {
+        if (movement.LengthSquared() <= EdgeEpsilon * EdgeEpsilon)
+        {
+            return PageEdge.Auto;
+        }
+
+        var horizontal = MathF.Abs(movement.X) >= MathF.Abs(movement.Y);
+        var preferred = horizontal
+            ? movement.X >= 0 ? PageEdge.Left : PageEdge.Right
+            : movement.Y >= 0 ? PageEdge.Top : PageEdge.Bottom;
+        if (preferred != lockedEdge)
+        {
+            return preferred;
+        }
+
+        var alternate = horizontal
+            ? movement.Y >= 0 ? PageEdge.Top : PageEdge.Bottom
+            : movement.X >= 0 ? PageEdge.Left : PageEdge.Right;
+        if (alternate != lockedEdge)
+        {
+            return alternate;
+        }
+
+        return SelectNearestFreeEdge(corner, pageSize, lockedEdge);
+    }
+
+    private static PageEdge Opposite(PageEdge edge) => edge switch
+    {
+        PageEdge.Top => PageEdge.Bottom,
+        PageEdge.Right => PageEdge.Left,
+        PageEdge.Bottom => PageEdge.Top,
+        PageEdge.Left => PageEdge.Right,
+        _ => PageEdge.Auto,
+    };
+
+    private static bool IsOnEdge(Vector2 pointer, Vector2 pageSize, PageEdge edge) => edge switch
+    {
+        PageEdge.Top => pointer.Y <= EdgeEpsilon,
+        PageEdge.Right => pageSize.X - pointer.X <= EdgeEpsilon,
+        PageEdge.Bottom => pageSize.Y - pointer.Y <= EdgeEpsilon,
+        PageEdge.Left => pointer.X <= EdgeEpsilon,
+        _ => false,
+    };
+
+    private static bool IsCorner(Vector2 pointer, Vector2 pageSize)
+    {
+        var vertical = pointer.Y <= EdgeEpsilon || pageSize.Y - pointer.Y <= EdgeEpsilon;
+        var horizontal = pointer.X <= EdgeEpsilon || pageSize.X - pointer.X <= EdgeEpsilon;
+        return vertical && horizontal;
+    }
+
+    private static Vector2 ProjectToEdge(Vector2 pointer, Vector2 pageSize, PageEdge edge) => edge switch
+    {
+        PageEdge.Top => new(pointer.X, 0),
+        PageEdge.Right => new(pageSize.X, pointer.Y),
+        PageEdge.Bottom => new(pointer.X, pageSize.Y),
+        PageEdge.Left => new(0, pointer.Y),
+        _ => pointer,
+    };
+
+    private static float CalculateProgress(Vector2 pointer, Vector2 pageSize, PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Top => pointer.Y / pageSize.Y,
+        PageEdge.Right => (pageSize.X - pointer.X) / pageSize.X,
+        PageEdge.Bottom => (pageSize.Y - pointer.Y) / pageSize.Y,
+        PageEdge.Left => pointer.X / pageSize.X,
+        _ => 0,
+    };
 }

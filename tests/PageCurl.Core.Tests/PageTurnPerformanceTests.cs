@@ -6,6 +6,13 @@ namespace PageCurl.Core.Tests;
 internal static class PageTurnPerformanceTests
 {
     private static readonly Vector2 PageSize = new(1200, 1600);
+    private static readonly PageEdge[] PhysicalEdges =
+    {
+        PageEdge.Top,
+        PageEdge.Right,
+        PageEdge.Bottom,
+        PageEdge.Left,
+    };
 
     public static void RunAll()
     {
@@ -17,28 +24,33 @@ internal static class PageTurnPerformanceTests
     {
         var options = new PageCurlOptions();
         var buffer = new PageMeshBuffer(options);
-        var pose = PageCurlGeometry.ComputePose(
-            PageSize,
-            new Vector2(PageSize.X, PageSize.Y * 0.5f),
-            new Vector2(PageSize.X * 0.2f, PageSize.Y * 0.5f),
-            PageTurnDirection.Forward,
-            0.8f,
-            options);
-
-        for (var i = 0; i < 100; i++)
+        foreach (var freeEdge in PhysicalEdges)
         {
-            PageCurlGeometry.Build(buffer, PageSize, pose, options);
-        }
+            var pose = PageCurlGeometry.ComputePose(
+                PageSize,
+                DragStartFor(freeEdge),
+                PointerFor(freeEdge),
+                Opposite(freeEdge),
+                freeEdge,
+                PageTurnDirection.Forward,
+                0.8f,
+                options);
 
-        CollectBeforeMeasurement();
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 1000; i++)
-        {
-            PageCurlGeometry.Build(buffer, PageSize, pose, options);
-        }
+            for (var i = 0; i < 100; i++)
+            {
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+            }
 
-        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-        TestAssert.True(allocated == 0, $"Geometry loop allocated {allocated} bytes.");
+            CollectBeforeMeasurement();
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 1000; i++)
+            {
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+            }
+
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestAssert.True(allocated == 0, $"{freeEdge} geometry loop allocated {allocated} bytes.");
+        }
     }
 
     private static void Controller_drag_and_settle_reuses_storage_without_managed_allocations()
@@ -76,4 +88,31 @@ internal static class PageTurnPerformanceTests
         GC.WaitForPendingFinalizers();
         GC.Collect();
     }
+
+    private static Vector2 DragStartFor(PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Top => new(PageSize.X * 0.5f, 0),
+        PageEdge.Right => new(PageSize.X, PageSize.Y * 0.5f),
+        PageEdge.Bottom => new(PageSize.X * 0.5f, PageSize.Y),
+        PageEdge.Left => new(0, PageSize.Y * 0.5f),
+        _ => Vector2.Zero,
+    };
+
+    private static Vector2 PointerFor(PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Top => new(PageSize.X * 0.5f, PageSize.Y * 0.2f),
+        PageEdge.Right => new(PageSize.X * 0.2f, PageSize.Y * 0.5f),
+        PageEdge.Bottom => new(PageSize.X * 0.5f, PageSize.Y * 0.8f),
+        PageEdge.Left => new(PageSize.X * 0.8f, PageSize.Y * 0.5f),
+        _ => Vector2.Zero,
+    };
+
+    private static PageEdge Opposite(PageEdge edge) => edge switch
+    {
+        PageEdge.Top => PageEdge.Bottom,
+        PageEdge.Right => PageEdge.Left,
+        PageEdge.Bottom => PageEdge.Top,
+        PageEdge.Left => PageEdge.Right,
+        _ => PageEdge.Auto,
+    };
 }

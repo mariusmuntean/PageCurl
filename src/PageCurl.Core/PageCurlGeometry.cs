@@ -15,6 +15,25 @@ public static class PageCurlGeometry
         float progress,
         PageCurlOptions options)
     {
+        var hingeEdge = direction == PageTurnDirection.Forward ? PageEdge.Left : PageEdge.Right;
+        var freeEdge = direction == PageTurnDirection.Forward ? PageEdge.Right : PageEdge.Left;
+        return ComputePose(pageSize, dragStart, pointer, hingeEdge, freeEdge, direction, progress, options);
+    }
+
+    /// <summary>
+    /// Computes a curl in the frame of the selected free edge while retaining
+    /// the physical hinge for renderers that need to anchor that edge.
+    /// </summary>
+    public static CurlPose ComputePose(
+        Vector2 pageSize,
+        Vector2 dragStart,
+        Vector2 pointer,
+        PageEdge hingeEdge,
+        PageEdge freeEdge,
+        PageTurnDirection direction,
+        float progress,
+        PageCurlOptions options)
+    {
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
 
@@ -23,28 +42,31 @@ public static class PageCurlGeometry
             return CurlPose.Inactive(direction);
         }
 
+        var resolvedFreeEdge = ResolveFreeEdge(hingeEdge, freeEdge, direction);
+        var resolvedHingeEdge = ResolveHingeEdge(hingeEdge, resolvedFreeEdge, direction);
+        var localPageSize = ToLocalPageSize(pageSize, resolvedFreeEdge);
+        var localDragStart = ToFreeLocal(dragStart, pageSize, resolvedFreeEdge);
+        var localPointer = ToFreeLocal(pointer, pageSize, resolvedFreeEdge);
         var clampedProgress = Math.Clamp(progress, 0, 1);
         // During a settle the finger is no longer moving, so reconstruct the
         // curl edge from the animated progress. During a drag this is the same
-        // x-coordinate that the controller derived from the pointer.
+        // local x-coordinate that the controller derived from the pointer.
         var animatedPointer = new Vector2(
-            direction == PageTurnDirection.Forward
-                ? pageSize.X * (1f - clampedProgress)
-                : pageSize.X * clampedProgress,
-            pointer.Y);
-        var delta = animatedPointer - dragStart;
+            localPageSize.X * (1f - clampedProgress),
+            localPointer.Y);
+        var delta = animatedPointer - localDragStart;
         var distance = delta.Length();
         var curlDirection = distance > Epsilon
             ? Vector2.Normalize(delta)
-            : direction == PageTurnDirection.Forward ? -Vector2.UnitX : Vector2.UnitX;
+            : -Vector2.UnitX;
 
-        var baseRadius = MathF.Max(pageSize.X * options.RadiusScale, 1f);
+        var baseRadius = MathF.Max(localPageSize.X * options.RadiusScale, 1f);
         var curlLength = MathF.PI * baseRadius;
         var radius = baseRadius;
-        var maximumDistance = MathF.Max(pageSize.X * 2f - curlLength, baseRadius);
+        var maximumDistance = MathF.Max(localPageSize.X * 2f - curlLength, baseRadius);
         if (distance > maximumDistance)
         {
-            radius = MathF.Max((pageSize.X * 2f - distance) / MathF.PI, 1f);
+            radius = MathF.Max((localPageSize.X * 2f - distance) / MathF.PI, 1f);
             curlLength = MathF.PI * radius;
         }
 
@@ -54,7 +76,19 @@ public static class PageCurlGeometry
             position -= curlDirection * ((distance - curlLength) * 0.5f);
         }
 
-        return new(position, curlDirection, radius, clampedProgress, direction, clampedProgress > Epsilon);
+        var screenPosition = FromFreeLocal(position, pageSize, resolvedFreeEdge);
+        var screenDirection = FromFreeLocalVector(curlDirection, resolvedFreeEdge);
+        return new(
+            screenPosition,
+            screenDirection,
+            radius,
+            clampedProgress,
+            direction,
+            clampedProgress > Epsilon)
+        {
+            HingeEdge = resolvedHingeEdge,
+            FreeEdge = resolvedFreeEdge,
+        };
     }
 
     public static void Build(
@@ -81,7 +115,17 @@ public static class PageCurlGeometry
             return;
         }
 
-        var direction = Vector2.Normalize(pose.Direction);
+        var freeEdge = ResolveFreeEdge(pose.HingeEdge, pose.FreeEdge, pose.TurnDirection);
+        var hingeEdge = ResolveHingeEdge(pose.HingeEdge, freeEdge, pose.TurnDirection);
+        var localPosition = ToFreeLocal(pose.Position, pageSize, freeEdge);
+        var localDirection = ToFreeLocalVector(pose.Direction, freeEdge);
+        if (localDirection.LengthSquared() <= Epsilon)
+        {
+            WriteFlatPage(buffer, pageSize);
+            return;
+        }
+
+        var direction = Vector2.Normalize(localDirection);
         var angle = MathF.Atan2(direction.Y, direction.X);
         var cos = MathF.Cos(angle);
         var sin = MathF.Sin(angle);
@@ -98,7 +142,8 @@ public static class PageCurlGeometry
             {
                 var u = column / (float)columns;
                 var source = new Vector2(pageSize.X * u, sourceY);
-                var local = Rotate(source - pose.Position, cos, -sin);
+                var sourceLocal = ToFreeLocal(source, pageSize, freeEdge);
+                var local = Rotate(sourceLocal - localPosition, cos, -sin);
                 var localX = local.X;
                 var transformedX = localX;
                 var depth = 0f;
@@ -118,7 +163,10 @@ public static class PageCurlGeometry
                     shade = 0.1f + (0.9f * MathF.Sqrt(MathF.Max(0, MathF.Sin(theta) + 1f)));
                 }
 
-                var world = Rotate(new Vector2(transformedX, local.Y), cos, sin) + pose.Position;
+                var worldLocal = Rotate(new Vector2(transformedX, local.Y), cos, sin) + localPosition;
+                var curled = FromFreeLocal(worldLocal, pageSize, freeEdge);
+                var anchorWeight = HingeWeight(source, pageSize, hingeEdge);
+                var world = source + ((curled - source) * anchorWeight);
                 var texture = new Vector2(
                     Math.Clamp(source.X / pageSize.X, 0, 1),
                     Math.Clamp(source.Y / pageSize.Y, 0, 1));
@@ -162,6 +210,99 @@ public static class PageCurlGeometry
             }
         }
     }
+
+    private static PageEdge ResolveFreeEdge(PageEdge hingeEdge, PageEdge freeEdge, PageTurnDirection direction)
+    {
+        if (IsPhysicalEdge(freeEdge))
+        {
+            return freeEdge;
+        }
+
+        if (IsPhysicalEdge(hingeEdge))
+        {
+            return Opposite(hingeEdge);
+        }
+
+        return direction == PageTurnDirection.Forward ? PageEdge.Right : PageEdge.Left;
+    }
+
+    private static PageEdge ResolveHingeEdge(PageEdge hingeEdge, PageEdge freeEdge, PageTurnDirection direction)
+    {
+        if (IsPhysicalEdge(hingeEdge))
+        {
+            return hingeEdge;
+        }
+
+        if (IsPhysicalEdge(freeEdge))
+        {
+            return Opposite(freeEdge);
+        }
+
+        return direction == PageTurnDirection.Forward ? PageEdge.Left : PageEdge.Right;
+    }
+
+    private static Vector2 ToLocalPageSize(Vector2 pageSize, PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Top or PageEdge.Bottom => new(pageSize.Y, pageSize.X),
+        _ => pageSize,
+    };
+
+    private static Vector2 ToFreeLocal(Vector2 point, Vector2 pageSize, PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Right => point,
+        PageEdge.Left => new(pageSize.X - point.X, point.Y),
+        PageEdge.Top => new(pageSize.Y - point.Y, point.X),
+        PageEdge.Bottom => new(point.Y, point.X),
+        _ => point,
+    };
+
+    private static Vector2 FromFreeLocal(Vector2 point, Vector2 pageSize, PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Right => point,
+        PageEdge.Left => new(pageSize.X - point.X, point.Y),
+        PageEdge.Top => new(point.Y, pageSize.Y - point.X),
+        PageEdge.Bottom => new(point.Y, point.X),
+        _ => point,
+    };
+
+    private static Vector2 ToFreeLocalVector(Vector2 vector, PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Right => vector,
+        PageEdge.Left => new(-vector.X, vector.Y),
+        PageEdge.Top => new(-vector.Y, vector.X),
+        PageEdge.Bottom => new(vector.Y, vector.X),
+        _ => vector,
+    };
+
+    private static Vector2 FromFreeLocalVector(Vector2 vector, PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Right => vector,
+        PageEdge.Left => new(-vector.X, vector.Y),
+        PageEdge.Top => new(vector.Y, -vector.X),
+        PageEdge.Bottom => new(vector.Y, vector.X),
+        _ => vector,
+    };
+
+    private static float HingeWeight(Vector2 source, Vector2 pageSize, PageEdge hingeEdge) => hingeEdge switch
+    {
+        PageEdge.Left => source.X / pageSize.X,
+        PageEdge.Right => (pageSize.X - source.X) / pageSize.X,
+        PageEdge.Top => source.Y / pageSize.Y,
+        PageEdge.Bottom => (pageSize.Y - source.Y) / pageSize.Y,
+        _ => 1,
+    };
+
+    private static bool IsPhysicalEdge(PageEdge edge) => edge is
+        PageEdge.Top or PageEdge.Right or PageEdge.Bottom or PageEdge.Left;
+
+    private static PageEdge Opposite(PageEdge edge) => edge switch
+    {
+        PageEdge.Top => PageEdge.Bottom,
+        PageEdge.Right => PageEdge.Left,
+        PageEdge.Bottom => PageEdge.Top,
+        PageEdge.Left => PageEdge.Right,
+        _ => PageEdge.Auto,
+    };
 
     private static void AddTriangle(
         PageMeshBuffer buffer,
