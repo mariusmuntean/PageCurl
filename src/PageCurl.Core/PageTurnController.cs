@@ -9,6 +9,10 @@ namespace PageCurl.Core;
 public sealed class PageTurnController
 {
     private const float EdgeEpsilon = 0.001f;
+    private const float ReleaseFlickThreshold = 1.5f;
+    private const float VelocitySmoothingFactor = 0.5f;
+    private const float MaximumReleaseVelocity = 8f;
+    private const double MaximumDragSampleIntervalSeconds = 0.25;
     private readonly PageCurlOptions _options;
     private PageTurnState _state;
     private PageTurnDirection _direction;
@@ -23,6 +27,10 @@ public sealed class PageTurnController
     private float _progress;
     private float _targetProgress;
     private float _velocity;
+    private double _lastDragTimestamp;
+    private float _lastSampledProgress;
+    private float _smoothedProgressVelocity;
+    private bool _hasDragTimestamp;
     private bool _completionRaised;
 
     public PageTurnController(PageCurlOptions? options = null)
@@ -71,6 +79,7 @@ public sealed class PageTurnController
         _progress = 0;
         _targetProgress = 0;
         _velocity = 0;
+        ResetDragVelocity();
         _completionRaised = false;
         _state = PageTurnState.Dragging;
         return true;
@@ -108,6 +117,7 @@ public sealed class PageTurnController
         _progress = 0;
         _targetProgress = 0;
         _velocity = 0;
+        ResetDragVelocity();
         _completionRaised = false;
 
         _edgeSelectionPending = lockedEdge == PageEdge.Auto && IsCorner(clampedPointer, pageSize);
@@ -167,7 +177,7 @@ public sealed class PageTurnController
             : CalculateProgress(_pointerPosition, _pageSize, _freeEdge);
         _progress = Math.Clamp(_progress, 0, 1);
         _targetProgress = _progress;
-        _velocity = 0;
+        UpdateProgressVelocity(timestampSeconds);
     }
 
     public void EndDrag(bool animate = true)
@@ -177,7 +187,11 @@ public sealed class PageTurnController
             return;
         }
 
-        _targetProgress = _progress >= _options.SnapThreshold ? 1 : 0;
+        _targetProgress = _smoothedProgressVelocity > ReleaseFlickThreshold
+            ? 1
+            : _smoothedProgressVelocity < -ReleaseFlickThreshold
+                ? 0
+                : _progress >= _options.SnapThreshold ? 1 : 0;
         if (!animate)
         {
             CompleteAtTarget();
@@ -210,6 +224,7 @@ public sealed class PageTurnController
         _progress = 0;
         _targetProgress = 1;
         _velocity = 0;
+        ResetDragVelocity();
         _completionRaised = false;
 
         if (!animate)
@@ -232,6 +247,7 @@ public sealed class PageTurnController
         }
 
         _targetProgress = 0;
+        ResetDragVelocity();
         BeginSettling();
     }
 
@@ -286,7 +302,13 @@ public sealed class PageTurnController
 
     private void BeginSettling()
     {
-        _velocity = 0;
+        var releaseVelocity = float.IsFinite(_smoothedProgressVelocity)
+            ? _smoothedProgressVelocity
+            : 0;
+        _velocity = _targetProgress >= 0.5f
+            ? MathF.Max(0, releaseVelocity)
+            : MathF.Min(0, releaseVelocity);
+        _velocity = Math.Clamp(_velocity, -MaximumReleaseVelocity, MaximumReleaseVelocity);
         _completionRaised = false;
         _state = PageTurnState.Settling;
     }
@@ -295,6 +317,7 @@ public sealed class PageTurnController
     {
         _progress = _targetProgress;
         _velocity = 0;
+        ResetDragVelocity();
         _state = PageTurnState.Idle;
         if (!_completionRaised)
         {
@@ -303,6 +326,55 @@ public sealed class PageTurnController
                 this,
                 new PageTurnCompletedEventArgs(_direction, _targetProgress >= 0.5f));
         }
+    }
+
+    private void ResetDragVelocity()
+    {
+        _lastDragTimestamp = 0;
+        _lastSampledProgress = 0;
+        _smoothedProgressVelocity = 0;
+        _hasDragTimestamp = false;
+    }
+
+    private void UpdateProgressVelocity(double timestampSeconds)
+    {
+        if (!double.IsFinite(timestampSeconds))
+        {
+            _smoothedProgressVelocity = 0;
+            _hasDragTimestamp = false;
+            return;
+        }
+
+        if (!_hasDragTimestamp)
+        {
+            _lastDragTimestamp = timestampSeconds;
+            _lastSampledProgress = _progress;
+            _hasDragTimestamp = true;
+            return;
+        }
+
+        var interval = timestampSeconds - _lastDragTimestamp;
+        if (!double.IsFinite(interval) || interval <= 0 || interval > MaximumDragSampleIntervalSeconds)
+        {
+            _lastDragTimestamp = timestampSeconds;
+            _lastSampledProgress = _progress;
+            _smoothedProgressVelocity = 0;
+            return;
+        }
+
+        var sampledVelocity = (_progress - _lastSampledProgress) / (float)interval;
+        if (!float.IsFinite(sampledVelocity))
+        {
+            return;
+        }
+
+        _smoothedProgressVelocity = Math.Clamp(
+            ((_smoothedProgressVelocity * (1 - VelocitySmoothingFactor))
+                + (sampledVelocity * VelocitySmoothingFactor)),
+            -MaximumReleaseVelocity,
+            MaximumReleaseVelocity);
+        _lastDragTimestamp = timestampSeconds;
+        _lastSampledProgress = _progress;
     }
 
     private static bool IsValidPageSize(Vector2 pageSize) =>

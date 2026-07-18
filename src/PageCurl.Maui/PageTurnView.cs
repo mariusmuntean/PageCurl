@@ -372,7 +372,9 @@ public sealed class PageTurnView : SKGLView
             case SKTouchAction.Moved:
                 if (_pointerCapture.Owns(e.Id))
                 {
-                    Controller.UpdateDrag(ToPagePointer(e.Location));
+                    Controller.UpdateDrag(
+                        ToPagePointer(e.Location),
+                        Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
                     e.Handled = true;
                     InvalidateSurface();
                 }

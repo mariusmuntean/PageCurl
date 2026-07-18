@@ -28,6 +28,9 @@ is a dependency-free executable runner. It checks:
 - forward and backward normalized progress;
 - threshold snapping, cancellation, spring convergence, and one-shot
   completion events;
+- direct finger progress tracking, monotonic timestamp velocity, fast
+  commit/cancel flicks around the threshold, and invalid timestamp rejection
+  without non-finite motion;
 - immediate reduced-motion completion and forward/backward programmatic turns;
 - reusable page-navigation boundaries, property notifications, and
   direction-aware under-page selection;

@@ -22,6 +22,13 @@ internal static class PageTurnControllerTests
         Cancel_always_returns_to_the_start_endpoint();
         Settling_progress_moves_the_curl_pose();
         Invalid_page_size_is_rejected_without_entering_drag();
+        Flick_release_commits_below_the_threshold();
+        Flick_release_cancels_above_the_threshold();
+        Non_monotonic_timestamps_do_not_create_release_velocity();
+        Invalid_timestamp_rebases_before_the_next_valid_sample();
+        Release_velocity_is_carried_into_forward_settling();
+        Release_velocity_is_carried_into_backward_settling();
+        Timestamped_drag_remains_directly_attached_to_the_finger();
     }
 
     private static void BeginDrag_chooses_edge_and_clamps_drag_start_to_page()
@@ -230,6 +237,104 @@ internal static class PageTurnControllerTests
 
         TestAssert.False(controller.BeginDrag(new Vector2(10, 10), Vector2.Zero));
         TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
+    }
+
+    private static void Flick_release_commits_below_the_threshold()
+    {
+        var controller = new PageTurnController();
+        controller.BeginDrag(new Vector2(90, 100), PageSize);
+        controller.UpdateDrag(new Vector2(70, 100), 1.000);
+        controller.UpdateDrag(new Vector2(58, 100), 1.016);
+        controller.EndDrag();
+
+        TestAssert.True(controller.Snapshot.Progress < 0.5f);
+        TestAssert.Equal(1f, controller.Snapshot.TargetProgress);
+    }
+
+    private static void Flick_release_cancels_above_the_threshold()
+    {
+        var controller = new PageTurnController();
+        controller.BeginDrag(new Vector2(90, 100), PageSize);
+        controller.UpdateDrag(new Vector2(42, 100), 1.000);
+        controller.UpdateDrag(new Vector2(49, 100), 1.016);
+        controller.EndDrag();
+
+        TestAssert.True(controller.Snapshot.Progress > 0.5f);
+        TestAssert.Equal(0f, controller.Snapshot.TargetProgress);
+    }
+
+    private static void Non_monotonic_timestamps_do_not_create_release_velocity()
+    {
+        var controller = new PageTurnController();
+        controller.BeginDrag(new Vector2(90, 100), PageSize);
+        controller.UpdateDrag(new Vector2(60, 100), 1.000);
+        controller.UpdateDrag(new Vector2(30, 100), 0.500);
+        controller.EndDrag();
+
+        TestAssert.Equal(1f, controller.Snapshot.TargetProgress);
+    }
+
+    private static void Invalid_timestamp_rebases_before_the_next_valid_sample()
+    {
+        var controller = new PageTurnController();
+        controller.BeginDrag(new Vector2(90, 100), PageSize);
+        controller.UpdateDrag(new Vector2(40, 100), 1.000);
+        controller.UpdateDrag(new Vector2(42, 100), 1.016);
+        controller.UpdateDrag(new Vector2(49, 100), 1.008);
+        controller.UpdateDrag(new Vector2(50, 100), 1.032);
+        controller.EndDrag();
+
+        TestAssert.Equal(1f, controller.Snapshot.TargetProgress);
+    }
+
+    private static void Release_velocity_is_carried_into_forward_settling()
+    {
+        var slow = new PageTurnController();
+        slow.BeginDrag(new Vector2(90, 100), PageSize);
+        slow.UpdateDrag(new Vector2(70, 100), 1.000);
+        slow.UpdateDrag(new Vector2(40, 100), 1.500);
+        slow.EndDrag();
+
+        var fast = new PageTurnController();
+        fast.BeginDrag(new Vector2(90, 100), PageSize);
+        fast.UpdateDrag(new Vector2(70, 100), 1.000);
+        fast.UpdateDrag(new Vector2(40, 100), 1.016);
+        fast.EndDrag();
+
+        slow.Tick(1.0 / 60.0);
+        fast.Tick(1.0 / 60.0);
+
+        TestAssert.True(fast.Snapshot.Progress > slow.Snapshot.Progress);
+    }
+
+    private static void Release_velocity_is_carried_into_backward_settling()
+    {
+        var slow = new PageTurnController();
+        slow.BeginDrag(new Vector2(90, 100), PageSize);
+        slow.UpdateDrag(new Vector2(40, 100), 1.000);
+        slow.UpdateDrag(new Vector2(60, 100), 1.500);
+        slow.EndDrag();
+
+        var fast = new PageTurnController();
+        fast.BeginDrag(new Vector2(90, 100), PageSize);
+        fast.UpdateDrag(new Vector2(40, 100), 1.000);
+        fast.UpdateDrag(new Vector2(60, 100), 1.016);
+        fast.EndDrag();
+
+        slow.Tick(1.0 / 60.0);
+        fast.Tick(1.0 / 60.0);
+
+        TestAssert.True(fast.Snapshot.Progress < slow.Snapshot.Progress);
+    }
+
+    private static void Timestamped_drag_remains_directly_attached_to_the_finger()
+    {
+        var controller = new PageTurnController();
+        controller.BeginDrag(new Vector2(90, 100), PageSize);
+        controller.UpdateDrag(new Vector2(63, 100), 1.000);
+
+        TestAssert.Equal(new Vector2(63, 100), controller.Snapshot.PointerPosition);
+        TestAssert.Equal(0.37f, controller.Snapshot.Progress, 3);
     }
 
     private static void RunUntilIdle(PageTurnController controller)
