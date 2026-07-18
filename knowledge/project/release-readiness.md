@@ -11,13 +11,12 @@ timestamp: 2026-07-16T00:00:00Z
 
 # Current status
 
-The repository contains a working core state machine, analytic page mesh, MAUI
-Skia adapter, modular demo, deterministic tests, pinned SDK/workloads, package
-metadata, and an iOS simulator smoke workflow. The local macOS validation has
-passed the core suite, neutral MAUI build, explicit iOS Release demo build,
-iOS simulator install/launch, light/dark portrait captures, explicit Android
-Release packaging, and the simulator accessibility/rotation pass. Physical
-device profiling and hardware smoke remain separate evidence gates.
+The repository contains a working core state machine, edge-aware hinge model,
+analytic page mesh, aspect-preserving MAUI Skia adapter, modular demo,
+deterministic tests, pinned SDK/workloads, package metadata, and an iOS
+simulator smoke workflow. MacCatalyst is also used as the fast responsive-layout
+feedback target. Physical-device profiling, Android hardware smoke, and store
+signing remain separate evidence gates.
 
 This is a strong engineering baseline, not a claim of Kindle-level polish.
 
@@ -39,10 +38,12 @@ Before shipping a package or embedding the control in a flagship reader:
 3. Profile gesture and settle paths on low-end Android and current iOS devices;
    verify no sustained frame drops, allocations, or texture leaks.
 4. Complete visual review for page edges, shadows, texture scaling, dark mode,
-   rotation, safe areas, large pages, and reduced motion.
+   rotation, safe areas, large pages, reduced motion, aspect-fit content, and
+   responsive MacCatalyst window sizes.
 5. Validate touch/accessibility behavior, including the labeled Previous and
-   Next commands, semantic descriptions, and reduced-motion mapping for
-   screen-reader users and users who enable reduced motion.
+   Next commands, the interactive page description, edge-lock selector,
+   diagnostics surface, decorative-hint suppression, and reduced-motion mapping
+   for screen-reader users and users who enable reduced motion.
 6. Document image lifetime, threading, and navigation/recycling rules in the
    consuming application.
 7. Choose and publish a license, versioning policy, compatibility matrix, and
@@ -54,7 +55,8 @@ Before shipping a package or embedding the control in a flagship reader:
 `SKGLView` is a practical cross-platform backend but relies on the graphics
 path exposed by each MAUI target. Apple OpenGL deprecation, unusual GPU driver
 behavior, very large textures, and high-DPI mesh density need real-device
-measurement. The core approximation does not model every physical fold; a
-product requiring realistic self-shadowing should add a native/Metal backend
-behind the same core contract. These risks are acceptable for the baseline only
-when they remain visible in release tracking.
+measurement. The core curl uses a reusable cylinder approximation with a
+weighted stationary-hinge anchor for adjacent free-edge starts; a product
+requiring physically exact multi-axis self-shadowing should add a native/Metal
+backend behind the same core contract. These risks are acceptable for the
+baseline only when they remain visible in release tracking.

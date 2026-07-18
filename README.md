@@ -5,10 +5,13 @@ book page. It separates interaction, geometry and drawing so the math can be
 tested without a device or UI toolkit:
 
 * `src/PageCurl.Core` targets `net10.0` and contains the allocation-free drag
-  state machine, spring settling and cylinder page mesh.
+  state machine, spring settling, edge-aware hinge selection, aspect-fit
+  viewport math, and cylinder page mesh.
 * `src/PageCurl.Maui` exposes `PageTurnView`, a GPU-backed `SKGLView` that
-  draws the mesh with SkiaSharp texture coordinates and per-vertex shading.
-  It also exposes a neutral `net10.0` target for source-level CI builds.
+  draws the mesh with SkiaSharp texture coordinates and per-vertex shading. It
+  supports `LockedEdge` (`Auto`, `Top`, `Right`, `Bottom`, or `Left`) and
+  `ContentScale` (`Fill` or `AspectFit`), plus a neutral `net10.0` target for
+  source-level CI builds.
 * `src/PageCurl.Demo` is a MAUI sample with four generated pages, including a
   large-page case and non-gesture page-turn commands.
 * `tests/PageCurl.Core.Tests` is a dependency-free executable test runner. It
@@ -40,6 +43,14 @@ targets are added on macOS, and the Windows target is added on Windows. This
 keeps a Linux restore/build from evaluating native workloads that cannot run on
 that host.
 
+For fast visual iteration on macOS, build the desktop target and resize the
+window freely while tuning the responsive stage:
+
+```bash
+dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst
+open src/PageCurl.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Demo.app
+```
+
 The demo supports Android, iOS, Mac Catalyst and Windows. See the
 [compatibility matrix](docs/compatibility.md) for the current evidence status.
 
@@ -57,7 +68,10 @@ The control accepts `SKImage` instances. The caller owns those images and can
 reuse or dispose them when the view is no longer using them.
 
 ```xml
-<curl:PageTurnView x:Name="TurnView" />
+<curl:PageTurnView
+    x:Name="TurnView"
+    ContentScale="AspectFit"
+    LockedEdge="Auto" />
 ```
 
 ```csharp
@@ -76,6 +90,12 @@ TurnView.PageTurnCompleted += (_, e) =>
 
 `PageTurnController` and `PageCurlGeometry` are public as well, so an app can
 use the tested interaction/mesh layer with another renderer if required.
+`Auto` selects the nearest free edge; a selected `LockedEdge` is the stationary
+hinge, while the remaining edges and corners can start a gesture. A corner in
+`Auto` mode resolves from the first meaningful inward drag vector. The legacy
+two-argument `BeginDrag` overload remains the horizontal left/right behavior
+for existing callers. `AspectFit` keeps source images undistorted and maps
+touch coordinates into the same fitted content rectangle used by the mesh.
 Set `PreviousPageImage` when backward turns should reveal a different page;
 when it is not set, the control falls back to `UnderPageImage` for compatibility.
 
@@ -122,8 +142,9 @@ dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:Tar
 The checks cover edge selection and clamping, normalized progress in both
 directions, threshold snapping, cancellation, completion events, finite and
 bounded mesh coordinates, UV/shading ranges, mesh-buffer reuse, immediate and
-programmatic turns, direction-aware demo navigation, and warmed 1,000-iteration
-core allocation loops. The MAUI control exposes opt-in
+programmatic turns, every physical edge and corner, locked-hinge anchoring,
+aspect-fit viewport math, direction-aware demo navigation, and warmed
+1,000-iteration core allocation loops. The MAUI control exposes opt-in
 `PageTurnPerformanceSnapshot` values for interactive render diagnostics; the
 default render path does not collect those metrics.
 

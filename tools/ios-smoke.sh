@@ -32,7 +32,10 @@ assert_demo_foreground() {
         local ui
         ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
         if echo "$ui" | rg -q '"AXLabel":"Page Curl Demo"' \
-            && echo "$ui" | rg -q '"AXLabel":"Enable page-turn testing mode"'; then
+            && echo "$ui" | rg -q '"AXLabel":"Interactive page\. Drag from any free edge or corner to turn the page\."' \
+            && echo "$ui" | rg -q '"AXLabel":"Select the stationary page edge"' \
+            && echo "$ui" | rg -q '"AXLabel":"Enable page-turn testing mode"' \
+            && ! echo "$ui" | rg -q '"AXLabel":"(↖|↗|↙|↘|‹|›|⌃  TOP EDGE  ⌃|⌄  BOTTOM EDGE  ⌄)"'; then
             return 0
         fi
         sleep 1
@@ -40,6 +43,60 @@ assert_demo_foreground() {
 
     echo "The demo did not remain in the foreground after launch." >&2
     return 1
+}
+
+capture_testing_mode() {
+    if ! command -v idb >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        echo "Skipping Testing mode capture because idb or jq is unavailable."
+        return 0
+    fi
+
+    local ui
+    ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
+    local switch_frame
+    switch_frame="$(echo "$ui" | jq -r '.. | objects | select(.AXLabel? == "Enable page-turn testing mode") | .AXFrame' | head -1)"
+    if [[ -z "$switch_frame" || "$switch_frame" == "null" ]]; then
+        echo "Testing mode frame was not exposed by idb." >&2
+        return 1
+    fi
+
+    local switch_values
+    switch_values="$(echo "$switch_frame" | tr -d '{}' | tr ',' ' ')"
+    local switch_x switch_y switch_width switch_height tap_x tap_y
+    read -r switch_x switch_y switch_width switch_height <<< "$switch_values"
+    tap_x="$(awk -v x="$switch_x" -v width="$switch_width" 'BEGIN { printf "%d", x + width / 2 }')"
+    tap_y="$(awk -v y="$switch_y" -v height="$switch_height" 'BEGIN { printf "%d", y + height / 2 }')"
+    idb ui tap --udid "$DEVICE" --duration 1 "$tap_x" "$tap_y" >/dev/null
+    sleep 1
+
+    local testing_ui
+    testing_ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
+    local next_frame
+    next_frame="$(echo "$testing_ui" | jq -r '.. | objects | select(.AXLabel? == "Turn to next page") | .AXFrame' | head -1)"
+    if ! echo "$testing_ui" | rg -q '"AXLabel":"RUNTIME PROBE"' \
+        || ! echo "$testing_ui" | rg -q '"AXLabel":"Turn to next page"' \
+        || [[ "$next_frame" == "{{0, 0}, {0, 0}}" ]]; then
+        echo "Testing mode did not expose a complete, visible diagnostics surface." >&2
+        return 1
+    fi
+
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/testing.png" >/dev/null
+
+    # Testing mode changes the vertical layout, so resolve the switch frame
+    # again before turning it back off.
+    ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
+    switch_frame="$(echo "$ui" | jq -r '.. | objects | select(.AXLabel? == "Enable page-turn testing mode") | .AXFrame' | head -1)"
+    switch_values="$(echo "$switch_frame" | tr -d '{}' | tr ',' ' ')"
+    read -r switch_x switch_y switch_width switch_height <<< "$switch_values"
+    tap_x="$(awk -v x="$switch_x" -v width="$switch_width" 'BEGIN { printf "%d", x + width / 2 }')"
+    tap_y="$(awk -v y="$switch_y" -v height="$switch_height" 'BEGIN { printf "%d", y + height / 2 }')"
+    idb ui tap --udid "$DEVICE" --duration 1 "$tap_x" "$tap_y" >/dev/null
+    local final_value
+    final_value="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null | jq -r '.. | objects | select(.AXLabel? == "Enable page-turn testing mode") | .AXValue' | head -1)"
+    if [[ "$final_value" != "0" ]]; then
+        echo "Testing mode did not return to its default off state." >&2
+        return 1
+    fi
 }
 
 echo "Building the iOS simulator demo..."
@@ -75,6 +132,7 @@ xcrun simctl launch "$DEVICE" "$BUNDLE_ID"
 assert_demo_foreground
 sleep 10
 xcrun simctl io "$DEVICE" screenshot "$OUTPUT/dark.png"
+capture_testing_mode
 
 echo "Device: $DEVICE"
 echo "Device record:"

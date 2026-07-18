@@ -23,6 +23,8 @@ high-profile reading app; passing unit tests alone is not a performance claim.
 is a dependency-free executable runner. It checks:
 
 - edge selection, non-finite input rejection, and pointer clamping;
+- all four free-edge centers and corners, corner tie-breaking from the first
+  drag vector, every locked hinge, and exact locked-edge rejection;
 - forward and backward normalized progress;
 - threshold snapping, cancellation, spring convergence, and one-shot
   completion events;
@@ -31,6 +33,8 @@ is a dependency-free executable runner. It checks:
   direction-aware under-page selection;
 - finite and bounded mesh coordinates, UV and shading ranges, and front/back
   triangle counts;
+- every edge-oriented geometry frame, stationary hinge vertices, aspect-fit
+  viewport sizing, and mesh-buffer reuse;
 - pointer capture accepts one finger, ignores other fingers, and releases the
   owner on completion or cancellation;
 - reuse of mesh buffers so a frame does not allocate geometry arrays;
@@ -56,16 +60,28 @@ dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-androi
 ```
 
 The iOS smoke script builds the explicit simulator target, installs and launches
-the demo, and captures light/dark portrait screenshots. Manual follow-up still
-covers button activation, reduced motion, cancellation, repeated turns,
-rotation, large pages, image replacement, and safe-area review.
+the demo, asserts the page/lock/testing accessibility surface without exposing
+decorative hint glyphs, captures light/dark portrait screenshots, and captures
+Testing mode with the diagnostics panel and navigation commands visible. Manual
+follow-up still covers button activation, reduced motion, cancellation, repeated
+turns, all four edges and corners, each lock choice, rotation, large pages,
+image replacement, and safe-area review.
+
+MacCatalyst is the fast visual feedback loop on macOS because its window can be
+resized through multiple aspect ratios without waiting for a simulator rebuild:
+
+```bash
+dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst
+open src/PageCurl.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Demo.app
+```
 
 The demo's opt-in `Testing mode` is the repeatable visual-debug surface for
 local development. It polls the controller only while enabled and exposes the
-current state, progress, pointer coordinates, curl pose, last completion result,
-and the control's opt-in frame diagnostics. The panel is accessible through
-the iOS accessibility tree so a simulator pass can assert that the diagnostics
-surface is present without changing the default render path.
+current state, progress, pointer coordinates, free/hinge edges, curl pose, last
+completion result, and the control's opt-in frame diagnostics. The panel is
+accessible through the iOS accessibility tree so a simulator pass can assert
+that the diagnostics surface is present without changing the default render
+path. Decorative rails and arrows are intentionally excluded from that tree.
 
 ## Device and visual validation
 
