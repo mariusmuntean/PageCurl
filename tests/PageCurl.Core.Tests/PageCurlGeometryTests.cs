@@ -26,6 +26,7 @@ internal static class PageCurlGeometryTests
         Dragged_free_corner_tracks_pointer_before_limit();
         Every_free_edge_produces_a_finite_bounded_mesh();
         Every_selected_hinge_edge_remains_stationary();
+        Curl_radius_relaxes_at_both_turn_endpoints();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -333,6 +334,35 @@ internal static class PageCurlGeometryTests
                 TestAssert.True(representedVertices > 0, $"No mesh vertices represented the {hingeEdge} hinge.");
             }
         }
+    }
+
+    private static void Curl_radius_relaxes_at_both_turn_endpoints()
+    {
+        var options = new PageCurlOptions();
+        var start = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, PageSize.Y * 0.5f),
+            new Vector2(PageSize.X * 0.95f, PageSize.Y * 0.5f),
+            PageTurnDirection.Forward,
+            0.05f,
+            options);
+        var middle = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, PageSize.Y * 0.5f),
+            new Vector2(PageSize.X * 0.5f, PageSize.Y * 0.5f),
+            PageTurnDirection.Forward,
+            0.5f,
+            options);
+        var end = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, PageSize.Y * 0.5f),
+            new Vector2(PageSize.X * 0.05f, PageSize.Y * 0.5f),
+            PageTurnDirection.Forward,
+            0.95f,
+            options);
+
+        TestAssert.True(start.Radius > middle.Radius * 2);
+        TestAssert.True(end.Radius > middle.Radius * 2);
     }
 
     private static int AssertHingeVerticesAreStationary(MeshVertex[] vertices, int count, PageEdge hingeEdge)

@@ -85,12 +85,8 @@
             StrokeShape="RoundRectangle 26">
             <Grid
                 x:Name="StageGrid"
-                HeightRequest="340"
-                MinimumHeightRequest="260"
-                MaximumWidthRequest="720"
-                HorizontalOptions="Center"
-                VerticalOptions="Center"
-                SizeChanged="OnStageSizeChanged">
+                HorizontalOptions="Fill"
+                VerticalOptions="Fill">
                 <curl:PageTurnView
                     x:Name="PageView"
                     ContentScale="AspectFit"

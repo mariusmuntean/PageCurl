@@ -64,7 +64,6 @@ public partial class MainPage : ContentPage
     {
         TestingPanel.IsVisible = e.Value;
         PageView.PerformanceDiagnosticsEnabled = e.Value;
-        UpdateStageHeight();
 
         if (e.Value)
         {
@@ -77,16 +76,6 @@ public partial class MainPage : ContentPage
             _testingTimer?.Stop();
             PageView.PerformanceDiagnosticsEnabled = false;
         }
-    }
-
-    private void OnStageSizeChanged(object? sender, EventArgs e)
-    {
-        if (Width <= 0 || Height <= 0)
-        {
-            return;
-        }
-
-        UpdateStageHeight();
     }
 
     private void OnLockedEdgeChanged(object? sender, EventArgs e)
@@ -239,20 +228,4 @@ public partial class MainPage : ContentPage
         BottomRightCornerHint.Opacity = auto || edge == PageEdge.Bottom || edge == PageEdge.Right ? 1 : 0.28;
     }
 
-    private void UpdateStageHeight()
-    {
-        if (Width <= 0 || Height <= 0)
-        {
-            return;
-        }
-
-        var landscape = Width > Height;
-        var responsiveLandscapeHeight = Math.Clamp(Height * (TestingPanel.IsVisible ? 0.32 : 0.45), 220, 360);
-        StageGrid.WidthRequest = landscape
-            ? Math.Clamp(Width * 0.58, 420, 720)
-            : -1;
-        StageGrid.HeightRequest = TestingPanel.IsVisible
-            ? (landscape ? responsiveLandscapeHeight : 225)
-            : (landscape ? responsiveLandscapeHeight : 340);
-    }
 }

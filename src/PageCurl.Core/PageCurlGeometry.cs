@@ -61,14 +61,10 @@ public static class PageCurlGeometry
             : -Vector2.UnitX;
 
         var baseRadius = MathF.Max(localPageSize.X * options.RadiusScale, 1f);
-        var curlLength = MathF.PI * baseRadius;
-        var radius = baseRadius;
-        var maximumDistance = MathF.Max(localPageSize.X * 2f - curlLength, baseRadius);
-        if (distance > maximumDistance)
-        {
-            radius = MathF.Max((localPageSize.X * 2f - distance) / MathF.PI, 1f);
-            curlLength = MathF.PI * radius;
-        }
+        var flatRadius = MathF.Max(localPageSize.X * 4f, baseRadius);
+        var curlAmount = MathF.Sin(MathF.PI * clampedProgress);
+        var radius = baseRadius + ((flatRadius - baseRadius) * (1f - curlAmount));
+        var curlLength = MathF.PI * radius;
 
         var position = animatedPointer;
         if (distance > curlLength)

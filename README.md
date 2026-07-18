@@ -125,13 +125,14 @@ The view uses `SKGLView` and invalidates only while a finger is moving or a
 release is settling. Mesh arrays, Skia point arrays and color arrays are
 allocated once. Image shaders are cached per `SKImage`; the settle animation
 uses a critically damped spring and a single 60 Hz dispatcher timer. The
-default mesh is 24 columns by 12 rows (576 triangles); increase it only if a
+default mesh is 24 columns by 24 rows (1,152 triangles); increase it only if a
 larger page or closer inspection warrants the extra work.
 
-The geometry is a bounded analytic cylinder approximation. It has no z-buffer
-dependency, so front and back triangle streams are depth-sorted and drawn in
-two passes. The same approach works on Android OpenGL ES, iOS, Mac Catalyst
-and Windows through the SkiaSharp MAUI handlers.
+The geometry is a bounded analytic cylinder approximation whose radius relaxes
+near the start and end of a turn and tightens around the midpoint. It has no
+z-buffer dependency, so front and back triangle streams are depth-sorted and
+drawn in two passes. The same approach works on Android OpenGL ES, iOS, Mac
+Catalyst and Windows through the SkiaSharp MAUI handlers.
 
 ## Verification
 

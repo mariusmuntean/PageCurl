@@ -67,7 +67,7 @@ public sealed class PageCurlOptions
 {
     public int MeshColumns { get; init; } = 24;
 
-    public int MeshRows { get; init; } = 12;
+    public int MeshRows { get; init; } = 24;
 
     /// <summary>Base cylinder radius as a fraction of page width.</summary>
     public float RadiusScale { get; init; } = 1f / 3f;
