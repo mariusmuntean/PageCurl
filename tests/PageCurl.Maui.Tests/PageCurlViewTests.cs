@@ -11,6 +11,7 @@ internal static class PageCurlViewTests
         await Front_and_back_content_are_captured_independently();
         await Failed_refresh_keeps_the_last_good_snapshot();
         Interaction_properties_forward_to_the_renderer();
+        Activation_layer_preserves_live_content_input();
     }
 
     private static async Task Front_and_back_content_are_captured_independently()
@@ -79,6 +80,17 @@ internal static class PageCurlViewTests
         TestAssert.Equal(PageBacksideMode.SolidColor, view.Renderer.BacksideMode);
         TestAssert.Equal(0.7f, view.Renderer.BacksideDimFactor);
         TestAssert.True(view.Renderer.ReduceMotion);
+    }
+
+    private static void Activation_layer_preserves_live_content_input()
+    {
+        var view = new PageCurlView(new FakeSnapshotter());
+        var pageFrame = (Grid)view.Children[0];
+        var activationLayer = (Grid)pageFrame.Children[^1];
+
+        TestAssert.True(activationLayer.InputTransparent);
+        TestAssert.False(activationLayer.CascadeInputTransparent);
+        TestAssert.True(activationLayer.Children.All(child => !child.InputTransparent));
     }
 
     private sealed class FakeSnapshotter : IPageContentSnapshotter

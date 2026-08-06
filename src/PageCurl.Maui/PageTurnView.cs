@@ -170,6 +170,7 @@ public sealed class PageTurnView : SKGLView
     private bool _eventsAttached;
     private bool _handlerDisconnected;
     private bool _syncingAnchor;
+    private int _surfaceGeneration;
     private long _frameCount;
     private double _lastFrameMilliseconds;
     private double _totalFrameMilliseconds;
@@ -435,6 +436,7 @@ public sealed class PageTurnView : SKGLView
     protected override void OnHandlerChanged()
     {
         base.OnHandlerChanged();
+        _surfaceGeneration++;
         if (Handler is null)
         {
             _handlerDisconnected = true;
@@ -451,6 +453,7 @@ public sealed class PageTurnView : SKGLView
         EnsureGraphicsResources();
         StartAnimationLoop();
         InvalidateSurface();
+        QueueSurfaceRecovery();
     }
 
     private static void OnImageChanged(BindableObject bindable, object? oldValue, object? newValue)
@@ -815,6 +818,23 @@ public sealed class PageTurnView : SKGLView
     }
 
     private void OnSizeChanged(object? sender, EventArgs e) => InvalidateSurface();
+
+    private void QueueSurfaceRecovery()
+    {
+        var generation = _surfaceGeneration;
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(1500), () =>
+        {
+            if (generation == _surfaceGeneration
+                && !_handlerDisconnected
+                && Handler is not null)
+            {
+                // An iOS GL surface can reject its first draw while the native
+                // window is still becoming active. One on-demand retry avoids
+                // a blank idle page without enabling a permanent render loop.
+                InvalidateSurface();
+            }
+        });
+    }
 
     private void EnsureGraphicsResources()
     {

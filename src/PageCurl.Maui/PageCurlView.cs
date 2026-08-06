@@ -323,6 +323,8 @@ public sealed class PageCurlView : Grid
     {
         var layer = new Grid
         {
+            InputTransparent = true,
+            CascadeInputTransparent = false,
             RowDefinitions =
             {
                 new RowDefinition(CornerActivationSize),

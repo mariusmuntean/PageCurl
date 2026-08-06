@@ -94,6 +94,7 @@ public partial class MainPage : ContentPage
     {
         CancelAllInteractions();
         _scene = scene;
+        StatusLabel.Text = "Ready";
         _haptics.Reset();
         _videoPage?.SetActive(scene == ShowcaseScene.Content
             && _contentKind == ShowcaseContentKind.Video);
