@@ -240,6 +240,8 @@ public readonly record struct CurlPose(
     PageTurnDirection TurnDirection,
     bool IsActive)
 {
+    public PageAnchor LockedAnchor { get; init; } = PageAnchor.Auto;
+
     public PageEdge HingeEdge { get; init; } = PageEdge.Auto;
 
     public PageEdge FreeEdge { get; init; } = PageEdge.Auto;
@@ -270,6 +272,9 @@ public readonly record struct PageTurnSnapshot(
     float Progress,
     float TargetProgress)
 {
+    /// <summary>The edge or corner that remains stationary during the turn.</summary>
+    public PageAnchor LockedAnchor { get; init; } = PageAnchor.Auto;
+
     /// <summary>The physical edge currently acting as the stationary hinge.</summary>
     public PageEdge HingeEdge { get; init; } = PageEdge.Auto;
 

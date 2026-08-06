@@ -9,7 +9,6 @@ namespace PageCurl.Core;
 public sealed class PageTurnController
 {
     private const float EdgeEpsilon = 0.001f;
-    private const float ReleaseFlickThreshold = 1.5f;
     private const float VelocitySmoothingFactor = 0.5f;
     private const float MaximumDragVelocity = 8f;
     private const float MaximumSettlingVelocity = 1.5f;
@@ -20,6 +19,7 @@ public sealed class PageTurnController
     private PageEdge _hingeEdge = PageEdge.Auto;
     private PageEdge _freeEdge = PageEdge.Auto;
     private PageEdge _lockedEdge = PageEdge.Auto;
+    private PageAnchor _lockedAnchor = PageAnchor.Auto;
     private bool _edgeSelectionPending;
     private Vector2 _pageSize;
     private Vector2 _dragStartPosition;
@@ -33,6 +33,7 @@ public sealed class PageTurnController
     private float _smoothedProgressVelocity;
     private bool _hasDragTimestamp;
     private bool _completionRaised;
+    private bool _isCommitCandidate;
 
     public PageTurnController(PageCurlOptions? options = null)
     {
@@ -44,6 +45,8 @@ public sealed class PageTurnController
 
     public event EventHandler<PageTurnCompletedEventArgs>? PageTurnCompleted;
 
+    public event EventHandler<PageChangeThresholdCrossedEventArgs>? PageChangeThresholdCrossed;
+
     public PageTurnSnapshot Snapshot => new(
         _state,
         _direction,
@@ -52,6 +55,7 @@ public sealed class PageTurnController
         _progress,
         _targetProgress)
     {
+        LockedAnchor = _lockedAnchor,
         HingeEdge = _hingeEdge,
         FreeEdge = _freeEdge,
     };
@@ -71,6 +75,7 @@ public sealed class PageTurnController
         _hingeEdge = _direction == PageTurnDirection.Forward ? PageEdge.Left : PageEdge.Right;
         _freeEdge = _direction == PageTurnDirection.Forward ? PageEdge.Right : PageEdge.Left;
         _lockedEdge = _hingeEdge;
+        _lockedAnchor = PageAnchorExtensions.FromEdge(_hingeEdge);
         _edgeSelectionPending = false;
         _initialPointerPosition = clampedPointer;
         _dragStartPosition = new(
@@ -82,6 +87,7 @@ public sealed class PageTurnController
         _velocity = 0;
         ResetDragVelocity();
         _completionRaised = false;
+        ResetCommitCandidate();
         _state = PageTurnState.Dragging;
         return true;
     }
@@ -93,20 +99,44 @@ public sealed class PageTurnController
     /// </summary>
     public bool BeginDrag(Vector2 pointer, Vector2 pageSize, PageEdge lockedEdge)
     {
-        if (!IsValidPageSize(pageSize) || !IsFinite(pointer) || !IsValidEdge(lockedEdge))
+        if (!IsValidEdge(lockedEdge))
+        {
+            return false;
+        }
+
+        return BeginDrag(pointer, pageSize, PageAnchorExtensions.FromEdge(lockedEdge));
+    }
+
+    /// <summary>
+    /// Begins a drag with either a stationary edge or a pinned corner.
+    /// <see cref="PageAnchor.Auto"/> selects an edge from the gesture start.
+    /// </summary>
+    public bool BeginDrag(Vector2 pointer, Vector2 pageSize, PageAnchor lockedAnchor)
+    {
+        if (!IsValidPageSize(pageSize) || !IsFinite(pointer) || !IsValidAnchor(lockedAnchor))
         {
             return false;
         }
 
         var clampedPointer = ClampToPage(pointer, pageSize);
         var nearestEdge = SelectNearestEdge(clampedPointer, pageSize);
-        if (lockedEdge != PageEdge.Auto && IsOnEdge(clampedPointer, pageSize, lockedEdge))
+        lockedAnchor.TryGetEdge(out var lockedEdge);
+        if (lockedAnchor.IsCorner())
+        {
+            var pin = lockedAnchor.GetPosition(pageSize);
+            if (Vector2.DistanceSquared(clampedPointer, pin) <= EdgeEpsilon * EdgeEpsilon)
+            {
+                return false;
+            }
+        }
+        else if (lockedEdge != PageEdge.Auto && IsOnEdge(clampedPointer, pageSize, lockedEdge))
         {
             return false;
         }
 
         _pageSize = pageSize;
         _lockedEdge = lockedEdge;
+        _lockedAnchor = lockedAnchor;
         _direction = clampedPointer.X >= pageSize.X * 0.5f
             ? PageTurnDirection.Forward
             : PageTurnDirection.Backward;
@@ -117,8 +147,9 @@ public sealed class PageTurnController
         _velocity = 0;
         ResetDragVelocity();
         _completionRaised = false;
+        ResetCommitCandidate();
 
-        _edgeSelectionPending = lockedEdge == PageEdge.Auto && IsCorner(clampedPointer, pageSize);
+        _edgeSelectionPending = lockedAnchor == PageAnchor.Auto && IsCorner(clampedPointer, pageSize);
         if (_edgeSelectionPending)
         {
             _freeEdge = PageEdge.Auto;
@@ -176,6 +207,7 @@ public sealed class PageTurnController
         _progress = Math.Clamp(_progress, 0, 1);
         _targetProgress = _progress;
         UpdateProgressVelocity(timestampSeconds);
+        NotifyCommitCandidateTransition();
     }
 
     public void EndDrag(bool animate = true)
@@ -185,11 +217,11 @@ public sealed class PageTurnController
             return;
         }
 
-        _targetProgress = _smoothedProgressVelocity > ReleaseFlickThreshold
-            ? 1
-            : _smoothedProgressVelocity < -ReleaseFlickThreshold
-                ? 0
-                : _progress >= _options.SnapThreshold ? 1 : 0;
+        var flickTarget = _options.FlickEnabled
+            ? GetFlickTarget(_smoothedProgressVelocity, _options.FlickVelocityThreshold)
+            : null;
+        _targetProgress = flickTarget
+            ?? (_progress >= _options.PageChangeThreshold ? 1f : 0f);
         if (!animate)
         {
             CompleteAtTarget();
@@ -213,6 +245,7 @@ public sealed class PageTurnController
         _hingeEdge = direction == PageTurnDirection.Forward ? PageEdge.Left : PageEdge.Right;
         _freeEdge = direction == PageTurnDirection.Forward ? PageEdge.Right : PageEdge.Left;
         _lockedEdge = _hingeEdge;
+        _lockedAnchor = PageAnchorExtensions.FromEdge(_hingeEdge);
         _edgeSelectionPending = false;
         _dragStartPosition = new(
             direction == PageTurnDirection.Forward ? pageSize.X : 0,
@@ -224,6 +257,7 @@ public sealed class PageTurnController
         _velocity = 0;
         ResetDragVelocity();
         _completionRaised = false;
+        ResetCommitCandidate();
 
         if (!animate)
         {
@@ -246,6 +280,7 @@ public sealed class PageTurnController
 
         _targetProgress = 0;
         ResetDragVelocity();
+        ResetCommitCandidate();
         BeginSettling();
     }
 
@@ -295,7 +330,10 @@ public sealed class PageTurnController
             _freeEdge,
             _direction,
             _progress,
-            _options);
+            _options) with
+        {
+            LockedAnchor = _lockedAnchor,
+        };
     }
 
     private void BeginSettling()
@@ -332,6 +370,41 @@ public sealed class PageTurnController
         _lastSampledProgress = 0;
         _smoothedProgressVelocity = 0;
         _hasDragTimestamp = false;
+    }
+
+    private void ResetCommitCandidate() =>
+        _isCommitCandidate = _progress >= _options.PageChangeThreshold;
+
+    private void NotifyCommitCandidateTransition()
+    {
+        var isCommitCandidate = _progress >= _options.PageChangeThreshold;
+        if (isCommitCandidate == _isCommitCandidate)
+        {
+            return;
+        }
+
+        _isCommitCandidate = isCommitCandidate;
+        PageChangeThresholdCrossed?.Invoke(
+            this,
+            new PageChangeThresholdCrossedEventArgs(
+                _direction,
+                isCommitCandidate,
+                _progress));
+    }
+
+    private static float? GetFlickTarget(float velocity, float threshold)
+    {
+        if (velocity > threshold)
+        {
+            return 1f;
+        }
+
+        if (velocity < -threshold)
+        {
+            return 0f;
+        }
+
+        return null;
     }
 
     private void UpdateProgressVelocity(double timestampSeconds)
@@ -380,6 +453,17 @@ public sealed class PageTurnController
 
     private static bool IsValidEdge(PageEdge edge) =>
         edge is PageEdge.Auto or PageEdge.Top or PageEdge.Right or PageEdge.Bottom or PageEdge.Left;
+
+    private static bool IsValidAnchor(PageAnchor anchor) => anchor is
+        PageAnchor.Auto
+        or PageAnchor.Top
+        or PageAnchor.Right
+        or PageAnchor.Bottom
+        or PageAnchor.Left
+        or PageAnchor.TopLeft
+        or PageAnchor.TopRight
+        or PageAnchor.BottomRight
+        or PageAnchor.BottomLeft;
 
     private static bool IsFinite(Vector2 value) =>
         float.IsFinite(value.X) && float.IsFinite(value.Y);

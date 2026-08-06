@@ -40,6 +40,12 @@ internal static class PageTurnControllerTests
         Release_velocity_is_carried_into_backward_settling();
         Committed_flick_retains_visible_settle_motion();
         Timestamped_drag_remains_directly_attached_to_the_finger();
+        Pinned_corners_reject_only_the_pinned_point();
+        Anchor_overload_preserves_the_locked_anchor_in_snapshot_and_pose();
+        Custom_page_change_threshold_controls_release_intent();
+        Disabled_flick_does_not_override_the_page_change_threshold();
+        Custom_flick_velocity_threshold_controls_release_intent();
+        Threshold_event_fires_once_on_entry_and_once_on_exit();
     }
 
     private static void BeginDrag_chooses_edge_and_clamps_drag_start_to_page()
@@ -417,6 +423,144 @@ internal static class PageTurnControllerTests
 
         TestAssert.Equal(new Vector2(63, 100), controller.Snapshot.PointerPosition);
         TestAssert.Equal(0.37f, controller.Snapshot.Progress, 3);
+    }
+
+    private static void Pinned_corners_reject_only_the_pinned_point()
+    {
+        var cases = new[]
+        {
+            (PageAnchor.TopLeft, Vector2.Zero),
+            (PageAnchor.TopRight, new Vector2(PageSize.X, 0)),
+            (PageAnchor.BottomRight, PageSize),
+            (PageAnchor.BottomLeft, new Vector2(0, PageSize.Y)),
+        };
+
+        foreach (var (anchor, pin) in cases)
+        {
+            var rejected = new PageTurnController();
+            var accepted = new PageTurnController();
+
+            TestAssert.False(rejected.BeginDrag(pin, PageSize, anchor));
+            TestAssert.True(accepted.BeginDrag(PageSize * 0.5f, PageSize, anchor));
+            TestAssert.Equal(anchor, accepted.Snapshot.LockedAnchor);
+        }
+    }
+
+    private static void Anchor_overload_preserves_the_locked_anchor_in_snapshot_and_pose()
+    {
+        var controller = new PageTurnController();
+
+        TestAssert.True(controller.BeginDrag(
+            new Vector2(PageSize.X, PageSize.Y),
+            PageSize,
+            PageAnchor.TopLeft));
+        controller.UpdateDrag(new Vector2(65, 130));
+
+        TestAssert.Equal(PageAnchor.TopLeft, controller.Snapshot.LockedAnchor);
+        TestAssert.Equal(PageAnchor.TopLeft, controller.GetCurlPose(PageSize).LockedAnchor);
+    }
+
+    private static void Custom_page_change_threshold_controls_release_intent()
+    {
+        var cases = new[]
+        {
+            (Threshold: 0f, PointerX: 100f, ExpectedTarget: 1f),
+            (Threshold: 0.35f, PointerX: 65f, ExpectedTarget: 1f),
+            (Threshold: 1f, PointerX: 0f, ExpectedTarget: 1f),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var controller = new PageTurnController(new PageCurlOptions
+            {
+                PageChangeThreshold = testCase.Threshold,
+                FlickEnabled = false,
+            });
+            controller.BeginDrag(new Vector2(100, 100), PageSize);
+            controller.UpdateDrag(new Vector2(testCase.PointerX, 100));
+            controller.EndDrag();
+
+            TestAssert.Equal(testCase.ExpectedTarget, controller.Snapshot.TargetProgress);
+        }
+    }
+
+    private static void Disabled_flick_does_not_override_the_page_change_threshold()
+    {
+        var controller = new PageTurnController(new PageCurlOptions
+        {
+            PageChangeThreshold = 0.8f,
+            FlickEnabled = false,
+        });
+        controller.BeginDrag(new Vector2(100, 100), PageSize);
+        controller.UpdateDrag(new Vector2(90, 100), 1.000);
+        controller.UpdateDrag(new Vector2(70, 100), 1.016);
+        controller.EndDrag();
+
+        TestAssert.Equal(0f, controller.Snapshot.TargetProgress);
+    }
+
+    private static void Custom_flick_velocity_threshold_controls_release_intent()
+    {
+        var sensitive = new PageTurnController(new PageCurlOptions
+        {
+            PageChangeThreshold = 0.8f,
+            FlickVelocityThreshold = 0.4f,
+        });
+        sensitive.BeginDrag(new Vector2(100, 100), PageSize);
+        sensitive.UpdateDrag(new Vector2(90, 100), 1.000);
+        sensitive.UpdateDrag(new Vector2(80, 100), 1.100);
+        sensitive.EndDrag();
+
+        var deliberate = new PageTurnController(new PageCurlOptions
+        {
+            PageChangeThreshold = 0.8f,
+            FlickVelocityThreshold = 2f,
+        });
+        deliberate.BeginDrag(new Vector2(100, 100), PageSize);
+        deliberate.UpdateDrag(new Vector2(90, 100), 1.000);
+        deliberate.UpdateDrag(new Vector2(80, 100), 1.100);
+        deliberate.EndDrag();
+
+        TestAssert.Equal(1f, sensitive.Snapshot.TargetProgress);
+        TestAssert.Equal(0f, deliberate.Snapshot.TargetProgress);
+    }
+
+    private static void Threshold_event_fires_once_on_entry_and_once_on_exit()
+    {
+        var controller = new PageTurnController(new PageCurlOptions
+        {
+            PageChangeThreshold = 0.35f,
+            FlickEnabled = false,
+        });
+        var entryCount = 0;
+        var exitCount = 0;
+        PageChangeThresholdCrossedEventArgs? latest = null;
+        controller.PageChangeThresholdCrossed += (_, args) =>
+        {
+            latest = args;
+            if (args.IsCommitCandidate)
+            {
+                entryCount++;
+            }
+            else
+            {
+                exitCount++;
+            }
+        };
+
+        controller.BeginDrag(new Vector2(100, 100), PageSize, PageAnchor.Left);
+        controller.UpdateDrag(new Vector2(70, 100));
+        controller.UpdateDrag(new Vector2(60, 100));
+        controller.UpdateDrag(new Vector2(50, 100));
+        controller.UpdateDrag(new Vector2(70, 100));
+        controller.UpdateDrag(new Vector2(80, 100));
+
+        TestAssert.Equal(1, entryCount);
+        TestAssert.Equal(1, exitCount);
+        TestAssert.NotNull(latest);
+        TestAssert.Equal(PageTurnDirection.Forward, latest!.Direction);
+        TestAssert.False(latest.IsCommitCandidate);
+        TestAssert.Equal(0.3f, latest.Progress, 3);
     }
 
     private static void RunUntilIdle(PageTurnController controller)
