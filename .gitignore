@@ -9,6 +9,8 @@
 .dotnet-home/
 .artifacts/
 .artifacts/ios-smoke/
+.superpowers/
+.worktrees/
 *.xcresult
 TestResults/
 *.userprefs
