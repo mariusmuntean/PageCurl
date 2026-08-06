@@ -38,6 +38,7 @@ internal static class PageTurnControllerTests
         Invalid_timestamp_rebases_before_the_next_valid_sample();
         Release_velocity_is_carried_into_forward_settling();
         Release_velocity_is_carried_into_backward_settling();
+        Committed_flick_retains_visible_settle_motion();
         Timestamped_drag_remains_directly_attached_to_the_finger();
     }
 
@@ -389,6 +390,23 @@ internal static class PageTurnControllerTests
         fast.Tick(1.0 / 60.0);
 
         TestAssert.True(fast.Snapshot.Progress < slow.Snapshot.Progress);
+    }
+
+    private static void Committed_flick_retains_visible_settle_motion()
+    {
+        var controller = new PageTurnController();
+        controller.BeginDrag(new Vector2(90, 100), PageSize);
+        controller.UpdateDrag(new Vector2(70, 100), 1.000);
+        controller.UpdateDrag(new Vector2(10, 100), 1.016);
+        controller.EndDrag();
+
+        for (var frame = 0; frame < 12; frame++)
+        {
+            TestAssert.True(controller.Tick(1.0 / 60.0));
+        }
+
+        TestAssert.Equal(PageTurnState.Settling, controller.Snapshot.State);
+        TestAssert.True(controller.Snapshot.Progress < 0.999f);
     }
 
     private static void Timestamped_drag_remains_directly_attached_to_the_finger()

@@ -11,7 +11,8 @@ public sealed class PageTurnController
     private const float EdgeEpsilon = 0.001f;
     private const float ReleaseFlickThreshold = 1.5f;
     private const float VelocitySmoothingFactor = 0.5f;
-    private const float MaximumReleaseVelocity = 8f;
+    private const float MaximumDragVelocity = 8f;
+    private const float MaximumSettlingVelocity = 1.5f;
     private const double MaximumDragSampleIntervalSeconds = 0.25;
     private readonly PageCurlOptions _options;
     private PageTurnState _state;
@@ -305,7 +306,7 @@ public sealed class PageTurnController
         _velocity = _targetProgress >= 0.5f
             ? MathF.Max(0, releaseVelocity)
             : MathF.Min(0, releaseVelocity);
-        _velocity = Math.Clamp(_velocity, -MaximumReleaseVelocity, MaximumReleaseVelocity);
+        _velocity = Math.Clamp(_velocity, -MaximumSettlingVelocity, MaximumSettlingVelocity);
         _completionRaised = false;
         _state = PageTurnState.Settling;
     }
@@ -368,8 +369,8 @@ public sealed class PageTurnController
         _smoothedProgressVelocity = Math.Clamp(
             ((_smoothedProgressVelocity * (1 - VelocitySmoothingFactor))
                 + (sampledVelocity * VelocitySmoothingFactor)),
-            -MaximumReleaseVelocity,
-            MaximumReleaseVelocity);
+            -MaximumDragVelocity,
+            MaximumDragVelocity);
         _lastDragTimestamp = timestampSeconds;
         _lastSampledProgress = _progress;
     }
