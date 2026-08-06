@@ -5,59 +5,48 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
     <Application.Resources>
         <ResourceDictionary>
-            <Color x:Key="PageBackgroundLight">#F3F0FA</Color>
-            <Color x:Key="PageBackgroundDark">#0F1020</Color>
-            <Color x:Key="SurfaceLight">#FFFCF5</Color>
-            <Color x:Key="SurfaceDark">#191A31</Color>
-            <Color x:Key="StageLight">#E8E2F7</Color>
-            <Color x:Key="StageDark">#17182B</Color>
-            <Color x:Key="BorderLight">#C7BEE4</Color>
-            <Color x:Key="BorderDark">#3A3B58</Color>
-            <Color x:Key="TextLight">#262035</Color>
-            <Color x:Key="TextDark">#F7F2FF</Color>
-            <Color x:Key="MutedLight">#665F79</Color>
-            <Color x:Key="MutedDark">#C7C4D8</Color>
-            <Color x:Key="AccentLight">#7658D8</Color>
-            <Color x:Key="AccentDark">#9D7CFF</Color>
-            <Color x:Key="WarmAccent">#F3B66F</Color>
-            <Color x:Key="ButtonTextDark">#0F1020</Color>
-            <LinearGradientBrush x:Key="PageBackgroundBrushLight" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#F3F0FA" Offset="0" />
-                <GradientStop Color="#FFF3E6" Offset="1" />
-            </LinearGradientBrush>
-            <LinearGradientBrush x:Key="PageBackgroundBrushDark" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#11122A" Offset="0" />
-                <GradientStop Color="#241D2D" Offset="1" />
-            </LinearGradientBrush>
-            <LinearGradientBrush x:Key="BrandBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#9D7CFF" Offset="0" />
-                <GradientStop Color="#F3B66F" Offset="1" />
-            </LinearGradientBrush>
+            <Color x:Key="CanvasLight">#F0EEE8</Color>
+            <Color x:Key="CanvasDark">#171816</Color>
+            <Color x:Key="StageLight">#E2DFD6</Color>
+            <Color x:Key="StageDark">#20211E</Color>
+            <Color x:Key="PaperLight">#FAF8F1</Color>
+            <Color x:Key="PaperDark">#2A2B27</Color>
+            <Color x:Key="InkLight">#1C211F</Color>
+            <Color x:Key="InkDark">#F1F0E9</Color>
+            <Color x:Key="MutedLight">#6E736E</Color>
+            <Color x:Key="MutedDark">#A9ADA6</Color>
+            <Color x:Key="RuleLight">#C9C7BE</Color>
+            <Color x:Key="RuleDark">#3B3D38</Color>
+            <Color x:Key="Cobalt">#3157D5</Color>
+
             <Style TargetType="Label">
-                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
             </Style>
-            <Style x:Key="EyebrowLabel" TargetType="Label">
-                <Setter Property="FontSize" Value="11" />
+            <Style x:Key="Eyebrow" TargetType="Label">
+                <Setter Property="FontSize" Value="10" />
                 <Setter Property="FontAttributes" Value="Bold" />
-                <Setter Property="CharacterSpacing" Value="1.8" />
-                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}" />
+                <Setter Property="CharacterSpacing" Value="1.6" />
+                <Setter Property="TextColor" Value="{StaticResource Cobalt}" />
             </Style>
-            <Style x:Key="MutedLabel" TargetType="Label">
+            <Style x:Key="QuietText" TargetType="Label">
                 <Setter Property="FontSize" Value="13" />
                 <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource MutedLight}, Dark={StaticResource MutedDark}}" />
             </Style>
-            <Style x:Key="ReaderButton" TargetType="Button">
-                <Setter Property="HeightRequest" Value="46" />
-                <Setter Property="CornerRadius" Value="16" />
-                <Setter Property="Padding" Value="18,0" />
+            <Style x:Key="QuietButton" TargetType="Button">
+                <Setter Property="HeightRequest" Value="42" />
+                <Setter Property="Padding" Value="14,0" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="FontSize" Value="13" />
                 <Setter Property="FontAttributes" Value="Bold" />
-                <Setter Property="FontSize" Value="14" />
-                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}" />
-                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextLight}, Dark={StaticResource TextDark}}" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+                <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource RuleLight}, Dark={StaticResource RuleDark}}" />
+                <Setter Property="BorderWidth" Value="1" />
             </Style>
-            <Style x:Key="PrimaryReaderButton" TargetType="Button" BasedOn="{StaticResource ReaderButton}">
-                <Setter Property="Background" Value="{StaticResource BrandBrush}" />
-                <Setter Property="TextColor" Value="{StaticResource ButtonTextDark}" />
+            <Style x:Key="CobaltButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+                <Setter Property="BackgroundColor" Value="{StaticResource Cobalt}" />
+                <Setter Property="TextColor" Value="White" />
+                <Setter Property="BorderWidth" Value="0" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>

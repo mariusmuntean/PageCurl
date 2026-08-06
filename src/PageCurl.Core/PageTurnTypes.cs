@@ -65,9 +65,9 @@ public sealed class PageTurnPointerCapture
 /// <summary>Options shared by the interaction controller and the mesh builder.</summary>
 public sealed class PageCurlOptions
 {
-    public int MeshColumns { get; init; } = 24;
+    public int MeshColumns { get; init; } = 48;
 
-    public int MeshRows { get; init; } = 24;
+    public int MeshRows { get; init; } = 48;
 
     /// <summary>Base cylinder radius as a fraction of page width.</summary>
     public float RadiusScale { get; init; } = 1f / 3f;
@@ -172,6 +172,7 @@ public sealed class PageMeshBuffer
 {
     internal readonly int Columns;
     internal readonly int Rows;
+    internal readonly int BaseGridVertexCount;
     internal readonly GridVertex[] Grid;
     internal readonly TriangleOrder[] Orders;
 
@@ -182,8 +183,10 @@ public sealed class PageMeshBuffer
 
         Columns = options.MeshColumns;
         Rows = options.MeshRows;
-        Grid = new GridVertex[(Columns + 1) * (Rows + 1)];
-        Orders = new TriangleOrder[Columns * Rows * 2];
+        BaseGridVertexCount = (Columns + 1) * (Rows + 1);
+        var cellCount = Columns * Rows;
+        Grid = new GridVertex[BaseGridVertexCount + (cellCount * 8)];
+        Orders = new TriangleOrder[cellCount * 6];
         var vertexCapacity = Math.Max(6, Orders.Length * 3);
         FrontVertices = new MeshVertex[vertexCapacity];
         BackVertices = new MeshVertex[vertexCapacity];
@@ -199,12 +202,18 @@ public sealed class PageMeshBuffer
 
     internal readonly struct GridVertex
     {
-        public GridVertex(Vector2 position, Vector2 textureCoordinate, float shade, float depth)
+        public GridVertex(
+            Vector2 position,
+            Vector2 textureCoordinate,
+            float shade,
+            float depth,
+            float facing)
         {
             Position = position;
             TextureCoordinate = textureCoordinate;
             Shade = shade;
             Depth = depth;
+            Facing = facing;
         }
 
         public Vector2 Position { get; }
@@ -214,6 +223,8 @@ public sealed class PageMeshBuffer
         public float Shade { get; }
 
         public float Depth { get; }
+
+        public float Facing { get; }
     }
 
     internal struct TriangleOrder

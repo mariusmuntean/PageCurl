@@ -19,7 +19,6 @@ public partial class MainPage : ContentPage
         BindingContext = _navigation;
         LockedEdgePicker.ItemsSource = new[] { "Auto", "Top", "Right", "Bottom", "Left" };
         LockedEdgePicker.SelectedIndex = 0;
-        ApplyLockedEdgeVisuals();
         EnsurePageSet();
     }
 
@@ -27,8 +26,8 @@ public partial class MainPage : ContentPage
     {
         if (!args.Committed)
         {
-            StatusLabel.Text = "TURN CANCELLED";
-            PageHintLabel.Text = "Release before the midpoint to return to the current page.";
+            StatusLabel.Text = "Turn cancelled";
+            PageHintLabel.Text = "Pull past halfway to complete the turn.";
             _lastTestingResult = $"Last result · {args.Direction.ToString().ToUpperInvariant()} CANCELLED";
             UpdateTestingPanel();
             return;
@@ -36,20 +35,18 @@ public partial class MainPage : ContentPage
 
         if (!_navigation.TryCommit(args.Direction))
         {
-            StatusLabel.Text = "TURN UNAVAILABLE";
-            PageHintLabel.Text = "The page is already at this edge.";
+            StatusLabel.Text = "Edge reached";
+            PageHintLabel.Text = "There is no page beyond this edge.";
             _lastTestingResult = $"Last result · {args.Direction.ToString().ToUpperInvariant()} UNAVAILABLE";
             UpdateTestingPanel();
             return;
         }
 
         ShowPage();
-        EdgeHintsOverlay.Opacity = 0.28;
-        HintsButton.IsVisible = true;
-        StatusLabel.Text = _navigation.CanTurnForward ? "CURL COMPLETE" : "FINAL PAGE";
+        StatusLabel.Text = _navigation.CanTurnForward ? "Turn complete" : "Final page";
         PageHintLabel.Text = args.Direction == PageTurnDirection.Forward
-            ? "Forward curl completed from the right side or a corner."
-            : "Backward curl completed from the left side or a corner.";
+            ? "Drag again to continue."
+            : "Drag again to go back.";
         _lastTestingResult = $"Last result · {args.Direction.ToString().ToUpperInvariant()} COMMITTED";
         UpdateTestingPanel();
     }
@@ -89,19 +86,17 @@ public partial class MainPage : ContentPage
             _ => PageEdge.Auto,
         };
         PageView.LockedEdge = edge;
-        LockedEdgeLabel.Text = edge.ToString().ToUpperInvariant();
-        ApplyLockedEdgeVisuals();
+        LockedEdgeLabel.Text = edge == PageEdge.Auto
+            ? "Auto selects the opposite edge."
+            : $"{edge} stays fixed while the page turns.";
         PageHintLabel.Text = edge == PageEdge.Auto
-            ? "Auto hinge: the nearest free edge controls the curl."
-            : $"{edge} edge locked. Drag any other edge or corner toward the page.";
+            ? "Drag the page from any free edge."
+            : $"{edge} edge locked. Drag elsewhere to curl.";
         UpdateTestingPanel();
     }
 
-    private void OnShowHintsClicked(object? sender, EventArgs e)
-    {
-        EdgeHintsOverlay.Opacity = 1;
-        HintsButton.IsVisible = false;
-    }
+    private void OnSettingsClicked(object? sender, EventArgs e) =>
+        SettingsPanel.IsVisible = !SettingsPanel.IsVisible;
 
     protected override void OnAppearing()
     {
@@ -114,8 +109,7 @@ public partial class MainPage : ContentPage
         _testingTimer?.Stop();
         PageView.PerformanceDiagnosticsEnabled = false;
         TestingModeSwitch.IsToggled = false;
-        HintsButton.IsVisible = false;
-        EdgeHintsOverlay.Opacity = 1;
+        SettingsPanel.IsVisible = false;
         PageView.CancelInteraction();
         PageView.FrontImage = null;
         PageView.BackImage = null;
@@ -137,14 +131,14 @@ public partial class MainPage : ContentPage
             return;
         }
 
-        StatusLabel.Text = "TURNING...";
+        StatusLabel.Text = "Turning";
         PageHintLabel.Text = direction == PageTurnDirection.Forward
-            ? "Curling from the right side or a corner..."
-            : "Curling from the left side or a corner...";
+            ? "Turning forward."
+            : "Turning back.";
         if (!PageView.TryTurn(direction))
         {
-            StatusLabel.Text = "TURN UNAVAILABLE";
-            PageHintLabel.Text = "The renderer is not ready for a new turn.";
+            StatusLabel.Text = "Not ready";
+            PageHintLabel.Text = "Finish the current turn first.";
         }
     }
 
@@ -210,22 +204,8 @@ public partial class MainPage : ContentPage
         PageView.UnderPageImage = pages[_navigation.GetUnderPageIndex(PageTurnDirection.Forward)];
         PageView.PreviousPageImage = pages[_navigation.GetUnderPageIndex(PageTurnDirection.Backward)];
         PageCounterLabel.Text = $"{pageIndex + 1:00} / {pages.Count:00}";
-        StatusLabel.Text = _navigation.CanTurnForward ? "READY TO TURN" : "FINAL PAGE";
-        PageHintLabel.Text = "Drag from a side or corner to reveal the next fold.";
-    }
-
-    private void ApplyLockedEdgeVisuals()
-    {
-        var edge = PageView.LockedEdge;
-        var auto = edge == PageEdge.Auto;
-        TopEdgeHint.Opacity = auto || edge == PageEdge.Top ? 1 : 0.28;
-        RightEdgeHint.Opacity = auto || edge == PageEdge.Right ? 1 : 0.28;
-        BottomEdgeHint.Opacity = auto || edge == PageEdge.Bottom ? 1 : 0.28;
-        LeftEdgeHint.Opacity = auto || edge == PageEdge.Left ? 1 : 0.28;
-        TopLeftCornerHint.Opacity = auto || edge == PageEdge.Top || edge == PageEdge.Left ? 1 : 0.28;
-        TopRightCornerHint.Opacity = auto || edge == PageEdge.Top || edge == PageEdge.Right ? 1 : 0.28;
-        BottomLeftCornerHint.Opacity = auto || edge == PageEdge.Bottom || edge == PageEdge.Left ? 1 : 0.28;
-        BottomRightCornerHint.Opacity = auto || edge == PageEdge.Bottom || edge == PageEdge.Right ? 1 : 0.28;
+        StatusLabel.Text = _navigation.CanTurnForward ? "Ready" : "Final page";
+        PageHintLabel.Text = "Drag the page from any free edge.";
     }
 
 }

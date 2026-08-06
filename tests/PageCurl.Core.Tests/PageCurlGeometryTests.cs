@@ -30,6 +30,7 @@ internal static class PageCurlGeometryTests
         Curl_radius_relaxes_at_both_turn_endpoints();
         Developable_surface_preserves_material_triangle_lengths();
         Triangle_streams_follow_surface_orientation();
+        Front_and_back_streams_share_a_straight_tangent_seam();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -484,6 +485,52 @@ internal static class PageCurlGeometryTests
         TestAssert.True(buffer.BackVertexCount > 0);
         AssertTriangleOrientation(buffer.FrontVertices, buffer.FrontVertexCount, false);
         AssertTriangleOrientation(buffer.BackVertices, buffer.BackVertexCount, true);
+    }
+
+    private static void Front_and_back_streams_share_a_straight_tangent_seam()
+    {
+        var options = new PageCurlOptions { MeshColumns = 8, MeshRows = 8 };
+        var buffer = new PageMeshBuffer(options);
+        var pose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, 0),
+            new Vector2(48, 52),
+            PageTurnDirection.Forward,
+            0.52f,
+            options);
+
+        PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+        var seam = new List<Vector2>();
+        for (var frontIndex = 0; frontIndex < buffer.FrontVertexCount; frontIndex++)
+        {
+            var front = buffer.FrontVertices[frontIndex];
+            for (var backIndex = 0; backIndex < buffer.BackVertexCount; backIndex++)
+            {
+                var back = buffer.BackVertices[backIndex];
+                if (Vector2.DistanceSquared(front.TextureCoordinate, back.TextureCoordinate) > 0.000001f
+                    || Vector2.DistanceSquared(front.Position, back.Position) > 0.000001f)
+                {
+                    continue;
+                }
+
+                if (!seam.Exists(point => Vector2.DistanceSquared(point, front.Position) <= 0.000001f))
+                {
+                    seam.Add(front.Position);
+                }
+            }
+        }
+
+        TestAssert.True(seam.Count >= 2, "Front and back meshes do not share a tangent seam.");
+        var start = seam[0];
+        var end = seam.OrderByDescending(point => Vector2.DistanceSquared(point, start)).First();
+        var seamDirection = Vector2.Normalize(end - start);
+        foreach (var point in seam)
+        {
+            var offset = point - start;
+            var distance = MathF.Abs((offset.X * seamDirection.Y) - (offset.Y * seamDirection.X));
+            TestAssert.True(distance <= 0.001f, $"Tangent seam deviates by {distance:F4} pixels.");
+        }
     }
 
     private static void AssertTriangleOrientation(MeshVertex[] vertices, int count, bool expectBack)

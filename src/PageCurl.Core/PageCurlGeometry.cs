@@ -48,12 +48,19 @@ public static class PageCurlGeometry
         var localDragStart = ToFreeLocal(dragStart, pageSize, resolvedFreeEdge);
         var localPointer = ToFreeLocal(pointer, pageSize, resolvedFreeEdge);
         var clampedProgress = Math.Clamp(progress, 0, 1);
-        // During a settle the finger is no longer moving, so reconstruct the
-        // curl edge from the animated progress. During a drag this is the same
-        // local x-coordinate that the controller derived from the pointer.
-        var animatedPointer = new Vector2(
-            localPageSize.X * (1f - clampedProgress),
-            localPointer.Y);
+        // Continue along the release trajectory while settling. Animating only
+        // the edge-normal coordinate makes a diagonal corner pull rotate toward
+        // the adjacent edge just before it closes, producing a second snap.
+        var pointerProgress = Math.Clamp(
+            1f - (localPointer.X / localPageSize.X),
+            0,
+            1);
+        var animatedPointer = pointerProgress > Epsilon
+            ? localDragStart
+                + ((localPointer - localDragStart) * (clampedProgress / pointerProgress))
+            : new Vector2(
+                localPageSize.X * (1f - clampedProgress),
+                localDragStart.Y);
         var delta = animatedPointer - localDragStart;
         var distance = delta.Length();
         var curlDirection = distance > Epsilon
@@ -153,6 +160,7 @@ public static class PageCurlGeometry
                 var transformedProjection = sourceProjection;
                 var depth = 0f;
                 var shade = 1f;
+                var facing = curlStart + (MathF.PI * radius * 0.5f) - sourceProjection;
 
                 if (distanceIntoCurl >= curlLength)
                 {
@@ -173,10 +181,16 @@ public static class PageCurlGeometry
                     Math.Clamp(source.X / pageSize.X, 0, 1),
                     Math.Clamp(source.Y / pageSize.Y, 0, 1));
                 buffer.Grid[(row * (columns + 1)) + column] =
-                    new PageMeshBuffer.GridVertex(world, texture, Math.Clamp(shade, 0.1f, 1f), depth);
+                    new PageMeshBuffer.GridVertex(
+                        world,
+                        texture,
+                        Math.Clamp(shade, 0.1f, 1f),
+                        depth,
+                        facing);
             }
         }
 
+        var gridVertexCount = buffer.BaseGridVertexCount;
         var orderCount = 0;
         for (var row = 0; row < rows; row++)
         {
@@ -186,8 +200,30 @@ public static class PageCurlGeometry
                 var topRight = topLeft + 1;
                 var bottomLeft = topLeft + columns + 1;
                 var bottomRight = bottomLeft + 1;
-                AddTriangle(buffer, ref orderCount, topLeft, topRight, bottomLeft);
-                AddTriangle(buffer, ref orderCount, topRight, bottomRight, bottomLeft);
+                AddClippedTriangle(
+                    buffer,
+                    ref gridVertexCount,
+                    ref orderCount,
+                    topLeft,
+                    topRight,
+                    bottomLeft,
+                    direction,
+                    axis,
+                    curlStart,
+                    radius,
+                    pageSize);
+                AddClippedTriangle(
+                    buffer,
+                    ref gridVertexCount,
+                    ref orderCount,
+                    topRight,
+                    bottomRight,
+                    bottomLeft,
+                    direction,
+                    axis,
+                    curlStart,
+                    radius,
+                    pageSize);
             }
         }
 
@@ -387,44 +423,222 @@ public static class PageCurlGeometry
         _ => PageEdge.Auto,
     };
 
-    private static void AddTriangle(
+    private static void AddClippedTriangle(
+        PageMeshBuffer buffer,
+        ref int gridVertexCount,
+        ref int orderCount,
+        int a,
+        int b,
+        int c,
+        Vector2 direction,
+        Vector2 axis,
+        float curlStart,
+        float radius,
+        Vector2 pageSize)
+    {
+        AddClippedSide(
+            buffer,
+            ref gridVertexCount,
+            ref orderCount,
+            a,
+            b,
+            c,
+            isBack: false,
+            direction,
+            axis,
+            curlStart,
+            radius,
+            pageSize);
+        AddClippedSide(
+            buffer,
+            ref gridVertexCount,
+            ref orderCount,
+            a,
+            b,
+            c,
+            isBack: true,
+            direction,
+            axis,
+            curlStart,
+            radius,
+            pageSize);
+    }
+
+    private static void AddClippedSide(
+        PageMeshBuffer buffer,
+        ref int gridVertexCount,
+        ref int orderCount,
+        int a,
+        int b,
+        int c,
+        bool isBack,
+        Vector2 direction,
+        Vector2 axis,
+        float curlStart,
+        float radius,
+        Vector2 pageSize)
+    {
+        Span<int> input = stackalloc int[3] { a, b, c };
+        Span<int> output = stackalloc int[4];
+        var outputCount = 0;
+        var previousIndex = input[^1];
+        var previousInside = IsInside(buffer.Grid[previousIndex].Facing, isBack);
+
+        for (var index = 0; index < input.Length; index++)
+        {
+            var currentIndex = input[index];
+            var currentInside = IsInside(buffer.Grid[currentIndex].Facing, isBack);
+            if (currentInside != previousInside)
+            {
+                AppendUnique(
+                    output,
+                    ref outputCount,
+                    AddFacingIntersection(
+                        buffer,
+                        ref gridVertexCount,
+                        previousIndex,
+                        currentIndex,
+                        direction,
+                        axis,
+                        curlStart,
+                        radius,
+                        pageSize));
+            }
+
+            if (currentInside)
+            {
+                AppendUnique(output, ref outputCount, currentIndex);
+            }
+
+            previousIndex = currentIndex;
+            previousInside = currentInside;
+        }
+
+        if (outputCount > 1 && output[0] == output[outputCount - 1])
+        {
+            outputCount--;
+        }
+
+        for (var index = 1; index < outputCount - 1; index++)
+        {
+            AddTriangleOrder(
+                buffer,
+                ref orderCount,
+                output[0],
+                output[index],
+                output[index + 1],
+                isBack);
+        }
+    }
+
+    private static bool IsInside(float facing, bool isBack) =>
+        isBack ? facing < 0 : facing >= 0;
+
+    private static void AppendUnique(Span<int> output, ref int count, int index)
+    {
+        if (count == 0 || output[count - 1] != index)
+        {
+            output[count++] = index;
+        }
+    }
+
+    private static int AddFacingIntersection(
+        PageMeshBuffer buffer,
+        ref int gridVertexCount,
+        int firstIndex,
+        int secondIndex,
+        Vector2 direction,
+        Vector2 axis,
+        float curlStart,
+        float radius,
+        Vector2 pageSize)
+    {
+        var first = buffer.Grid[firstIndex];
+        var second = buffer.Grid[secondIndex];
+        if (first.Facing == 0)
+        {
+            return firstIndex;
+        }
+
+        if (second.Facing == 0)
+        {
+            return secondIndex;
+        }
+
+        var amount = Math.Clamp(first.Facing / (first.Facing - second.Facing), 0, 1);
+        var texture = Vector2.Lerp(first.TextureCoordinate, second.TextureCoordinate, amount);
+        var source = new Vector2(texture.X * pageSize.X, texture.Y * pageSize.Y);
+        var axisProjection = Vector2.Dot(source, axis);
+        var tangentProjection = curlStart + radius;
+        var tangentShade = 0.15f + (0.85f * MathF.Cos(MathF.PI * 0.375f));
+        var intersection = new PageMeshBuffer.GridVertex(
+            (direction * tangentProjection) + (axis * axisProjection),
+            texture,
+            tangentShade,
+            radius,
+            0);
+        buffer.Grid[gridVertexCount] = intersection;
+        return gridVertexCount++;
+    }
+
+    private static void AddTriangleOrder(
         PageMeshBuffer buffer,
         ref int orderCount,
         int a,
         int b,
-        int c)
+        int c,
+        bool isBack)
     {
         var first = buffer.Grid[a];
         var second = buffer.Grid[b];
         var third = buffer.Grid[c];
         var depth = (first.Depth + second.Depth + third.Depth) / 3f;
-        var firstPosition = new Vector3(first.Position, first.Depth);
-        var secondPosition = new Vector3(second.Position, second.Depth);
-        var thirdPosition = new Vector3(third.Position, third.Depth);
-        var normalZ = Vector3.Cross(secondPosition - firstPosition, thirdPosition - firstPosition).Z;
         buffer.Orders[orderCount++] = new PageMeshBuffer.TriangleOrder
         {
             A = a,
             B = b,
             C = c,
             Depth = depth,
-            IsBack = normalZ < 0,
+            IsBack = isBack,
         };
     }
 
     private static void SortOrders(PageMeshBuffer.TriangleOrder[] orders, int count)
     {
-        for (var i = 1; i < count; i++)
+        for (var root = (count / 2) - 1; root >= 0; root--)
         {
-            var current = orders[i];
-            var j = i - 1;
-            while (j >= 0 && orders[j].Depth > current.Depth)
+            SiftDown(orders, root, count);
+        }
+
+        for (var end = count - 1; end > 0; end--)
+        {
+            (orders[0], orders[end]) = (orders[end], orders[0]);
+            SiftDown(orders, 0, end);
+        }
+    }
+
+    private static void SiftDown(PageMeshBuffer.TriangleOrder[] orders, int root, int count)
+    {
+        while (true)
+        {
+            var child = (root * 2) + 1;
+            if (child >= count)
             {
-                orders[j + 1] = orders[j];
-                j--;
+                return;
             }
 
-            orders[j + 1] = current;
+            if (child + 1 < count && orders[child].Depth < orders[child + 1].Depth)
+            {
+                child++;
+            }
+
+            if (orders[root].Depth >= orders[child].Depth)
+            {
+                return;
+            }
+
+            (orders[root], orders[child]) = (orders[child], orders[root]);
+            root = child;
         }
     }
 

@@ -30,6 +30,7 @@ internal static class PageTurnControllerTests
         Programmatic_turn_rejects_invalid_sizes_and_busy_controller();
         Cancel_always_returns_to_the_start_endpoint();
         Settling_progress_moves_the_curl_pose();
+        Corner_release_preserves_curl_direction_while_settling_back();
         Invalid_page_size_is_rejected_without_entering_drag();
         Flick_release_commits_below_the_threshold();
         Flick_release_cancels_above_the_threshold();
@@ -272,6 +273,26 @@ internal static class PageTurnControllerTests
 
         TestAssert.True(after.Progress > before.Progress);
         TestAssert.True(Vector2.Distance(after.Position, before.Position) > 0.01f);
+    }
+
+    private static void Corner_release_preserves_curl_direction_while_settling_back()
+    {
+        var controller = new PageTurnController();
+        controller.BeginDrag(new Vector2(PageSize.X, 0), PageSize);
+        controller.UpdateDrag(new Vector2(70, 30), 0.1);
+        controller.EndDrag();
+
+        var released = controller.GetCurlPose(PageSize);
+        for (var frame = 0; frame < 120 && controller.Snapshot.Progress > 0.05f; frame++)
+        {
+            TestAssert.True(controller.Tick(1.0 / 60.0));
+        }
+
+        var settling = controller.GetCurlPose(PageSize);
+
+        TestAssert.True(
+            Vector2.Dot(released.Direction, settling.Direction) > 0.999f,
+            $"Curl direction rotated from {released.Direction} to {settling.Direction} during rollback.");
     }
 
     private static void Invalid_page_size_is_rejected_without_entering_drag()
