@@ -13,6 +13,7 @@ internal static class PageAnchorTests
         Threshold_and_flick_options_reject_invalid_values();
         Snap_threshold_remains_an_alias_for_page_change_threshold();
         Threshold_event_args_preserve_valid_semantics();
+        Page_change_threshold_can_be_tuned_after_controller_creation();
     }
 
     private static void Every_physical_edge_round_trips_through_an_anchor()
@@ -109,5 +110,18 @@ internal static class PageAnchorTests
                 PageTurnDirection.Forward,
                 isCommitCandidate: false,
                 progress: float.NaN));
+    }
+
+    private static void Page_change_threshold_can_be_tuned_after_controller_creation()
+    {
+        var options = new PageCurlOptions { FlickEnabled = false };
+        var controller = new PageTurnController(options);
+        options.PageChangeThreshold = 0.8f;
+
+        controller.BeginDrag(new Vector2(100, 100), new Vector2(100, 200));
+        controller.UpdateDrag(new Vector2(40, 100));
+        controller.EndDrag();
+
+        TestAssert.Equal(0f, controller.Snapshot.TargetProgress);
     }
 }

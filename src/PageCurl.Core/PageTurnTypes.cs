@@ -132,6 +132,7 @@ public sealed class PageTurnPointerCapture
 public sealed class PageCurlOptions
 {
     private float _pageChangeThreshold = 0.5f;
+    private float _flickVelocityThreshold = 1.5f;
 
     public int MeshColumns { get; init; } = 48;
 
@@ -144,21 +145,37 @@ public sealed class PageCurlOptions
     public float PageChangeThreshold
     {
         get => _pageChangeThreshold;
-        init => _pageChangeThreshold = value;
+        set
+        {
+            ValidatePageChangeThreshold(value);
+            _pageChangeThreshold = value;
+        }
     }
 
     /// <summary>Compatibility alias for <see cref="PageChangeThreshold"/>.</summary>
     public float SnapThreshold
     {
         get => _pageChangeThreshold;
-        init => _pageChangeThreshold = value;
+        set
+        {
+            ValidatePageChangeThreshold(value);
+            _pageChangeThreshold = value;
+        }
     }
 
     /// <summary>Whether release velocity may override the page-change threshold.</summary>
-    public bool FlickEnabled { get; init; } = true;
+    public bool FlickEnabled { get; set; } = true;
 
     /// <summary>Normalized page-progress velocity required to recognize a flick.</summary>
-    public float FlickVelocityThreshold { get; init; } = 1.5f;
+    public float FlickVelocityThreshold
+    {
+        get => _flickVelocityThreshold;
+        set
+        {
+            ValidateFlickVelocityThreshold(value);
+            _flickVelocityThreshold = value;
+        }
+    }
 
     /// <summary>Angular frequency used by the critically damped settle animation.</summary>
     public float SpringFrequency { get; init; } = 18f;
@@ -180,23 +197,32 @@ public sealed class PageCurlOptions
             throw new ArgumentOutOfRangeException(nameof(RadiusScale), "RadiusScale must be finite and positive.");
         }
 
-        if (!float.IsFinite(PageChangeThreshold) || PageChangeThreshold is < 0 or > 1)
+        ValidatePageChangeThreshold(PageChangeThreshold);
+        ValidateFlickVelocityThreshold(FlickVelocityThreshold);
+
+        if (!float.IsFinite(SpringFrequency) || SpringFrequency <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(SpringFrequency), "SpringFrequency must be finite and positive.");
+        }
+    }
+
+    private static void ValidatePageChangeThreshold(float value)
+    {
+        if (!float.IsFinite(value) || value is < 0 or > 1)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(PageChangeThreshold),
                 "PageChangeThreshold must be between zero and one.");
         }
+    }
 
-        if (!float.IsFinite(FlickVelocityThreshold) || FlickVelocityThreshold <= 0)
+    private static void ValidateFlickVelocityThreshold(float value)
+    {
+        if (!float.IsFinite(value) || value <= 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(FlickVelocityThreshold),
                 "FlickVelocityThreshold must be finite and positive.");
-        }
-
-        if (!float.IsFinite(SpringFrequency) || SpringFrequency <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(SpringFrequency), "SpringFrequency must be finite and positive.");
         }
     }
 }

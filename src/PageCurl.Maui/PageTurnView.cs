@@ -48,6 +48,78 @@ public sealed class PageTurnView : SKGLView
         typeof(PageEdge),
         typeof(PageTurnView),
         PageEdge.Auto,
+        validateValue: static (_, value) => value is PageEdge edge
+            && Enum.IsDefined(edge),
+        propertyChanged: OnLockedEdgeChanged);
+
+    public static readonly BindableProperty LockedAnchorProperty = BindableProperty.Create(
+        nameof(LockedAnchor),
+        typeof(PageAnchor),
+        typeof(PageTurnView),
+        PageAnchor.Auto,
+        validateValue: static (_, value) => value is PageAnchor anchor
+            && Enum.IsDefined(anchor),
+        propertyChanged: OnLockedAnchorChanged);
+
+    public static readonly BindableProperty PageChangeThresholdProperty = BindableProperty.Create(
+        nameof(PageChangeThreshold),
+        typeof(float),
+        typeof(PageTurnView),
+        0.5f,
+        validateValue: static (_, value) => value is float threshold
+            && float.IsFinite(threshold)
+            && threshold is >= 0 and <= 1,
+        propertyChanged: OnInteractionOptionChanged);
+
+    public static readonly BindableProperty FlickEnabledProperty = BindableProperty.Create(
+        nameof(FlickEnabled),
+        typeof(bool),
+        typeof(PageTurnView),
+        true,
+        propertyChanged: OnInteractionOptionChanged);
+
+    public static readonly BindableProperty FlickVelocityThresholdProperty = BindableProperty.Create(
+        nameof(FlickVelocityThreshold),
+        typeof(float),
+        typeof(PageTurnView),
+        1.5f,
+        validateValue: static (_, value) => value is float threshold
+            && float.IsFinite(threshold)
+            && threshold > 0,
+        propertyChanged: OnInteractionOptionChanged);
+
+    public static readonly BindableProperty PageAspectRatioProperty = BindableProperty.Create(
+        nameof(PageAspectRatio),
+        typeof(float),
+        typeof(PageTurnView),
+        0f,
+        validateValue: static (_, value) => value is float ratio
+            && float.IsFinite(ratio)
+            && ratio >= 0,
+        propertyChanged: OnVisualPropertyChanged);
+
+    public static readonly BindableProperty BacksideModeProperty = BindableProperty.Create(
+        nameof(BacksideMode),
+        typeof(PageBacksideMode),
+        typeof(PageTurnView),
+        PageBacksideMode.MirroredFront,
+        validateValue: static (_, value) => value is PageBacksideMode mode
+            && Enum.IsDefined(mode),
+        propertyChanged: OnVisualPropertyChanged);
+
+    public static readonly BindableProperty BacksideColorProperty = BindableProperty.Create(
+        nameof(BacksideColor),
+        typeof(Color),
+        typeof(PageTurnView),
+        Colors.White,
+        propertyChanged: OnVisualPropertyChanged);
+
+    public static readonly BindableProperty BacksideDimFactorProperty = BindableProperty.Create(
+        nameof(BacksideDimFactor),
+        typeof(float),
+        typeof(PageTurnView),
+        0.82f,
+        coerceValue: static (_, value) => Math.Clamp((float)value, 0, 1),
         propertyChanged: OnVisualPropertyChanged);
 
     public static readonly BindableProperty ContentScaleProperty = BindableProperty.Create(
@@ -88,6 +160,7 @@ public sealed class PageTurnView : SKGLView
     private int _animationGeneration;
     private bool _eventsAttached;
     private bool _handlerDisconnected;
+    private bool _syncingAnchor;
     private long _frameCount;
     private double _lastFrameMilliseconds;
     private double _totalFrameMilliseconds;
@@ -111,6 +184,10 @@ public sealed class PageTurnView : SKGLView
         _backPoints = new SKPoint[_meshBuffer.BackVertices.Length];
         _backTexturePoints = new SKPoint[_meshBuffer.BackVertices.Length];
         _backColors = new SKColor[_meshBuffer.BackVertices.Length];
+
+        PageChangeThreshold = options.PageChangeThreshold;
+        FlickEnabled = options.FlickEnabled;
+        FlickVelocityThreshold = options.FlickVelocityThreshold;
 
         EnableTouchEvents = true;
         AttachViewHandlers();
@@ -146,6 +223,57 @@ public sealed class PageTurnView : SKGLView
     {
         get => (PageEdge)GetValue(LockedEdgeProperty);
         set => SetValue(LockedEdgeProperty, value);
+    }
+
+    /// <summary>Locks an edge or pins a corner for gestures.</summary>
+    public PageAnchor LockedAnchor
+    {
+        get => (PageAnchor)GetValue(LockedAnchorProperty);
+        set => SetValue(LockedAnchorProperty, value);
+    }
+
+    /// <summary>Normalized page travel required to make release commit.</summary>
+    public float PageChangeThreshold
+    {
+        get => (float)GetValue(PageChangeThresholdProperty);
+        set => SetValue(PageChangeThresholdProperty, value);
+    }
+
+    public bool FlickEnabled
+    {
+        get => (bool)GetValue(FlickEnabledProperty);
+        set => SetValue(FlickEnabledProperty, value);
+    }
+
+    public float FlickVelocityThreshold
+    {
+        get => (float)GetValue(FlickVelocityThresholdProperty);
+        set => SetValue(FlickVelocityThresholdProperty, value);
+    }
+
+    /// <summary>Page width divided by height. Zero uses image dimensions.</summary>
+    public float PageAspectRatio
+    {
+        get => (float)GetValue(PageAspectRatioProperty);
+        set => SetValue(PageAspectRatioProperty, value);
+    }
+
+    public PageBacksideMode BacksideMode
+    {
+        get => (PageBacksideMode)GetValue(BacksideModeProperty);
+        set => SetValue(BacksideModeProperty, value);
+    }
+
+    public Color BacksideColor
+    {
+        get => (Color)GetValue(BacksideColorProperty);
+        set => SetValue(BacksideColorProperty, value);
+    }
+
+    public float BacksideDimFactor
+    {
+        get => (float)GetValue(BacksideDimFactorProperty);
+        set => SetValue(BacksideDimFactorProperty, value);
     }
 
     /// <summary>Controls whether page images fill or preserve their aspect ratio.</summary>
@@ -210,6 +338,12 @@ public sealed class PageTurnView : SKGLView
     {
         add => Controller.PageTurnCompleted += value;
         remove => Controller.PageTurnCompleted -= value;
+    }
+
+    public event EventHandler<PageChangeThresholdCrossedEventArgs>? PageChangeThresholdCrossed
+    {
+        add => Controller.PageChangeThresholdCrossed += value;
+        remove => Controller.PageChangeThresholdCrossed -= value;
     }
 
     public bool TryTurn(PageTurnDirection direction)
@@ -283,6 +417,50 @@ public sealed class PageTurnView : SKGLView
         }
     }
 
+    private static void OnInteractionOptionChanged(
+        BindableObject bindable,
+        object? oldValue,
+        object? newValue)
+    {
+        var view = (PageTurnView)bindable;
+        view._options.PageChangeThreshold = view.PageChangeThreshold;
+        view._options.FlickEnabled = view.FlickEnabled;
+        view._options.FlickVelocityThreshold = view.FlickVelocityThreshold;
+    }
+
+    private static void OnLockedEdgeChanged(
+        BindableObject bindable,
+        object? oldValue,
+        object? newValue)
+    {
+        var view = (PageTurnView)bindable;
+        if (!view._syncingAnchor)
+        {
+            view._syncingAnchor = true;
+            view.LockedAnchor = PageAnchorExtensions.FromEdge((PageEdge)newValue!);
+            view._syncingAnchor = false;
+        }
+
+        OnVisualPropertyChanged(bindable, oldValue, newValue);
+    }
+
+    private static void OnLockedAnchorChanged(
+        BindableObject bindable,
+        object? oldValue,
+        object? newValue)
+    {
+        var view = (PageTurnView)bindable;
+        if (!view._syncingAnchor)
+        {
+            view._syncingAnchor = true;
+            var anchor = (PageAnchor)newValue!;
+            view.LockedEdge = anchor.TryGetEdge(out var edge) ? edge : PageEdge.Auto;
+            view._syncingAnchor = false;
+        }
+
+        OnVisualPropertyChanged(bindable, oldValue, newValue);
+    }
+
     private void OnPaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
         if (_handlerDisconnected)
@@ -319,8 +497,42 @@ public sealed class PageTurnView : SKGLView
             var pose = Controller.GetCurlPose(pageSize);
             PageCurlGeometry.Build(_meshBuffer, pageSize, pose, _options);
             var offset = new SKPoint(_contentViewport.Origin.X, _contentViewport.Origin.Y);
-            DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint!, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors, offset);
-            DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors, offset);
+            DrawMesh(
+                canvas,
+                _meshBuffer.FrontVertices,
+                _meshBuffer.FrontVertexCount,
+                FrontImage,
+                PageBacksideMode.CustomContent,
+                1,
+                SKColors.White,
+                _frontPaint!,
+                ref _frontShader,
+                ref _frontShaderImage,
+                _frontPoints,
+                _frontTexturePoints,
+                _frontColors,
+                offset);
+            var backsideImage = BacksideMode switch
+            {
+                PageBacksideMode.MirroredFront => FrontImage,
+                PageBacksideMode.CustomContent => BackImage ?? FrontImage,
+                _ => null,
+            };
+            DrawMesh(
+                canvas,
+                _meshBuffer.BackVertices,
+                _meshBuffer.BackVertexCount,
+                backsideImage,
+                BacksideMode,
+                BacksideDimFactor,
+                ToSkColor(BacksideColor),
+                _backPaint!,
+                ref _backShader,
+                ref _backShaderImage,
+                _backPoints,
+                _backTexturePoints,
+                _backColors,
+                offset);
         }
         finally
         {
@@ -358,7 +570,7 @@ public sealed class PageTurnView : SKGLView
                     break;
                 }
 
-                if (Controller.BeginDrag(pressedPointer, pageSize, LockedEdge))
+                if (Controller.BeginDrag(pressedPointer, pageSize, LockedAnchor))
                 {
                     e.Handled = true;
                     InvalidateSurface();
@@ -451,6 +663,9 @@ public sealed class PageTurnView : SKGLView
         MeshVertex[] vertices,
         int count,
         SKImage? image,
+        PageBacksideMode backsideMode,
+        float dimFactor,
+        SKColor solidColor,
         SKPaint paint,
         ref SKShader? shader,
         ref SKImage? shaderImage,
@@ -472,11 +687,18 @@ public sealed class PageTurnView : SKGLView
         {
             var vertex = vertices[i];
             points[i] = new SKPoint(vertex.Position.X + offset.X, vertex.Position.Y + offset.Y);
+            var sample = PageBacksideMapping.Map(
+                backsideMode,
+                vertex.TextureCoordinate,
+                vertex.Shade,
+                dimFactor);
             texturePoints[i] = new SKPoint(
-                vertex.TextureCoordinate.X * imageWidth,
-                vertex.TextureCoordinate.Y * imageHeight);
-            var shade = (byte)Math.Clamp((int)MathF.Round(vertex.Shade * 255), 25, 255);
-            colors[i] = new SKColor(shade, shade, shade, 255);
+                sample.TextureCoordinate.X * imageWidth,
+                sample.TextureCoordinate.Y * imageHeight);
+            var shade = Math.Clamp(sample.Shade, 0, 1);
+            colors[i] = sample.UsesTexture && image is not null
+                ? ShadeColor(SKColors.White, shade)
+                : ShadeColor(solidColor, shade);
         }
 
         // The SkiaSharp array overload uses the complete array length. Fill
@@ -580,9 +802,12 @@ public sealed class PageTurnView : SKGLView
         }
 
         var image = FrontImage ?? UnderPageImage;
-        if (ContentScale == PageContentScale.AspectFit && image is not null)
+        if (PageAspectRatio > 0 || ContentScale == PageContentScale.AspectFit)
         {
-            return PageViewportRect.AspectFit(canvasSize, new Vector2(image.Width, image.Height));
+            var intrinsicSize = image is null
+                ? Vector2.Zero
+                : new Vector2(image.Width, image.Height);
+            return PageAspectLayout.Fit(canvasSize, PageAspectRatio, intrinsicSize);
         }
 
         return new PageViewportRect(Vector2.Zero, canvasSize);
@@ -645,4 +870,10 @@ public sealed class PageTurnView : SKGLView
 
     private static byte ToByte(float component) =>
         (byte)Math.Clamp((int)MathF.Round(component * 255), 0, 255);
+
+    private static SKColor ShadeColor(SKColor color, float shade) => new(
+        (byte)Math.Clamp((int)MathF.Round(color.Red * shade), 0, 255),
+        (byte)Math.Clamp((int)MathF.Round(color.Green * shade), 0, 255),
+        (byte)Math.Clamp((int)MathF.Round(color.Blue * shade), 0, 255),
+        color.Alpha);
 }
