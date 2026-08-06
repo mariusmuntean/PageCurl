@@ -99,10 +99,7 @@ public sealed class PageTurnController
 
         var clampedPointer = ClampToPage(pointer, pageSize);
         var nearestEdge = SelectNearestEdge(clampedPointer, pageSize);
-        if (lockedEdge != PageEdge.Auto
-            && nearestEdge == lockedEdge
-            && IsOnEdge(clampedPointer, pageSize, lockedEdge)
-            && !IsCorner(clampedPointer, pageSize))
+        if (lockedEdge != PageEdge.Auto && IsOnEdge(clampedPointer, pageSize, lockedEdge))
         {
             return false;
         }

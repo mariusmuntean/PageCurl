@@ -6,11 +6,20 @@ namespace PageCurl.Core.Tests;
 internal static class PageTurnControllerTests
 {
     private static readonly Vector2 PageSize = new(100, 200);
+    private static readonly PageEdge[] PhysicalEdges =
+    {
+        PageEdge.Top,
+        PageEdge.Right,
+        PageEdge.Bottom,
+        PageEdge.Left,
+    };
 
     public static void RunAll()
     {
         BeginDrag_chooses_edge_and_clamps_drag_start_to_page();
         BeginDrag_supports_all_page_corners();
+        Locked_edge_and_endpoints_do_not_start_a_drag();
+        Unlocked_edges_still_start_a_drag();
         UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection.Forward);
         UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection.Backward);
         Release_before_threshold_settles_back_and_reports_cancelled_turn();
@@ -65,6 +74,40 @@ internal static class PageTurnControllerTests
             TestAssert.True(controller.BeginDrag(testCase.Pointer, PageSize));
             TestAssert.Equal(testCase.Direction, controller.Snapshot.Direction);
             TestAssert.Equal(testCase.Start, controller.Snapshot.DragStartPosition);
+        }
+    }
+
+    private static void Locked_edge_and_endpoints_do_not_start_a_drag()
+    {
+        foreach (var lockedEdge in PhysicalEdges)
+        {
+            foreach (var point in PointsOnEdge(lockedEdge))
+            {
+                var controller = new PageTurnController();
+
+                TestAssert.False(controller.BeginDrag(point, PageSize, lockedEdge));
+                TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
+            }
+        }
+    }
+
+    private static void Unlocked_edges_still_start_a_drag()
+    {
+        foreach (var lockedEdge in PhysicalEdges)
+        {
+            foreach (var freeEdge in PhysicalEdges)
+            {
+                if (freeEdge == lockedEdge)
+                {
+                    continue;
+                }
+
+                var controller = new PageTurnController();
+
+                TestAssert.True(controller.BeginDrag(EdgeCenter(freeEdge), PageSize, lockedEdge));
+                TestAssert.Equal(freeEdge, controller.Snapshot.FreeEdge);
+                TestAssert.Equal(lockedEdge, controller.Snapshot.HingeEdge);
+            }
         }
     }
 
@@ -346,4 +389,22 @@ internal static class PageTurnControllerTests
 
         TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
     }
+
+    private static Vector2[] PointsOnEdge(PageEdge edge) => edge switch
+    {
+        PageEdge.Top => [new(0, 0), new(PageSize.X * 0.5f, 0), new(PageSize.X, 0)],
+        PageEdge.Right => [new(PageSize.X, 0), new(PageSize.X, PageSize.Y * 0.5f), PageSize],
+        PageEdge.Bottom => [new(0, PageSize.Y), new(PageSize.X * 0.5f, PageSize.Y), PageSize],
+        PageEdge.Left => [new(0, 0), new(0, PageSize.Y * 0.5f), new(0, PageSize.Y)],
+        _ => [],
+    };
+
+    private static Vector2 EdgeCenter(PageEdge edge) => edge switch
+    {
+        PageEdge.Top => new(PageSize.X * 0.5f, 0),
+        PageEdge.Right => new(PageSize.X, PageSize.Y * 0.5f),
+        PageEdge.Bottom => new(PageSize.X * 0.5f, PageSize.Y),
+        PageEdge.Left => new(0, PageSize.Y * 0.5f),
+        _ => PageSize * 0.5f,
+    };
 }
