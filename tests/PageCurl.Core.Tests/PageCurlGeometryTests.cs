@@ -31,6 +31,7 @@ internal static class PageCurlGeometryTests
         Developable_surface_preserves_material_triangle_lengths();
         Triangle_streams_follow_surface_orientation();
         Front_and_back_streams_share_a_straight_tangent_seam();
+        Every_pinned_corner_builds_a_developable_cone();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -532,6 +533,186 @@ internal static class PageCurlGeometryTests
             TestAssert.True(distance <= 0.001f, $"Tangent seam deviates by {distance:F4} pixels.");
         }
     }
+
+    private static void Every_pinned_corner_builds_a_developable_cone()
+    {
+        const int columns = 32;
+        const int rows = 32;
+        var options = new PageCurlOptions { MeshColumns = columns, MeshRows = rows };
+        var anchors = new[]
+        {
+            PageAnchor.TopLeft,
+            PageAnchor.TopRight,
+            PageAnchor.BottomRight,
+            PageAnchor.BottomLeft,
+        };
+
+        foreach (var anchor in anchors)
+        {
+            var apex = anchor.GetPosition(PageSize);
+            var grab = OppositeCorner(anchor);
+            var pointer = apex + ((grab - apex) * 0.62f);
+            var pose = new CurlPose(
+                pointer,
+                Vector2.Normalize(pointer - grab),
+                24,
+                0.38f,
+                PageTurnDirection.Forward,
+                true)
+            {
+                LockedAnchor = anchor,
+                DragStart = grab,
+                HasDragStart = true,
+            };
+            var first = new PageMeshBuffer(options);
+            var second = new PageMeshBuffer(options);
+
+            PageCurlGeometry.Build(first, PageSize, pose, options);
+            PageCurlGeometry.Build(second, PageSize, pose, options);
+
+            var pinnedVertex = FindVertexAtTexture(first, TextureFor(anchor));
+            TestAssert.True(Vector2.Distance(pinnedVertex.Position, apex) <= 0.001f);
+            TestAssert.True(MathF.Abs(pinnedVertex.Depth) <= 0.001f);
+            var grabbedVertex = FindVertexAtTexture(first, TextureForOpposite(anchor));
+            TestAssert.True(
+                Vector2.Distance(grabbedVertex.Position, pointer) <= 1.5f,
+                $"{anchor} grabbed point missed the pointer.");
+            AssertFiniteAndBounded(first.FrontVertices, first.FrontVertexCount);
+            AssertFiniteAndBounded(first.BackVertices, first.BackVertexCount);
+            AssertConeRestLengths(first, columns, rows, anchor);
+            AssertSameMesh(first, second);
+        }
+    }
+
+    private static void AssertConeRestLengths(
+        PageMeshBuffer buffer,
+        int columns,
+        int rows,
+        PageAnchor anchor)
+    {
+        var horizontalRestLength = PageSize.X / columns;
+        var verticalRestLength = PageSize.Y / rows;
+        var diagonalRestLength = MathF.Sqrt(
+            (horizontalRestLength * horizontalRestLength)
+            + (verticalRestLength * verticalRestLength));
+
+        for (var row = 0; row <= rows; row++)
+        {
+            for (var column = 0; column <= columns; column++)
+            {
+                var texture = new Vector2(column / (float)columns, row / (float)rows);
+                if (column < columns)
+                {
+                    AssertRestLengthWithin(
+                        buffer,
+                        texture,
+                        new Vector2((column + 1) / (float)columns, texture.Y),
+                        horizontalRestLength,
+                        0.06f,
+                        $"{anchor} horizontal edge ({column}, {row})");
+                }
+
+                if (row < rows)
+                {
+                    AssertRestLengthWithin(
+                        buffer,
+                        texture,
+                        new Vector2(texture.X, (row + 1) / (float)rows),
+                        verticalRestLength,
+                        0.06f,
+                        $"{anchor} vertical edge ({column}, {row})");
+                }
+
+                if (column < columns && row < rows)
+                {
+                    if (anchor is PageAnchor.TopLeft or PageAnchor.BottomRight)
+                    {
+                        AssertRestLengthWithin(
+                            buffer,
+                            texture,
+                            new Vector2(
+                                (column + 1) / (float)columns,
+                                (row + 1) / (float)rows),
+                            diagonalRestLength,
+                            0.06f,
+                            $"{anchor} diagonal ({column}, {row})");
+                    }
+                    else
+                    {
+                        AssertRestLengthWithin(
+                            buffer,
+                            new Vector2((column + 1) / (float)columns, texture.Y),
+                            new Vector2(texture.X, (row + 1) / (float)rows),
+                            diagonalRestLength,
+                            0.06f,
+                            $"{anchor} diagonal ({column}, {row})");
+                    }
+                }
+            }
+        }
+    }
+
+    private static void AssertRestLengthWithin(
+        PageMeshBuffer buffer,
+        Vector2 firstTexture,
+        Vector2 secondTexture,
+        float restLength,
+        float tolerance,
+        string label)
+    {
+        var first = ToPosition3(FindVertexAtTexture(buffer, firstTexture));
+        var second = ToPosition3(FindVertexAtTexture(buffer, secondTexture));
+        var relativeError = MathF.Abs(Vector3.Distance(first, second) - restLength) / restLength;
+        TestAssert.True(relativeError <= tolerance, $"{label} changed length by {relativeError:P2}.");
+    }
+
+    private static void AssertSameMesh(
+        PageMeshBuffer expected,
+        PageMeshBuffer actual)
+    {
+        TestAssert.Equal(expected.FrontVertexCount, actual.FrontVertexCount);
+        TestAssert.Equal(expected.BackVertexCount, actual.BackVertexCount);
+        for (var index = 0; index < expected.FrontVertexCount; index++)
+        {
+            TestAssert.Equal(
+                expected.FrontVertices[index],
+                actual.FrontVertices[index]);
+        }
+
+        for (var index = 0; index < expected.BackVertexCount; index++)
+        {
+            TestAssert.Equal(
+                expected.BackVertices[index],
+                actual.BackVertices[index]);
+        }
+    }
+
+    private static Vector2 OppositeCorner(PageAnchor anchor) => anchor switch
+    {
+        PageAnchor.TopLeft => PageSize,
+        PageAnchor.TopRight => new Vector2(0, PageSize.Y),
+        PageAnchor.BottomRight => Vector2.Zero,
+        PageAnchor.BottomLeft => new Vector2(PageSize.X, 0),
+        _ => PageSize * 0.5f,
+    };
+
+    private static Vector2 TextureFor(PageAnchor anchor) => anchor switch
+    {
+        PageAnchor.TopLeft => Vector2.Zero,
+        PageAnchor.TopRight => Vector2.UnitX,
+        PageAnchor.BottomRight => Vector2.One,
+        PageAnchor.BottomLeft => Vector2.UnitY,
+        _ => new Vector2(0.5f),
+    };
+
+    private static Vector2 TextureForOpposite(PageAnchor anchor) => anchor switch
+    {
+        PageAnchor.TopLeft => Vector2.One,
+        PageAnchor.TopRight => Vector2.UnitY,
+        PageAnchor.BottomRight => Vector2.Zero,
+        PageAnchor.BottomLeft => Vector2.UnitX,
+        _ => new Vector2(0.5f),
+    };
 
     private static void AssertTriangleOrientation(MeshVertex[] vertices, int count, bool expectBack)
     {

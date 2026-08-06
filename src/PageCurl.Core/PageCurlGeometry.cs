@@ -120,6 +120,12 @@ public static class PageCurlGeometry
             return;
         }
 
+        if (pose.LockedAnchor.IsCorner())
+        {
+            BuildCornerCone(buffer, pageSize, pose);
+            return;
+        }
+
         var freeEdge = ResolveFreeEdge(pose.HingeEdge, pose.FreeEdge, pose.TurnDirection);
         var hingeEdge = ResolveHingeEdge(pose.HingeEdge, freeEdge, pose.TurnDirection);
         var grabSource = pose.HasDragStart && IsFinite(pose.DragStart)
@@ -227,6 +233,121 @@ public static class PageCurlGeometry
             }
         }
 
+        WriteOrderedTriangles(buffer, orderCount);
+    }
+
+    private static void BuildCornerCone(
+        PageMeshBuffer buffer,
+        Vector2 pageSize,
+        CurlPose pose)
+    {
+        const float minimumConeSine = 0.08f;
+        var apex = pose.LockedAnchor.GetPosition(pageSize);
+        var grabSource = pose.HasDragStart && IsFinite(pose.DragStart)
+            ? pose.DragStart
+            : OppositeCorner(pose.LockedAnchor, pageSize);
+        var grabVector = grabSource - apex;
+        var grabLength = grabVector.Length();
+        if (grabLength <= Epsilon)
+        {
+            WriteFlatPage(buffer, pageSize);
+            return;
+        }
+
+        var pointerVector = pose.Position - apex;
+        var pointerLength = pointerVector.Length();
+        var baseDirection = pointerLength > Epsilon
+            ? pointerVector / pointerLength
+            : SafeConeDirection(pose.Direction, grabVector);
+        var coneSine = Math.Clamp(pointerLength / grabLength, minimumConeSine, 1f);
+        var coneCosine = MathF.Sqrt(MathF.Max(0, 1f - (coneSine * coneSine)));
+        var columns = buffer.Columns;
+        var rows = buffer.Rows;
+
+        for (var row = 0; row <= rows; row++)
+        {
+            var v = row / (float)rows;
+            var sourceY = pageSize.Y * v;
+            for (var column = 0; column <= columns; column++)
+            {
+                var u = column / (float)columns;
+                var source = new Vector2(pageSize.X * u, sourceY);
+                var sourceVector = source - apex;
+                var slantDistance = sourceVector.Length();
+                Vector2 world;
+                float depth;
+                float shade;
+
+                if (slantDistance <= Epsilon)
+                {
+                    world = apex;
+                    depth = 0;
+                    shade = 1;
+                }
+                else
+                {
+                    var angle = SignedAngle(grabVector, sourceVector) / coneSine;
+                    var screenDirection = Rotate(baseDirection, angle);
+                    world = apex + (screenDirection * (slantDistance * coneSine));
+                    depth = slantDistance * coneCosine;
+                    shade = 0.3f + (0.7f * MathF.Abs(MathF.Cos(angle * 0.55f)));
+                }
+
+                var texture = new Vector2(u, v);
+                buffer.Grid[(row * (columns + 1)) + column] =
+                    new PageMeshBuffer.GridVertex(
+                        world,
+                        texture,
+                        Math.Clamp(shade, 0.1f, 1f),
+                        depth,
+                        0);
+            }
+        }
+
+        var orderCount = 0;
+        for (var row = 0; row < rows; row++)
+        {
+            for (var column = 0; column < columns; column++)
+            {
+                var topLeft = (row * (columns + 1)) + column;
+                var topRight = topLeft + 1;
+                var bottomLeft = topLeft + columns + 1;
+                var bottomRight = bottomLeft + 1;
+                if (pose.LockedAnchor is PageAnchor.TopLeft or PageAnchor.BottomRight)
+                {
+                    AddOrientedTriangle(buffer, ref orderCount, topLeft, topRight, bottomRight);
+                    AddOrientedTriangle(buffer, ref orderCount, topLeft, bottomRight, bottomLeft);
+                }
+                else
+                {
+                    AddOrientedTriangle(buffer, ref orderCount, topLeft, topRight, bottomLeft);
+                    AddOrientedTriangle(buffer, ref orderCount, topRight, bottomRight, bottomLeft);
+                }
+            }
+        }
+
+        WriteOrderedTriangles(buffer, orderCount);
+    }
+
+    private static void AddOrientedTriangle(
+        PageMeshBuffer buffer,
+        ref int orderCount,
+        int a,
+        int b,
+        int c)
+    {
+        var first = buffer.Grid[a];
+        var second = buffer.Grid[b];
+        var third = buffer.Grid[c];
+        var first3 = new Vector3(first.Position, first.Depth);
+        var second3 = new Vector3(second.Position, second.Depth);
+        var third3 = new Vector3(third.Position, third.Depth);
+        var normalZ = Vector3.Cross(second3 - first3, third3 - first3).Z;
+        AddTriangleOrder(buffer, ref orderCount, a, b, c, normalZ < 0);
+    }
+
+    private static void WriteOrderedTriangles(PageMeshBuffer buffer, int orderCount)
+    {
         SortOrders(buffer.Orders, orderCount);
         buffer.FrontVertexCount = 0;
         buffer.BackVertexCount = 0;
@@ -247,6 +368,41 @@ public static class PageCurlGeometry
                 buffer.FrontVertexCount = count;
             }
         }
+    }
+
+    private static Vector2 OppositeCorner(PageAnchor anchor, Vector2 pageSize) => anchor switch
+    {
+        PageAnchor.TopLeft => pageSize,
+        PageAnchor.TopRight => new Vector2(0, pageSize.Y),
+        PageAnchor.BottomRight => Vector2.Zero,
+        PageAnchor.BottomLeft => new Vector2(pageSize.X, 0),
+        _ => pageSize * 0.5f,
+    };
+
+    private static Vector2 SafeConeDirection(Vector2 poseDirection, Vector2 grabVector)
+    {
+        var direction = -poseDirection;
+        if (direction.LengthSquared() <= Epsilon || !IsFinite(direction))
+        {
+            direction = grabVector;
+        }
+
+        return Vector2.Normalize(direction);
+    }
+
+    private static float SignedAngle(Vector2 first, Vector2 second) =>
+        MathF.Atan2(Cross(first, second), Vector2.Dot(first, second));
+
+    private static float Cross(Vector2 first, Vector2 second) =>
+        (first.X * second.Y) - (first.Y * second.X);
+
+    private static Vector2 Rotate(Vector2 vector, float radians)
+    {
+        var cosine = MathF.Cos(radians);
+        var sine = MathF.Sin(radians);
+        return new(
+            (vector.X * cosine) - (vector.Y * sine),
+            (vector.X * sine) + (vector.Y * cosine));
     }
 
     private static float SolveArcLength(float screenTravel, float radius)

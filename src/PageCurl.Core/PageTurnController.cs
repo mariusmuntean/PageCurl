@@ -31,6 +31,7 @@ public sealed class PageTurnController
     private double _lastDragTimestamp;
     private float _lastSampledProgress;
     private float _smoothedProgressVelocity;
+    private float _gesturePointerProgress;
     private bool _hasDragTimestamp;
     private bool _completionRaised;
     private bool _isCommitCandidate;
@@ -85,6 +86,7 @@ public sealed class PageTurnController
         _progress = 0;
         _targetProgress = 0;
         _velocity = 0;
+        _gesturePointerProgress = 0;
         ResetDragVelocity();
         _completionRaised = false;
         ResetCommitCandidate();
@@ -145,6 +147,7 @@ public sealed class PageTurnController
         _progress = 0;
         _targetProgress = 0;
         _velocity = 0;
+        _gesturePointerProgress = 0;
         ResetDragVelocity();
         _completionRaised = false;
         ResetCommitCandidate();
@@ -167,7 +170,9 @@ public sealed class PageTurnController
             }
 
             SelectEdges(_freeEdge);
-            _dragStartPosition = ProjectToEdge(clampedPointer, pageSize, _freeEdge);
+            _dragStartPosition = lockedAnchor.IsCorner()
+                ? clampedPointer
+                : ProjectToEdge(clampedPointer, pageSize, _freeEdge);
         }
 
         _state = PageTurnState.Dragging;
@@ -203,8 +208,15 @@ public sealed class PageTurnController
 
         _progress = _freeEdge == PageEdge.Auto
             ? 0
-            : CalculateProgress(_pointerPosition, _pageSize, _freeEdge);
+            : _lockedAnchor.IsCorner()
+                ? CalculateProgressFromGrab(
+                    _pointerPosition,
+                    _initialPointerPosition,
+                    _pageSize,
+                    _freeEdge)
+                : CalculateProgress(_pointerPosition, _pageSize, _freeEdge);
         _progress = Math.Clamp(_progress, 0, 1);
+        _gesturePointerProgress = _progress;
         _targetProgress = _progress;
         UpdateProgressVelocity(timestampSeconds);
         NotifyCommitCandidateTransition();
@@ -255,6 +267,7 @@ public sealed class PageTurnController
         _progress = 0;
         _targetProgress = 1;
         _velocity = 0;
+        _gesturePointerProgress = 0;
         ResetDragVelocity();
         _completionRaised = false;
         ResetCommitCandidate();
@@ -322,7 +335,7 @@ public sealed class PageTurnController
             return CurlPose.Inactive(_direction);
         }
 
-        return PageCurlGeometry.ComputePose(
+        var pose = PageCurlGeometry.ComputePose(
             pageSize,
             _dragStartPosition,
             _pointerPosition,
@@ -330,7 +343,21 @@ public sealed class PageTurnController
             _freeEdge,
             _direction,
             _progress,
-            _options) with
+            _options);
+        if (_lockedAnchor.IsCorner())
+        {
+            var animatedPointer = _gesturePointerProgress > EdgeEpsilon
+                ? _dragStartPosition
+                    + ((_pointerPosition - _dragStartPosition)
+                        * (_progress / _gesturePointerProgress))
+                : Vector2.Lerp(
+                    _dragStartPosition,
+                    ProgressEndpoint(_dragStartPosition, pageSize, _freeEdge),
+                    _progress);
+            pose = pose with { Position = animatedPointer };
+        }
+
+        return pose with
         {
             LockedAnchor = _lockedAnchor,
         };
@@ -607,5 +634,30 @@ public sealed class PageTurnController
         PageEdge.Bottom => (pageSize.Y - pointer.Y) / pageSize.Y,
         PageEdge.Left => pointer.X / pageSize.X,
         _ => 0,
+    };
+
+    private static float CalculateProgressFromGrab(
+        Vector2 pointer,
+        Vector2 grab,
+        Vector2 pageSize,
+        PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Top => (pointer.Y - grab.Y) / MathF.Max(pageSize.Y - grab.Y, EdgeEpsilon),
+        PageEdge.Right => (grab.X - pointer.X) / MathF.Max(grab.X, EdgeEpsilon),
+        PageEdge.Bottom => (grab.Y - pointer.Y) / MathF.Max(grab.Y, EdgeEpsilon),
+        PageEdge.Left => (pointer.X - grab.X) / MathF.Max(pageSize.X - grab.X, EdgeEpsilon),
+        _ => 0,
+    };
+
+    private static Vector2 ProgressEndpoint(
+        Vector2 grab,
+        Vector2 pageSize,
+        PageEdge freeEdge) => freeEdge switch
+    {
+        PageEdge.Top => new(grab.X, pageSize.Y),
+        PageEdge.Right => new(0, grab.Y),
+        PageEdge.Bottom => new(grab.X, 0),
+        PageEdge.Left => new(pageSize.X, grab.Y),
+        _ => grab,
     };
 }

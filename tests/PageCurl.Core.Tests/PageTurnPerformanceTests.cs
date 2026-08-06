@@ -17,6 +17,7 @@ internal static class PageTurnPerformanceTests
     public static void RunAll()
     {
         Geometry_build_reuses_storage_without_managed_allocations();
+        Corner_cone_build_reuses_storage_without_managed_allocations();
         Controller_drag_and_settle_reuses_storage_without_managed_allocations();
     }
 
@@ -67,6 +68,60 @@ internal static class PageTurnPerformanceTests
 
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         TestAssert.True(allocated == 0, $"Controller loop allocated {allocated} bytes.");
+    }
+
+    private static void Corner_cone_build_reuses_storage_without_managed_allocations()
+    {
+        var options = new PageCurlOptions();
+        var buffer = new PageMeshBuffer(options);
+        var anchors = new[]
+        {
+            PageAnchor.TopLeft,
+            PageAnchor.TopRight,
+            PageAnchor.BottomRight,
+            PageAnchor.BottomLeft,
+        };
+
+        foreach (var anchor in anchors)
+        {
+            var apex = anchor.GetPosition(PageSize);
+            var grab = anchor switch
+            {
+                PageAnchor.TopLeft => PageSize,
+                PageAnchor.TopRight => new Vector2(0, PageSize.Y),
+                PageAnchor.BottomRight => Vector2.Zero,
+                PageAnchor.BottomLeft => new Vector2(PageSize.X, 0),
+                _ => PageSize * 0.5f,
+            };
+            var pointer = apex + ((grab - apex) * 0.6f);
+            var pose = new CurlPose(
+                pointer,
+                Vector2.Normalize(pointer - grab),
+                250,
+                0.4f,
+                PageTurnDirection.Forward,
+                true)
+            {
+                LockedAnchor = anchor,
+                DragStart = grab,
+                HasDragStart = true,
+            };
+
+            for (var i = 0; i < 100; i++)
+            {
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+            }
+
+            CollectBeforeMeasurement();
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 1000; i++)
+            {
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+            }
+
+            var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestAssert.True(allocated == 0, $"{anchor} cone loop allocated {allocated} bytes.");
+        }
     }
 
     private static void RunControllerTurn(PageTurnController controller)

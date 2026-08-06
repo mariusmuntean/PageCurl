@@ -42,6 +42,7 @@ internal static class PageTurnControllerTests
         Timestamped_drag_remains_directly_attached_to_the_finger();
         Pinned_corners_reject_only_the_pinned_point();
         Anchor_overload_preserves_the_locked_anchor_in_snapshot_and_pose();
+        Corner_anchor_preserves_the_exact_grabbed_material_point();
         Custom_page_change_threshold_controls_release_intent();
         Disabled_flick_does_not_override_the_page_change_threshold();
         Custom_flick_velocity_threshold_controls_release_intent();
@@ -458,6 +459,22 @@ internal static class PageTurnControllerTests
 
         TestAssert.Equal(PageAnchor.TopLeft, controller.Snapshot.LockedAnchor);
         TestAssert.Equal(PageAnchor.TopLeft, controller.GetCurlPose(PageSize).LockedAnchor);
+    }
+
+    private static void Corner_anchor_preserves_the_exact_grabbed_material_point()
+    {
+        var controller = new PageTurnController();
+        var grabbedPoint = new Vector2(82, 146);
+
+        TestAssert.True(controller.BeginDrag(grabbedPoint, PageSize, PageAnchor.TopLeft));
+        controller.UpdateDrag(grabbedPoint);
+
+        TestAssert.Equal(grabbedPoint, controller.Snapshot.DragStartPosition);
+        TestAssert.Equal(0f, controller.Snapshot.Progress);
+
+        var pointer = new Vector2(50, 112);
+        controller.UpdateDrag(pointer);
+        TestAssert.True(Vector2.Distance(controller.GetCurlPose(PageSize).Position, pointer) <= 0.001f);
     }
 
     private static void Custom_page_change_threshold_controls_release_intent()
