@@ -1,3 +1,4 @@
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 
@@ -11,6 +12,15 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseSkiaSharp();
+
+#if ANDROID
+        if (OperatingSystem.IsAndroidVersionAtLeast(26))
+        {
+            builder.UseMauiCommunityToolkitMediaElement();
+        }
+#elif !MACCATALYST
+        builder.UseMauiCommunityToolkitMediaElement();
+#endif
 
 #if DEBUG
         builder.Logging.AddDebug();

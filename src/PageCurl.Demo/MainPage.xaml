@@ -4,143 +4,222 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:curl="clr-namespace:PageCurl.Maui;assembly=PageCurl.Maui"
-    SafeAreaEdges="All"
-    BackgroundColor="{AppThemeBinding Light={StaticResource CanvasLight}, Dark={StaticResource CanvasDark}}">
-    <Grid
-        Padding="24,20"
-        RowDefinitions="Auto,*,Auto"
-        RowSpacing="16">
-
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+    SafeAreaEdges="All">
+    <Grid x:Name="RootGrid" Padding="18,16" RowDefinitions="Auto,*,Auto" RowSpacing="14">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
             <VerticalStackLayout Spacing="1">
-                <Label Text="PAGECURL" Style="{StaticResource Eyebrow}" />
-                <Label Text="Paper, not pixels." FontSize="25" FontAttributes="Bold" />
+                <Label Text="PAGECURL.MAUI" Style="{StaticResource Eyebrow}" />
+                <Label x:Name="SceneTitleLabel" Text="One page" FontSize="24" FontAttributes="Bold" />
             </VerticalStackLayout>
             <VerticalStackLayout Grid.Column="1" Spacing="1" HorizontalOptions="End" VerticalOptions="Center">
-                <Label x:Name="PageCounterLabel" Text="01 / 04" FontSize="15" FontAttributes="Bold" HorizontalTextAlignment="End" />
+                <Label x:Name="PageCounterLabel" Text="01 / 08" FontSize="14" FontAttributes="Bold" HorizontalTextAlignment="End" />
                 <Label x:Name="StatusLabel" Text="Ready" Style="{StaticResource QuietText}" HorizontalTextAlignment="End" />
             </VerticalStackLayout>
         </Grid>
 
-        <Grid Grid.Row="1">
+        <Grid x:Name="AdaptiveBody" Grid.Row="1" ColumnDefinitions="154,*,294" ColumnSpacing="14">
+            <Border x:Name="DesktopSceneRail" Style="{StaticResource Panel}" Padding="10">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+                    <Label Text="SCENES" Style="{StaticResource Eyebrow}" Margin="10,8,0,0" />
+                    <VerticalStackLayout Grid.Row="1" Spacing="4">
+                        <Button x:Name="SingleSceneButton" Text="01  Single" CommandParameter="Single" Clicked="OnSceneClicked" />
+                        <Button x:Name="SpreadSceneButton" Text="02  Spread" CommandParameter="Spread" Clicked="OnSceneClicked" />
+                        <Button x:Name="ContentSceneButton" Text="03  Content" CommandParameter="Content" Clicked="OnSceneClicked" />
+                        <Button x:Name="BacksideSceneButton" Text="04  Backside" CommandParameter="Backside" Clicked="OnSceneClicked" />
+                        <Button x:Name="CornerSceneButton" Text="05  Corner pin" CommandParameter="CornerPin" Clicked="OnSceneClicked" />
+                    </VerticalStackLayout>
+                    <Label Grid.Row="2" Text="Drag slowly or flick. Every scene uses the same completion event." Style="{StaticResource QuietText}" Margin="10" />
+                </Grid>
+            </Border>
+
             <Border
+                Grid.Column="1"
                 BackgroundColor="{AppThemeBinding Light={StaticResource StageLight}, Dark={StaticResource StageDark}}"
                 StrokeThickness="0"
-                StrokeShape="RoundRectangle 10">
-                <curl:PageTurnView
-                    x:Name="PageView"
-                    ContentScale="AspectFit"
-                    SemanticProperties.Description="Interactive page. Drag from any free edge or corner to turn the page."
-                    SurfaceColor="{AppThemeBinding Light={StaticResource StageLight}, Dark={StaticResource StageDark}}" />
-            </Border>
-
-            <Border
-                x:Name="SettingsPanel"
-                IsVisible="False"
-                WidthRequest="310"
-                Margin="16"
-                Padding="20"
-                HorizontalOptions="End"
-                VerticalOptions="Start"
-                BackgroundColor="{AppThemeBinding Light={StaticResource PaperLight}, Dark={StaticResource PaperDark}}"
-                Stroke="{AppThemeBinding Light={StaticResource RuleLight}, Dark={StaticResource RuleDark}}"
-                StrokeThickness="1"
-                StrokeShape="RoundRectangle 8">
-                <VerticalStackLayout Spacing="18">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <VerticalStackLayout Spacing="1">
-                            <Label Text="SETTINGS" Style="{StaticResource Eyebrow}" />
-                            <Label Text="Turn behaviour" FontSize="18" FontAttributes="Bold" />
-                        </VerticalStackLayout>
-                        <Button
-                            Grid.Column="1"
-                            Text="Close"
-                            Style="{StaticResource QuietButton}"
-                            HeightRequest="36"
-                            Padding="10,0"
-                            Clicked="OnSettingsClicked"
-                            SemanticProperties.Description="Close page curl settings" />
-                    </Grid>
-
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="LOCKED EDGE" Style="{StaticResource Eyebrow}" />
-                        <Picker
-                            x:Name="LockedEdgePicker"
-                            Title="Auto"
-                            HeightRequest="44"
-                            SelectedIndexChanged="OnLockedEdgeChanged"
-                            SemanticProperties.Description="Select the stationary page edge" />
-                        <Label x:Name="LockedEdgeLabel" Text="Auto selects the opposite edge." Style="{StaticResource QuietText}" />
-                    </VerticalStackLayout>
-
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <VerticalStackLayout Spacing="1">
-                            <Label Text="Reduce motion" FontAttributes="Bold" />
-                            <Label Text="Complete turns without settling." Style="{StaticResource QuietText}" />
-                        </VerticalStackLayout>
-                        <Switch
-                            Grid.Column="1"
-                            x:Name="ReduceMotionSwitch"
-                            IsToggled="{Binding Source={x:Reference PageView}, Path=ReduceMotion, Mode=TwoWay}"
-                            SemanticProperties.Description="Reduce page-turn motion" />
-                    </Grid>
-
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <VerticalStackLayout Spacing="1">
-                            <Label Text="Diagnostics" FontAttributes="Bold" />
-                            <Label Text="Pose, timing and allocations." Style="{StaticResource QuietText}" />
-                        </VerticalStackLayout>
-                        <Switch
-                            Grid.Column="1"
-                            x:Name="TestingModeSwitch"
-                            Toggled="OnTestingModeToggled"
-                            SemanticProperties.Description="Enable page-turn diagnostics" />
-                    </Grid>
+                StrokeShape="RoundRectangle 12">
+                <Grid x:Name="StageHost" Padding="10" SizeChanged="OnStageSizeChanged">
+                    <curl:PageTurnView
+                        x:Name="SinglePageView"
+                        ContentScale="AspectFit"
+                        SurfaceColor="{AppThemeBinding Light={StaticResource StageLight}, Dark={StaticResource StageDark}}"
+                        PageTurnCompleted="OnPageTurnCompleted"
+                        PageChangeThresholdCrossed="OnThresholdCrossed"
+                        SemanticProperties.Description="Single interactive page. Drag any free edge or corner." />
+                    <curl:PageSpreadView
+                        x:Name="SpreadPageView"
+                        IsVisible="False"
+                        PageAspectRatio="0.75"
+                        GutterWidth="2"
+                        PageTurnCompleted="OnPageTurnCompleted"
+                        PageChangeThresholdCrossed="OnThresholdCrossed"
+                        SnapshotFailed="OnSnapshotFailed"
+                        SemanticProperties.Description="Two-page spread. Drag the outer edge of either page." />
+                    <curl:PageCurlView
+                        x:Name="ContentPageView"
+                        IsVisible="False"
+                        PageAspectRatio="0.75"
+                        PageTurnCompleted="OnPageTurnCompleted"
+                        PageChangeThresholdCrossed="OnThresholdCrossed"
+                        SnapshotFailed="OnSnapshotFailed" />
+                    <curl:PageCurlView
+                        x:Name="BacksidePageView"
+                        IsVisible="False"
+                        PageAspectRatio="0.75"
+                        PageTurnCompleted="OnPageTurnCompleted"
+                        PageChangeThresholdCrossed="OnThresholdCrossed"
+                        SnapshotFailed="OnSnapshotFailed" />
+                    <curl:PageTurnView
+                        x:Name="CornerPageView"
+                        IsVisible="False"
+                        ContentScale="AspectFit"
+                        LockedAnchor="TopLeft"
+                        SurfaceColor="{AppThemeBinding Light={StaticResource StageLight}, Dark={StaticResource StageDark}}"
+                        PageTurnCompleted="OnPageTurnCompleted"
+                        PageChangeThresholdCrossed="OnThresholdCrossed"
+                        SemanticProperties.Description="Page pinned at one corner. Drag another edge or corner." />
 
                     <Border
-                        x:Name="TestingPanel"
+                        x:Name="CornerPinMarker"
                         IsVisible="False"
-                        Padding="12"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource CanvasLight}, Dark={StaticResource CanvasDark}}"
-                        StrokeThickness="0"
-                        StrokeShape="RoundRectangle 6">
-                        <VerticalStackLayout Spacing="3">
-                            <Label x:Name="TestingStateLabel" Text="IDLE · FORWARD · 0%" FontAttributes="Bold" FontSize="12" />
-                            <Label x:Name="TestingPointerLabel" Text="Pointer — · Start —" Style="{StaticResource QuietText}" />
-                            <Label x:Name="TestingPoseLabel" Text="Pose inactive" Style="{StaticResource QuietText}" />
-                            <Label x:Name="TestingPerformanceLabel" Text="Frames — · Render —" Style="{StaticResource QuietText}" />
-                            <Label x:Name="TestingResultLabel" Text="Last result —" Style="{StaticResource QuietText}" />
-                        </VerticalStackLayout>
-                    </Border>
-                </VerticalStackLayout>
+                        WidthRequest="16"
+                        HeightRequest="16"
+                        BackgroundColor="{StaticResource Cobalt}"
+                        Stroke="White"
+                        StrokeThickness="3"
+                        StrokeShape="RoundRectangle 8"
+                        HorizontalOptions="Start"
+                        VerticalOptions="Start"
+                        InputTransparent="True" />
+                </Grid>
             </Border>
+
+            <Border x:Name="InspectorPanel" Grid.Column="2" Style="{StaticResource Panel}" Padding="18">
+                <Grid x:Name="InspectorContent">
+                    <ScrollView x:Name="OptionsScroll">
+                        <VerticalStackLayout x:Name="OptionsPanel" Spacing="18">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="OPTIONS" Style="{StaticResource Eyebrow}" />
+                                    <Label x:Name="OptionsTitleLabel" Text="Page behaviour" FontSize="18" FontAttributes="Bold" />
+                                </VerticalStackLayout>
+                                <Button x:Name="CloseOptionsButton" Grid.Column="1" Text="Close" IsVisible="False" Style="{StaticResource QuietButton}" Clicked="OnOptionsClicked" />
+                            </Grid>
+
+                            <VerticalStackLayout x:Name="AnchorOptions" Spacing="5">
+                                <Label Text="LOCKED EDGE OR CORNER" Style="{StaticResource Eyebrow}" />
+                                <Picker x:Name="AnchorPicker" SelectedIndexChanged="OnAnchorChanged" SemanticProperties.Description="Select the stationary edge or pinned corner" />
+                                <Label x:Name="AnchorHelpLabel" Text="Auto chooses from the first inward motion." Style="{StaticResource QuietText}" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Spacing="4">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="PAGE CHANGE" Style="{StaticResource Eyebrow}" />
+                                    <Label x:Name="ThresholdLabel" Grid.Column="1" Text="50%" FontSize="12" FontAttributes="Bold" />
+                                </Grid>
+                                <Slider x:Name="ThresholdSlider" Minimum="0.1" Maximum="0.9" Value="0.5" ValueChanged="OnThresholdChanged" SemanticProperties.Description="Page change threshold" />
+                                <Label Text="Travel needed before release commits the page." Style="{StaticResource QuietText}" />
+                            </VerticalStackLayout>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="Flick gestures" FontAttributes="Bold" FontSize="13" />
+                                    <Label Text="A quick release may finish sooner." Style="{StaticResource QuietText}" />
+                                </VerticalStackLayout>
+                                <Switch x:Name="FlickSwitch" Grid.Column="1" IsToggled="True" Toggled="OnFlickToggled" SemanticProperties.Description="Enable flick gestures" />
+                            </Grid>
+
+                            <VerticalStackLayout Spacing="5">
+                                <Label Text="PAGE RATIO" Style="{StaticResource Eyebrow}" />
+                                <Picker x:Name="RatioPicker" SelectedIndexChanged="OnRatioChanged" SemanticProperties.Description="Choose page width to height ratio" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout x:Name="ContentOptions" IsVisible="False" Spacing="7">
+                                <Label Text="CONTENT TYPE" Style="{StaticResource Eyebrow}" />
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5">
+                                    <Button x:Name="ImageContentButton" Text="Image" CommandParameter="Image" Style="{StaticResource SegmentButton}" Clicked="OnContentKindClicked" />
+                                    <Button x:Name="InteractiveContentButton" Grid.Column="1" Text="View" CommandParameter="Interactive" Style="{StaticResource SegmentButton}" Clicked="OnContentKindClicked" />
+                                    <Button x:Name="VideoContentButton" Grid.Column="2" Text="Video" CommandParameter="Video" Style="{StaticResource SegmentButton}" Clicked="OnContentKindClicked" />
+                                </Grid>
+                                <Button x:Name="RefreshSnapshotButton" Text="Refresh snapshot" Style="{StaticResource QuietButton}" Clicked="OnRefreshSnapshotClicked" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout x:Name="BacksideOptions" IsVisible="False" Spacing="7">
+                                <Label Text="BACKSIDE" Style="{StaticResource Eyebrow}" />
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5">
+                                    <Button x:Name="MirrorBackButton" Text="Mirror" CommandParameter="MirroredFront" Style="{StaticResource SegmentButton}" Clicked="OnBacksideModeClicked" />
+                                    <Button x:Name="ColorBackButton" Grid.Column="1" Text="Color" CommandParameter="SolidColor" Style="{StaticResource SegmentButton}" Clicked="OnBacksideModeClicked" />
+                                    <Button x:Name="CustomBackButton" Grid.Column="2" Text="View" CommandParameter="CustomContent" Style="{StaticResource SegmentButton}" Clicked="OnBacksideModeClicked" />
+                                </Grid>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout x:Name="CornerOptions" IsVisible="False" Spacing="7">
+                                <Label Text="PINNED CORNER" Style="{StaticResource Eyebrow}" />
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="5" RowSpacing="5">
+                                    <Button x:Name="TopLeftPinButton" Text="Top left" CommandParameter="TopLeft" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
+                                    <Button x:Name="TopRightPinButton" Grid.Column="1" Text="Top right" CommandParameter="TopRight" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
+                                    <Button x:Name="BottomLeftPinButton" Grid.Row="1" Text="Bottom left" CommandParameter="BottomLeft" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
+                                    <Button x:Name="BottomRightPinButton" Grid.Row="1" Grid.Column="1" Text="Bottom right" CommandParameter="BottomRight" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
+                                </Grid>
+                            </VerticalStackLayout>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="Haptics" FontAttributes="Bold" FontSize="13" />
+                                    <Label Text="Distinct threshold and completion cues." Style="{StaticResource QuietText}" />
+                                </VerticalStackLayout>
+                                <Switch x:Name="HapticsSwitch" Grid.Column="1" Toggled="OnHapticsToggled" SemanticProperties.Description="Enable page-turn haptic feedback" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="Reduce motion" FontAttributes="Bold" FontSize="13" />
+                                    <Label Text="Jump directly to the release result." Style="{StaticResource QuietText}" />
+                                </VerticalStackLayout>
+                                <Switch x:Name="ReduceMotionSwitch" Grid.Column="1" Toggled="OnReduceMotionToggled" SemanticProperties.Description="Reduce page-turn motion" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Grid>
+            </Border>
+
+            <Grid x:Name="MobileOptionsOverlay" Grid.ColumnSpan="3" IsVisible="False" BackgroundColor="#80171816" ZIndex="20">
+                <Border
+                    Style="{StaticResource Panel}"
+                    Padding="18"
+                    Margin="8"
+                    MaximumHeightRequest="560"
+                    VerticalOptions="End">
+                    <Grid x:Name="MobileOptionsContent" />
+                </Border>
+            </Grid>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-            <VerticalStackLayout Spacing="1" VerticalOptions="Center">
-                <Label x:Name="PageHintLabel" Text="Drag the page from any free edge." FontAttributes="Bold" FontSize="13" />
-                <Label Text="The surface stays stiff and inextensible." Style="{StaticResource QuietText}" />
-            </VerticalStackLayout>
-            <Button
-                Grid.Column="1"
-                Text="Previous"
-                Style="{StaticResource QuietButton}"
-                Clicked="OnPreviousClicked"
-                IsEnabled="{Binding CanTurnBackward}"
-                SemanticProperties.Description="Turn to previous page" />
-            <Button
-                Grid.Column="2"
-                Text="Next"
-                Style="{StaticResource CobaltButton}"
-                Clicked="OnNextClicked"
-                IsEnabled="{Binding CanTurnForward}"
-                SemanticProperties.Description="Turn to next page" />
-            <Button
-                Grid.Column="3"
-                Text="Settings"
-                Style="{StaticResource QuietButton}"
-                Clicked="OnSettingsClicked"
-                SemanticProperties.Description="Open page curl settings" />
+        <Grid Grid.Row="2">
+            <Grid x:Name="DesktopFooter" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <VerticalStackLayout Spacing="1" VerticalOptions="Center">
+                    <Label x:Name="PageHintLabel" Text="Drag from any free edge or corner." FontAttributes="Bold" FontSize="13" />
+                    <Label x:Name="DetailLabel" Text="The page follows the pointer without stretching." Style="{StaticResource QuietText}" />
+                </VerticalStackLayout>
+                <Button x:Name="PreviousButton" Grid.Column="1" Text="Previous" Style="{StaticResource QuietButton}" Clicked="OnPreviousClicked" />
+                <Button x:Name="NextButton" Grid.Column="2" Text="Next" Style="{StaticResource CobaltButton}" Clicked="OnNextClicked" />
+            </Grid>
+
+            <Grid x:Name="MobileFooter" IsVisible="False" RowDefinitions="Auto,Auto" RowSpacing="8">
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                    <HorizontalStackLayout Spacing="5">
+                        <Button x:Name="MobileSingleSceneButton" Text="Single" CommandParameter="Single" Clicked="OnSceneClicked" />
+                        <Button x:Name="MobileSpreadSceneButton" Text="Spread" CommandParameter="Spread" Clicked="OnSceneClicked" />
+                        <Button x:Name="MobileContentSceneButton" Text="Content" CommandParameter="Content" Clicked="OnSceneClicked" />
+                        <Button x:Name="MobileBacksideSceneButton" Text="Backside" CommandParameter="Backside" Clicked="OnSceneClicked" />
+                        <Button x:Name="MobileCornerSceneButton" Text="Corner" CommandParameter="CornerPin" Clicked="OnSceneClicked" />
+                    </HorizontalStackLayout>
+                </ScrollView>
+                <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto" ColumnSpacing="7">
+                    <Button x:Name="MobilePreviousButton" Text="Previous" Style="{StaticResource QuietButton}" Clicked="OnPreviousClicked" />
+                    <Button x:Name="MobileNextButton" Grid.Column="1" Text="Next" Style="{StaticResource CobaltButton}" Clicked="OnNextClicked" />
+                    <Button Grid.Column="2" Text="Options" Style="{StaticResource QuietButton}" Clicked="OnOptionsClicked" />
+                </Grid>
+            </Grid>
         </Grid>
     </Grid>
 </ContentPage>
