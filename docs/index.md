@@ -15,6 +15,8 @@ details:
 - [Release readiness](release-readiness.md): remaining production gates.
 - [Requirements status](requirements-status.md): implemented behavior and open
   evidence work.
+- [Expanded library design](expanded-library-design.md): approved content,
+  spread, anchor, backside, haptic, and showcase contracts.
 - [Validation records](validation/): dated evidence from completed runs.
 
 The repository validation skill owns the command matrix. Validation records
