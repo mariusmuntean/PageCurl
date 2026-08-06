@@ -7,10 +7,14 @@ PageCurl keeps interaction, geometry, rendering, and presentation separate.
   provides optional page-index rules for samples and consumers.
 - `PageCurl.Maui` adapts the core to MAUI with `PageTurnView`, a SkiaSharp
   `SKGLView`. It owns touch capture, shaders, fixed render buffers, invalidation,
-  and the 60 Hz settle timer.
+  and the 60 Hz settle timer. `PageCurlView` adds live MAUI content and owned
+  snapshots. `PageSpreadView` places one full-width renderer over two live
+  pages and a gutter.
 - `PageCurl.Demo` owns generated sample images and shows gesture, command,
   reduced-motion, edge-lock, and diagnostics behavior.
 - `PageCurl.Core.Tests` is a dependency-free executable test runner.
+- `PageCurl.Maui.Tests` runs wrapper and snapshot lifecycle checks against the
+  neutral MAUI target.
 
 On each active frame, the view maps the pointer into the aspect-fitted page
 viewport. The controller produces a curl pose. The geometry layer maps the
@@ -27,3 +31,14 @@ navigation semantics.
 Mesh, triangle, Skia point, UV, and color arrays are allocated at construction.
 The idle view does not run an animation loop. The active path uses bounded
 geometry and an allocation-free in-place sort.
+
+`PageCurlView` lays out one page with the same width/height ratio used by the
+renderer. Eight narrow Skia touch zones cover its edges and corners; the center
+remains available to child controls. Native snapshotters capture Android,
+Apple, and Windows views after layout. The wrapper clears renderer references
+before disposing owned snapshots on handler teardown.
+
+`PageSpreadView` lays out two equal page cells. Its renderer spans both cells,
+then aligns one page mesh to the left or right half. Forward turns hide the
+right live page and reveal the next-right destination; backward turns do the
+same on the left. One subtle shadow marks the gutter below the moving sheet.

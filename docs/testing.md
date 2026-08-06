@@ -15,10 +15,20 @@ The platform-free test runner covers:
 - warmed controller, cylinder, and four-corner cone loops with zero managed
   allocations.
 
+The neutral MAUI runner covers:
+
+- unavailable-platform and pre-cancelled snapshot capture;
+- snapshot generations, stale-result disposal, last-good-frame retention,
+  independent front/back replacement, and teardown order;
+- `PageCurlView` capture, failure events, and interaction property forwarding;
+- four-page spread capture and readiness-aware forward/back state.
+
 Visual validation still matters. Exercise every edge and corner, reversal,
 snap-back, committed settling, backward turns, all lock modes, large pages,
 light/dark appearance, compact and wide layouts, rotation, reduced motion,
-diagnostics, background/foreground transitions, and repeated image replacement.
+diagnostics, background/foreground transitions, live controls, video posters,
+snapshot failure, repeated image replacement, spread boundaries, and repeated
+gutter-crossing turns.
 
 Every geometry or interaction fix needs a deterministic regression. Visual
 changes need a reproducible manual scenario or before/after evidence. Use the

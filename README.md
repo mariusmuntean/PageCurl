@@ -7,15 +7,16 @@ tested without a device or UI toolkit:
 * `src/PageCurl.Core` targets `net10.0` and contains the allocation-free drag
   state machine, spring settling, edge or corner anchors, aspect-fit viewport
   math, and developable cylinder/cone page mesh.
-* `src/PageCurl.Maui` exposes `PageTurnView`, a GPU-backed `SKGLView` that
-  draws the mesh with SkiaSharp texture coordinates and per-vertex shading. It
-  supports `LockedEdge` (`Auto`, `Top`, `Right`, `Bottom`, or `Left`) and
-  `ContentScale` (`Fill` or `AspectFit`), plus a neutral `net10.0` target for
-  source-level CI builds.
+* `src/PageCurl.Maui` exposes the low-level `PageTurnView`, snapshot-backed
+  `PageCurlView`, and two-page `PageSpreadView`. The Skia renderer draws fixed
+  mesh buffers with per-vertex shading. A neutral `net10.0` target supports
+  source and lifecycle tests without a device.
 * `src/PageCurl.Demo` is a MAUI sample with four generated pages, including a
   large-page case and non-gesture page-turn commands.
 * `tests/PageCurl.Core.Tests` is a dependency-free executable test runner. It
   does not require an internet package feed or a test adapter.
+* `tests/PageCurl.Maui.Tests` covers snapshot replacement, content wrappers,
+  and spread readiness on the neutral MAUI target.
 
 ## Try the demo
 
@@ -142,6 +143,49 @@ not dispose caller-owned `SKImage` values; keep each image alive until it is no
 longer assigned, clear the properties before disposing a recycled image set,
 and call `CancelInteraction` when removing or recycling the view.
 
+### Use MAUI content
+
+`PageCurlView` keeps your MAUI view live while the page is flat. It captures a
+texture after layout and swaps to that texture only during a curl.
+
+```xml
+<curl:PageCurlView
+    x:Name="ArticlePage"
+    LockedAnchor="TopLeft"
+    PageAspectRatio="0.72"
+    PageChangeThreshold="0.42"
+    BacksideMode="MirroredFront">
+    <curl:PageCurlView.FrontContent>
+        <local:ArticleContentView />
+    </curl:PageCurlView.FrontContent>
+    <curl:PageCurlView.BackContent>
+        <local:ArticleNotesView />
+    </curl:PageCurlView.BackContent>
+</curl:PageCurlView>
+```
+
+Call `RefreshSnapshotAsync()` after dynamic content changes. Capture failures
+raise `SnapshotFailed` and leave the last good texture in place. A live video
+can remain in `FrontContent`; the curl uses its latest captured frame. Supply a
+poster view when the platform video layer does not appear in native snapshots.
+
+### Use a two-page spread
+
+```xml
+<curl:PageSpreadView
+    x:Name="Book"
+    PageAspectRatio="0.72"
+    LeftContent="{Binding LeftPage}"
+    RightContent="{Binding RightPage}"
+    PreviousLeftContent="{Binding PreviousLeftPage}"
+    NextRightContent="{Binding NextRightPage}" />
+```
+
+`TryTurnForward()` curls the right sheet across the gutter;
+`TryTurnBackward()` curls the left. `CanTurnForward` and `CanTurnBackward`
+remain false until both the current and destination snapshots are ready.
+Update the four content properties from the shared `PageTurnCompleted` event.
+
 ## Performance choices
 
 The view uses `SKGLView` and invalidates only while a finger is moving or a
@@ -164,16 +208,19 @@ Run the platform-independent checks with:
 
 ```bash
 dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj
+dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -f net10.0
 dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
 ```
 
 The checks cover edge selection and clamping, normalized progress in both
 directions, custom thresholds and flicks, threshold transitions, cancellation,
-completion events, finite and
-bounded mesh coordinates, UV/shading ranges, mesh-buffer reuse, immediate and
+completion events, finite and bounded mesh coordinates, UV/shading ranges,
+mesh-buffer reuse, immediate and
 programmatic turns, every physical edge and pinned corner, locked anchoring,
 aspect-fit viewport math, direction-aware demo navigation, and warmed
-1,000-iteration core allocation loops. The MAUI control exposes opt-in
+1,000-iteration core allocation loops. Neutral MAUI checks cover platform
+capture fallback, snapshot cancellation/replacement, wrapper property
+forwarding, four-page spread capture, and readiness state. The MAUI control exposes opt-in
 `PageTurnPerformanceSnapshot` values for interactive render diagnostics; the
 default render path does not collect those metrics.
 

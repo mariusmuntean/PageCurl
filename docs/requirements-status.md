@@ -14,8 +14,16 @@ in Git history and do not define unfinished work.
   thresholds, threshold transition events, configurable flicks, reduced
   motion, and programmatic turns through one completion path.
 - Explicit, intrinsic, and fallback page width/height ratio layout in the core.
+- MAUI properties for edge/corner anchors, page ratio, normalized threshold,
+  threshold events, flick enablement, and flick velocity.
 - Forward and backward destination images, caller-owned image lifetime, and
   aspect-fit rendering/pointer mapping.
+- Mirrored/dim, solid-color, and custom-content backsides.
+- Snapshot-backed MAUI front/back content with live flat-state controls,
+  last-good-frame retention, explicit refresh, and Android/Apple/Windows
+  capture implementations.
+- A two-page spread with right-forward and left-backward turns, full-gutter
+  overlay rendering, readiness-aware commands, and a restrained gutter shadow.
 - Fixed render buffers, allocation-free warmed core paths, depth ordering,
   exact front/back tangent clipping, and deep-curl underside layering.
 - Accessible Previous/Next commands, edge settings, opt-in diagnostics, light
@@ -25,9 +33,8 @@ in Git history and do not define unfinished work.
 
 ## In progress
 
-- MAUI properties for corner anchors, aspect ratio, thresholds, and flicks.
-- Snapshot-backed MAUI content, configurable backsides, and two-page spreads.
-- Responsive five-scene sample for compact mobile and resizable desktop.
+- Responsive five-scene sample for compact mobile and resizable desktop,
+  including semantic mobile haptics and video-poster fallback.
 
 ## Release evidence still required
 
