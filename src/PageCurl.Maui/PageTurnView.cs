@@ -378,6 +378,45 @@ public sealed class PageTurnView : SKGLView
         InvalidateSurface();
     }
 
+    internal bool TryBeginInteraction(
+        Vector2 pointer,
+        Vector2 pageSize,
+        PageAnchor lockedAnchor)
+    {
+        if (_handlerDisconnected
+            || Controller.Snapshot.State != PageTurnState.Idle
+            || !Controller.BeginDrag(pointer, pageSize, lockedAnchor))
+        {
+            return false;
+        }
+
+        InvalidateSurface();
+        return true;
+    }
+
+    internal void UpdateInteraction(Vector2 pointer)
+    {
+        Controller.UpdateDrag(
+            pointer,
+            Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
+        InvalidateSurface();
+    }
+
+    internal void EndInteraction(bool cancelled)
+    {
+        if (cancelled)
+        {
+            Controller.Cancel();
+        }
+        else
+        {
+            Controller.EndDrag(animate: !ReduceMotion);
+        }
+
+        StartAnimationLoop();
+        InvalidateSurface();
+    }
+
     protected override void OnHandlerChanged()
     {
         base.OnHandlerChanged();

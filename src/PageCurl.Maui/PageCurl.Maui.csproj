@@ -35,13 +35,13 @@
   <ItemGroup>
     <Compile Remove="PageContentSnapshotter.cs" />
     <Compile Remove="Platforms/Android/PageContentSnapshotter.Android.cs" />
-    <Compile Remove="Platforms/Apple/PageContentSnapshotter.Apple.cs" />
+    <Compile Remove="PageContentSnapshotter.Apple.cs" />
     <Compile Remove="Platforms/Windows/PageContentSnapshotter.Windows.cs" />
     <Compile Include="PageContentSnapshotter.cs"
              Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == ''" />
     <Compile Include="Platforms/Android/PageContentSnapshotter.Android.cs"
              Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'" />
-    <Compile Include="Platforms/Apple/PageContentSnapshotter.Apple.cs"
+    <Compile Include="PageContentSnapshotter.Apple.cs"
              Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" />
     <Compile Include="Platforms/Windows/PageContentSnapshotter.Windows.cs"
              Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'" />
