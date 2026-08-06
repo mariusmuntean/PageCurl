@@ -9,8 +9,9 @@ Finish the page deformation work, remove avoidable frame cost, simplify the
 sample application, and replace the split `docs/` and `knowledge/` structure
 with one current documentation tree.
 
-The control remains a small analytic page curl. This pass does not introduce a
-cloth simulation, another renderer, a UI framework, or new public tuning APIs.
+The control uses a fixed-buffer, constraint-based paper solver guided by an
+analytic curl target. This pass does not introduce another renderer, a UI
+framework, tearing, plastic creases, or a collection of material-tuning APIs.
 
 ## Work tracks
 
@@ -34,41 +35,63 @@ The locked edge includes its two endpoints. An exact point on that edge cannot
 both remain stationary and follow a pointer, so locked-edge endpoints do not
 start a gesture. Other edge points and corners retain direct pointer tracking.
 
-### Deformation model
+### Paper model
 
-The geometry continues to use a bounded analytic cylinder in the coordinate
-frame of the selected free edge. Each source point is mapped once by a shared
-point-transform function. The same function is used to solve the grab anchor,
-which removes the duplicated curl-region logic currently used by mesh building
-and anchor calculation.
+The final surface comes from a position-based sheet solver. The existing
+bounded cylinder supplies a smooth target shape; it no longer supplies the
+final vertex positions directly.
 
-For a locked hinge that is not opposite the free edge, displacement is
-constrained by a cubic smooth-step field:
+The solver stores 3-D particle positions in `PageMeshBuffer` and enforces:
 
-- influence is zero at the stationary hinge;
-- influence reaches one at the grabbed point's hinge distance;
-- position and first derivative are continuous;
-- points beyond the grabbed constraint receive the full cylinder mapping.
+- hard horizontal, vertical, and diagonal distance constraints so the page
+  cannot stretch or shear;
+- compliant second-neighbor bending constraints so curvature spreads across
+  the sheet instead of collapsing into a crease;
+- exact position constraints along the locked hinge;
+- an interpolated edge constraint that keeps the grabbed point attached to the
+  pointer even when it falls between mesh vertices.
 
-Position displacement, curl depth, and shading use the same influence. This
-keeps the hinge stationary without introducing bands or classifying visually
-flat hinge triangles as the page back.
+The solver follows the extended position-based dynamics formulation: fixed
+topology, per-constraint multipliers, compliance scaled by the step interval,
+and a bounded iteration count. Stretch and shear compliance is zero. Bend
+compliance is small and scale-aware, producing stiff paper rather than cloth.
+The solver has no plasticity, tearing, or permanent fold state.
 
-The existing progress-dependent radius remains: the page relaxes near both
-turn endpoints and curls most tightly near the midpoint. Values remain finite
-and bounded before being written to the fixed mesh buffers.
+For each active frame, the buffer predicts from its previous solved positions,
+moves toward the analytic curl target, projects sheet constraints, reapplies
+hinge and pointer constraints, then writes the solved positions. It resets to a
+flat sheet when page dimensions or interaction topology change. Inactive and
+endpoint poses return a flat page without retaining a deformed state.
+
+The existing progress-dependent radius remains the curl guide: the page is
+flat near both turn endpoints and curves most around the midpoint. The default
+is tuned as a stiff book page. `RadiusScale` remains the advanced curvature
+control, avoiding another public material-options surface.
+
+Triangle orientation comes from solved 3-D normals. Normals also provide
+bounded per-vertex shading, so front/back classification and light follow the
+paper surface instead of a depth threshold.
 
 ### Sorting and allocations
 
-Triangle storage remains fixed at `PageMeshBuffer` construction. The current
+Particle positions, constraint topology, multipliers, grid vertices, and
+triangle storage are allocated at `PageMeshBuffer` construction. The current
 quadratic insertion sort is replaced by an in-place span sort over the active
-triangle range. No comparer, collection, or temporary array is created per
-frame.
+triangle range. No comparer, collection, constraint object, or temporary array
+is created per frame.
 
 The implementation will not add a benchmark project or expose performance
 configuration. Existing opt-in render diagnostics and the warmed allocation
-guard are sufficient for this pass; elapsed-time evidence is gathered from the
-demo rather than asserted with a flaky wall-clock unit test.
+guard cover the frame path; elapsed-time evidence is gathered from the demo
+rather than asserted with a flaky wall-clock unit test.
+
+### Library API
+
+The default XAML surface stays small: assign page images, choose content scale,
+and handle `PageTurnCompleted`. The paper solver remains internal. Consumers do
+not configure particle masses, compliance, iterations, gravity, or damping.
+The existing `PageCurlOptions` continues to cover mesh density, curl radius,
+release threshold, and spring frequency for advanced callers.
 
 ## Demo application
 
@@ -164,11 +187,15 @@ the selected hinge, reduced-motion value, or testing-mode value.
 
 Core regression coverage will prove:
 
-- continuous neighboring mesh displacement for horizontal and vertical curls;
+- structural and diagonal edge lengths remain at their rest lengths within a
+  strict floating-point tolerance;
+- bending stays distributed and adjacent triangle angles remain below the
+  crease threshold;
 - stationary hinge vertices for every valid hinge/free-edge pairing;
 - pointer attachment at valid grabbed points;
-- finite positions, depth, shading, and texture coordinates;
+- finite positions, normals, depth, shading, and texture coordinates;
 - stable front/back triangle streams;
+- deterministic reset and repeated-frame convergence;
 - fixed buffer reuse and zero warmed managed allocations;
 - locked-edge endpoints cannot start contradictory gestures.
 
@@ -187,6 +214,15 @@ is recorded explicitly.
 
 The work is complete when both tracks are integrated, the canonical docs match
 the current source, automated checks pass, available platform builds pass, and
-fresh rendered evidence shows the editorial demo and continuous page curl
-without the previous deformation bands. Physical-device profiling remains a
-release gate rather than a claim of this local pass.
+fresh rendered evidence shows a stiff, non-stretching page that curls without
+forming sharp folds or the previous deformation bands. Physical-device
+profiling remains a release gate rather than a claim of this local pass.
+
+## Research basis
+
+- Müller, Heidelberger, Hennix, and Ratcliff,
+  [Position Based Dynamics](https://doi.org/10.1016/j.jvcir.2007.01.005).
+- Macklin, Müller, and Chentanez,
+  [XPBD: Position-Based Simulation of Compliant Constrained Dynamics](https://doi.org/10.1145/2994258.2994272).
+- Guven and Müller,
+  [How paper folds: bending with local constraints](https://arxiv.org/abs/0712.0978).
