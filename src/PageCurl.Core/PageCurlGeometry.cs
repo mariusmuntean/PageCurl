@@ -186,8 +186,8 @@ public static class PageCurlGeometry
                 var topRight = topLeft + 1;
                 var bottomLeft = topLeft + columns + 1;
                 var bottomRight = bottomLeft + 1;
-                AddTriangle(buffer, ref orderCount, topLeft, topRight, bottomLeft, radius);
-                AddTriangle(buffer, ref orderCount, topRight, bottomRight, bottomLeft, radius);
+                AddTriangle(buffer, ref orderCount, topLeft, topRight, bottomLeft);
+                AddTriangle(buffer, ref orderCount, topRight, bottomRight, bottomLeft);
             }
         }
 
@@ -392,20 +392,23 @@ public static class PageCurlGeometry
         ref int orderCount,
         int a,
         int b,
-        int c,
-        float radius)
+        int c)
     {
         var first = buffer.Grid[a];
         var second = buffer.Grid[b];
         var third = buffer.Grid[c];
         var depth = (first.Depth + second.Depth + third.Depth) / 3f;
+        var firstPosition = new Vector3(first.Position, first.Depth);
+        var secondPosition = new Vector3(second.Position, second.Depth);
+        var thirdPosition = new Vector3(third.Position, third.Depth);
+        var normalZ = Vector3.Cross(secondPosition - firstPosition, thirdPosition - firstPosition).Z;
         buffer.Orders[orderCount++] = new PageMeshBuffer.TriangleOrder
         {
             A = a,
             B = b,
             C = c,
             Depth = depth,
-            IsBack = depth > radius * 0.2f,
+            IsBack = normalZ < 0,
         };
     }
 

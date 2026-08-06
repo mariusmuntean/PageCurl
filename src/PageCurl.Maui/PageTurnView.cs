@@ -319,8 +319,8 @@ public sealed class PageTurnView : SKGLView
             var pose = Controller.GetCurlPose(pageSize);
             PageCurlGeometry.Build(_meshBuffer, pageSize, pose, _options);
             var offset = new SKPoint(_contentViewport.Origin.X, _contentViewport.Origin.Y);
-            DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors, offset);
             DrawMesh(canvas, _meshBuffer.FrontVertices, _meshBuffer.FrontVertexCount, FrontImage, _frontPaint!, ref _frontShader, ref _frontShaderImage, _frontPoints, _frontTexturePoints, _frontColors, offset);
+            DrawMesh(canvas, _meshBuffer.BackVertices, _meshBuffer.BackVertexCount, BackImage ?? FrontImage, _backPaint!, ref _backShader, ref _backShaderImage, _backPoints, _backTexturePoints, _backColors, offset);
         }
         finally
         {

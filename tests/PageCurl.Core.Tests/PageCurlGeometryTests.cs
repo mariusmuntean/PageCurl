@@ -29,6 +29,7 @@ internal static class PageCurlGeometryTests
         Every_selected_hinge_edge_remains_stationary();
         Curl_radius_relaxes_at_both_turn_endpoints();
         Developable_surface_preserves_material_triangle_lengths();
+        Triangle_streams_follow_surface_orientation();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -462,6 +463,40 @@ internal static class PageCurlGeometryTests
                         $"triangle diagonal ({column}, {row})");
                 }
             }
+        }
+    }
+
+    private static void Triangle_streams_follow_surface_orientation()
+    {
+        var options = new PageCurlOptions { MeshColumns = 24, MeshRows = 24 };
+        var buffer = new PageMeshBuffer(options);
+        var pose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, PageSize.Y * 0.5f),
+            new Vector2(12, PageSize.Y * 0.5f),
+            PageTurnDirection.Forward,
+            0.88f,
+            options);
+
+        PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+        TestAssert.True(buffer.FrontVertexCount > 0);
+        TestAssert.True(buffer.BackVertexCount > 0);
+        AssertTriangleOrientation(buffer.FrontVertices, buffer.FrontVertexCount, false);
+        AssertTriangleOrientation(buffer.BackVertices, buffer.BackVertexCount, true);
+    }
+
+    private static void AssertTriangleOrientation(MeshVertex[] vertices, int count, bool expectBack)
+    {
+        for (var index = 0; index < count; index += 3)
+        {
+            var first = ToPosition3(vertices[index]);
+            var second = ToPosition3(vertices[index + 1]);
+            var third = ToPosition3(vertices[index + 2]);
+            var normalZ = Vector3.Cross(second - first, third - first).Z;
+            TestAssert.True(
+                expectBack ? normalZ <= 0.001f : normalZ >= -0.001f,
+                $"{(expectBack ? "Back" : "Front")} triangle has normal Z {normalZ:F4}.");
         }
     }
 
