@@ -8,9 +8,12 @@ in Git history and do not define unfinished work.
 - Platform-free controller and geometry with a MAUI/Skia adapter.
 - Direct, developable stiff-paper curl with bounded radius and no cross-frame
   cloth state.
-- Every free edge and corner, explicit stationary hinges, and Auto selection.
-- Direct pointer tracking, reversal, cancellation, threshold/flick settling,
-  reduced motion, and programmatic turns through one completion path.
+- Every free edge and corner, explicit stationary edge anchors, pinned-corner
+  anchors, and Auto selection in the core API.
+- Direct pointer tracking, reversal, cancellation, configurable normalized
+  thresholds, threshold transition events, configurable flicks, reduced
+  motion, and programmatic turns through one completion path.
+- Explicit, intrinsic, and fallback page width/height ratio layout in the core.
 - Forward and backward destination images, caller-owned image lifetime, and
   aspect-fit rendering/pointer mapping.
 - Fixed render buffers, allocation-free warmed core paths, depth ordering,
@@ -22,8 +25,9 @@ in Git history and do not define unfinished work.
 
 ## In progress
 
-- Responsive sample-app polish for compact mobile and resizable desktop
-  layouts, including new generated page artwork.
+- MAUI properties for corner anchors, aspect ratio, thresholds, and flicks.
+- Snapshot-backed MAUI content, configurable backsides, and two-page spreads.
+- Responsive five-scene sample for compact mobile and resizable desktop.
 
 ## Release evidence still required
 

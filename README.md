@@ -5,8 +5,8 @@ book page. It separates interaction, geometry and drawing so the math can be
 tested without a device or UI toolkit:
 
 * `src/PageCurl.Core` targets `net10.0` and contains the allocation-free drag
-  state machine, spring settling, edge-aware hinge selection, aspect-fit
-  viewport math, and developable cylinder page mesh.
+  state machine, spring settling, edge or corner anchors, aspect-fit viewport
+  math, and developable cylinder/cone page mesh.
 * `src/PageCurl.Maui` exposes `PageTurnView`, a GPU-backed `SKGLView` that
   draws the mesh with SkiaSharp texture coordinates and per-vertex shading. It
   supports `LockedEdge` (`Auto`, `Top`, `Right`, `Bottom`, or `Left`) and
@@ -103,6 +103,28 @@ stiff sheet: it curls without cloth-like lag or permanent fold state.
 Set `PreviousPageImage` when backward turns should reveal a different page;
 when it is not set, the control falls back to `UnderPageImage` for compatibility.
 
+The core API accepts any stationary edge or pinned corner. It also exposes
+normalized release intent and flick settings:
+
+```csharp
+var options = new PageCurlOptions
+{
+    PageChangeThreshold = 0.42f,
+    FlickEnabled = true,
+    FlickVelocityThreshold = 1.5f,
+};
+var controller = new PageTurnController(options);
+controller.PageChangeThresholdCrossed += (_, e) =>
+    UpdateCommitHint(e.IsCommitCandidate);
+
+controller.BeginDrag(pointer, pageSize, PageAnchor.TopLeft);
+```
+
+An edge anchor keeps the current cylinder mapping. A corner anchor keeps that
+point fixed and maps the sheet onto a developable cone. `SnapThreshold` remains
+an alias for `PageChangeThreshold`. `PageAspectLayout.Fit` resolves an explicit
+width/height ratio, intrinsic content size, or the `0.75` fallback.
+
 For users who need an alternate to gesture input, call `TryTurn` from a labeled
 button or command. `ReduceMotion` maps both gesture releases and programmatic
 turns to immediate endpoint completion:
@@ -130,11 +152,11 @@ default mesh is 48 columns by 48 rows. Crossing triangles are clipped at the
 analytic front/back tangent, so the visible seam does not stair-step along the
 mesh grid.
 
-The geometry is a bounded, developable cylinder approximation whose preferred
-radius relaxes near the endpoints and tightens around the midpoint. It has no
-z-buffer dependency, so the outgoing front and turned underside are
-depth-sorted and drawn in two passes. The same approach works on Android, iOS,
-Mac Catalyst, and Windows through the SkiaSharp MAUI handlers.
+Edge curls use a bounded, developable cylinder whose preferred radius relaxes
+near the endpoints and tightens around the midpoint. Pinned corners use an
+analytic cone. Neither path needs a z-buffer: the outgoing front and turned
+underside are depth-sorted and drawn in two passes. The same approach works on
+Android, iOS, Mac Catalyst, and Windows through the SkiaSharp MAUI handlers.
 
 ## Verification
 
@@ -146,9 +168,10 @@ dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:Tar
 ```
 
 The checks cover edge selection and clamping, normalized progress in both
-directions, threshold snapping, cancellation, completion events, finite and
+directions, custom thresholds and flicks, threshold transitions, cancellation,
+completion events, finite and
 bounded mesh coordinates, UV/shading ranges, mesh-buffer reuse, immediate and
-programmatic turns, every physical edge and corner, locked-hinge anchoring,
+programmatic turns, every physical edge and pinned corner, locked anchoring,
 aspect-fit viewport math, direction-aware demo navigation, and warmed
 1,000-iteration core allocation loops. The MAUI control exposes opt-in
 `PageTurnPerformanceSnapshot` values for interactive render diagnostics; the

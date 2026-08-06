@@ -14,9 +14,11 @@ PageCurl keeps interaction, geometry, rendering, and presentation separate.
 
 On each active frame, the view maps the pointer into the aspect-fitted page
 viewport. The controller produces a curl pose. The geometry layer maps the
-flat sheet onto a rotated developable cylinder, clips triangles at the exact
-front/back tangent, and sorts each stream by depth. The renderer draws the
-destination page, then the outgoing page front and turned underside.
+flat sheet onto a rotated developable cylinder for edge anchors or an analytic
+cone for pinned corners. It clips cylinder triangles at the exact front/back
+tangent, classifies cone triangles by surface orientation, and sorts each
+stream by depth. The renderer draws the destination page, then the outgoing
+page front and turned underside.
 
 The core contains no MAUI, SkiaSharp, dispatcher, or device dependency. A
 future renderer can consume the same pose and mesh without changing gesture or
