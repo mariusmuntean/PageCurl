@@ -15,8 +15,9 @@ Before a public or flagship-reader release:
 4. Complete visual review for edges, tangent seams, shading, texture scaling,
    dark mode, rotation, safe areas, large pages, reduced motion, compact mobile
    layout, and resizable desktop windows.
-5. Run VoiceOver and TalkBack passes for the interactive page, Previous/Next
-   commands, lock selector, reduced motion, settings, and diagnostics.
+5. Run VoiceOver and TalkBack passes for scene selection, the interactive page,
+   Previous/Next, edge/corner anchors, threshold, haptics, reduced motion, and
+   the options sheet.
 6. Validate signing, archives, store packaging, API compatibility, and package
    publication before distribution.
 

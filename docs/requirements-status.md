@@ -24,17 +24,18 @@ in Git history and do not define unfinished work.
   capture implementations.
 - A two-page spread with right-forward and left-backward turns, full-gutter
   overlay rendering, readiness-aware commands, and a restrained gutter shadow.
+- A responsive five-scene showcase for single pages, spreads, images, live
+  `ContentView` controls, bundled video with poster fallback, configurable
+  backsides, and all four corner pins.
+- Mobile haptics with distinct threshold and committed-completion patterns,
+  plus a user-facing enable switch.
 - Fixed render buffers, allocation-free warmed core paths, depth ordering,
   exact front/back tangent clipping, and deep-curl underside layering.
-- Accessible Previous/Next commands, edge settings, opt-in diagnostics, light
-  and dark resources, safe-area layout, and generated large-page content.
+- Accessible Previous/Next commands, edge/corner settings, light and dark
+  resources, safe-area layout, compact options sheet, desktop inspector, and
+  generated high-resolution content.
 - .NET 10 package metadata, MIT license, support policy, compatibility matrix,
   CI definitions, and iOS smoke tooling.
-
-## In progress
-
-- Responsive five-scene sample for compact mobile and resizable desktop,
-  including semantic mobile haptics and video-poster fallback.
 
 ## Release evidence still required
 

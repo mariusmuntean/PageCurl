@@ -11,8 +11,9 @@ tested without a device or UI toolkit:
   `PageCurlView`, and two-page `PageSpreadView`. The Skia renderer draws fixed
   mesh buffers with per-vertex shading. A neutral `net10.0` target supports
   source and lifecycle tests without a device.
-* `src/PageCurl.Demo` is a MAUI sample with four generated pages, including a
-  large-page case and non-gesture page-turn commands.
+* `src/PageCurl.Demo` is a responsive five-scene showcase with eight generated
+  pages, one- and two-page navigation, live MAUI content, a bundled video,
+  backside choices, pinned corners, haptics, and non-gesture commands.
 * `tests/PageCurl.Core.Tests` is a dependency-free executable test runner. It
   does not require an internet package feed or a test adapter.
 * `tests/PageCurl.Maui.Tests` covers snapshot replacement, content wrappers,
@@ -55,13 +56,14 @@ open src/PageCurl.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.
 The demo supports Android, iOS, Mac Catalyst and Windows. See the
 [compatibility matrix](docs/compatibility.md) for the current evidence status.
 
-### Demo testing mode
+### Showcase scenes
 
-Enable `Testing mode` in the sample app when validating a gesture or tuning the
-renderer. The opt-in panel reports the controller state, pointer/start
-coordinates, curl pose, completion result, and opt-in render timing/allocation
-metrics. It is demo-only, disabled by default, and does not add polling or
-diagnostic work to normal library usage.
+The sample opens with a single-page reader and includes four focused scenes:
+an open spread, live `ContentView`/image/video content, configurable backsides,
+and a pinned-corner cone. Shared options expose every anchor, a percentage
+threshold, flicks, page ratios, reduced motion, and mobile haptics. Desktop uses
+a scene rail and inspector; compact layouts move those controls into a scene
+strip and options sheet.
 
 ## Use the control
 
@@ -168,6 +170,8 @@ Call `RefreshSnapshotAsync()` after dynamic content changes. Capture failures
 raise `SnapshotFailed` and leave the last good texture in place. A live video
 can remain in `FrontContent`; the curl uses its latest captured frame. Supply a
 poster view when the platform video layer does not appear in native snapshots.
+The demo keeps the media dependency outside the library, plays a bundled local
+clip on Android/iOS, and uses its capturable poster fallback on Mac Catalyst.
 
 ### Use a two-page spread
 
@@ -215,8 +219,8 @@ dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:Tar
 The checks cover edge selection and clamping, normalized progress in both
 directions, custom thresholds and flicks, threshold transitions, cancellation,
 completion events, finite and bounded mesh coordinates, UV/shading ranges,
-mesh-buffer reuse, immediate and
-programmatic turns, every physical edge and pinned corner, locked anchoring,
+mesh-buffer reuse, immediate and programmatic turns, semantic haptic cue
+mapping, every physical edge and pinned corner, locked anchoring,
 aspect-fit viewport math, direction-aware demo navigation, and warmed
 1,000-iteration core allocation loops. Neutral MAUI checks cover platform
 capture fallback, snapshot cancellation/replacement, wrapper property

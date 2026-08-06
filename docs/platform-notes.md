@@ -18,3 +18,8 @@ not prove that the native workload, signing, simulator, or device path works.
 The control currently uses `SKGLView`. Apple OpenGL deprecation, GPU driver
 differences, large textures, high-DPI mesh cost, and device thermal behavior
 remain platform risks that require measurement.
+
+The iOS simulator can reject the first on-demand GL draw while its native
+window is still becoming active. `PageTurnView` schedules one generation-
+guarded retry after handler attachment. This recovers an idle page without a
+permanent render loop or a callback that can outlive a disconnected handler.

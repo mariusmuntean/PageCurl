@@ -32,9 +32,12 @@ assert_demo_foreground() {
         local ui
         ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
         if echo "$ui" | rg -q '"AXLabel":"Page Curl Demo"' \
-            && echo "$ui" | rg -q '"AXLabel":"Interactive page\. Drag from any free edge or corner to turn the page\."' \
-            && echo "$ui" | rg -q '"AXLabel":"Select the stationary page edge"' \
-            && echo "$ui" | rg -q '"AXLabel":"Enable page-turn testing mode"' \
+            && echo "$ui" | rg -q '"AXLabel":"Single"' \
+            && echo "$ui" | rg -q '"AXLabel":"Spread"' \
+            && echo "$ui" | rg -q '"AXLabel":"Content"' \
+            && echo "$ui" | rg -q '"AXLabel":"Backside"' \
+            && echo "$ui" | rg -q '"AXLabel":"Corner"' \
+            && echo "$ui" | rg -q '"AXLabel":"Options"' \
             && ! echo "$ui" | rg -q '"AXLabel":"(↖|↗|↙|↘|‹|›|⌃  TOP EDGE  ⌃|⌄  BOTTOM EDGE  ⌄)"'; then
             return 0
         fi
@@ -45,64 +48,94 @@ assert_demo_foreground() {
     return 1
 }
 
-capture_testing_mode() {
+tap_label() {
+    local label="$1"
+    local ui frame values x y width height tap_x tap_y
+    ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
+    frame="$(echo "$ui" | jq -r --arg label "$label" '.. | objects | select(.AXLabel? == $label) | .AXFrame' | head -1)"
+    if [[ -z "$frame" || "$frame" == "null" || "$frame" == "{{0, 0}, {0, 0}}" ]]; then
+        echo "The '$label' control was not visible." >&2
+        return 1
+    fi
+
+    values="$(echo "$frame" | tr -d '{}' | tr ',' ' ')"
+    read -r x y width height <<< "$values"
+    tap_x="$(awk -v x="$x" -v width="$width" 'BEGIN { printf "%d", x + width / 2 }')"
+    tap_y="$(awk -v y="$y" -v height="$height" 'BEGIN { printf "%d", y + height / 2 }')"
+    idb ui tap --udid "$DEVICE" --duration 0.2 "$tap_x" "$tap_y" >/dev/null
+}
+
+wait_for_label() {
+    local label="$1"
+    for _ in 1 2 3 4 5; do
+        if idb ui describe-all --udid "$DEVICE" --json 2>/dev/null \
+            | jq -e --arg label "$label" '.. | objects | select(.AXLabel? == $label)' >/dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+
+    echo "The '$label' surface did not appear." >&2
+    return 1
+}
+
+capture_feature_scenes() {
     if ! command -v idb >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-        echo "Skipping Testing mode capture because idb or jq is unavailable."
+        echo "Skipping feature-scene capture because idb or jq is unavailable."
         return 0
     fi
 
-    local ui
-    ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
-    local switch_frame
-    switch_frame="$(echo "$ui" | jq -r '.. | objects | select(.AXLabel? == "Enable page-turn testing mode") | .AXFrame' | head -1)"
-    if [[ -z "$switch_frame" || "$switch_frame" == "null" ]]; then
-        echo "Testing mode frame was not exposed by idb." >&2
-        return 1
-    fi
+    tap_label "Options"
+    wait_for_label "Select the stationary edge or pinned corner"
+    wait_for_label "Page change threshold"
+    wait_for_label "Enable flick gestures"
+    wait_for_label "Enable page-turn haptic feedback"
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/options.png" >/dev/null
+    tap_label "Close"
 
-    local switch_values
-    switch_values="$(echo "$switch_frame" | tr -d '{}' | tr ',' ' ')"
-    local switch_x switch_y switch_width switch_height tap_x tap_y
-    read -r switch_x switch_y switch_width switch_height <<< "$switch_values"
-    tap_x="$(awk -v x="$switch_x" -v width="$switch_width" 'BEGIN { printf "%d", x + width / 2 }')"
-    tap_y="$(awk -v y="$switch_y" -v height="$switch_height" 'BEGIN { printf "%d", y + height / 2 }')"
-    idb ui tap --udid "$DEVICE" --duration 1 "$tap_x" "$tap_y" >/dev/null
-    local testing_ui=""
-    local next_frame=""
-    local testing_ready=0
-    for _ in 1 2 3 4 5; do
-        sleep 1
-        testing_ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
-        next_frame="$(echo "$testing_ui" | jq -r '.. | objects | select(.AXLabel? == "Turn to next page") | .AXFrame' | head -1)"
-        if echo "$testing_ui" | rg -q '"AXLabel":"RUNTIME PROBE"' \
-            && echo "$testing_ui" | rg -q '"AXLabel":"Turn to next page"' \
-            && [[ "$next_frame" != "{{0, 0}, {0, 0}}" ]]; then
-            testing_ready=1
-            break
-        fi
-    done
-    if [[ "$testing_ready" != "1" ]]; then
-        echo "Testing mode did not expose a complete, visible diagnostics surface." >&2
-        return 1
-    fi
+    tap_label "Spread"
+    wait_for_label "Open spread"
+    sleep 1
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/spread.png" >/dev/null
 
-    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/testing.png" >/dev/null
+    tap_label "Content"
+    wait_for_label "Live content"
+    tap_label "Options"
+    wait_for_label "View"
+    tap_label "View"
+    tap_label "Close"
+    wait_for_label "Increment the live content counter"
+    tap_label "Increment the live content counter"
+    wait_for_label "Live content updated"
+    sleep 1
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/content-view.png" >/dev/null
 
-    # Testing mode changes the vertical layout, so resolve the switch frame
-    # again before turning it back off.
-    ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
-    switch_frame="$(echo "$ui" | jq -r '.. | objects | select(.AXLabel? == "Enable page-turn testing mode") | .AXFrame' | head -1)"
-    switch_values="$(echo "$switch_frame" | tr -d '{}' | tr ',' ' ')"
-    read -r switch_x switch_y switch_width switch_height <<< "$switch_values"
-    tap_x="$(awk -v x="$switch_x" -v width="$switch_width" 'BEGIN { printf "%d", x + width / 2 }')"
-    tap_y="$(awk -v y="$switch_y" -v height="$switch_height" 'BEGIN { printf "%d", y + height / 2 }')"
-    idb ui tap --udid "$DEVICE" --duration 1 "$tap_x" "$tap_y" >/dev/null
-    local final_value
-    final_value="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null | jq -r '.. | objects | select(.AXLabel? == "Enable page-turn testing mode") | .AXValue' | head -1)"
-    if [[ "$final_value" != "0" ]]; then
-        echo "Testing mode did not return to its default off state." >&2
-        return 1
-    fi
+    tap_label "Options"
+    wait_for_label "Video"
+    tap_label "Video"
+    tap_label "Close"
+    wait_for_label "Looping local video page with snapshot poster fallback"
+    sleep 2
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/content-video.png" >/dev/null
+
+    tap_label "Backside"
+    wait_for_label "The other side"
+    tap_label "Options"
+    wait_for_label "View"
+    tap_label "View"
+    tap_label "Close"
+    sleep 1
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/backside.png" >/dev/null
+
+    tap_label "Corner"
+    wait_for_label "Pinned corner"
+    tap_label "Options"
+    wait_for_label "Top left"
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/corner.png" >/dev/null
+    tap_label "Close"
+
+    tap_label "Single"
+    wait_for_label "One page"
 }
 
 echo "Building the iOS simulator demo..."
@@ -138,10 +171,10 @@ xcrun simctl launch "$DEVICE" "$BUNDLE_ID"
 assert_demo_foreground
 sleep 10
 xcrun simctl io "$DEVICE" screenshot "$OUTPUT/dark.png"
-capture_testing_mode
+capture_feature_scenes
 
 echo "Device: $DEVICE"
 echo "Device record:"
 xcrun simctl list devices | awk -v id="$DEVICE" 'index($0, id) && record == "" { record = $0 } END { print record }'
 echo "App: $APP"
-echo "Screenshots: $OUTPUT/light.png $OUTPUT/dark.png"
+echo "Screenshots: $OUTPUT/light.png $OUTPUT/dark.png $OUTPUT/options.png $OUTPUT/spread.png $OUTPUT/content-view.png $OUTPUT/content-video.png $OUTPUT/backside.png $OUTPUT/corner.png"

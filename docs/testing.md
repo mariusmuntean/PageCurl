@@ -8,6 +8,8 @@ The platform-free test runner covers:
   entry/exit events, cancellation, reduced motion, programmatic turns,
   one-shot completion, stable diagonal rollback, and visible settling;
 - navigation boundaries and direction-aware destination pages;
+- semantic haptic mapping for threshold entry/exit, committed completion,
+  cancellation, disabled feedback, and duplicate suppression;
 - finite cylinder and cone geometry, stationary edges and pins, pointer
   attachment, developable material lengths, valid UV/shade ranges, front/back
   orientation, exact cylinder tangent seams, deep-curl layering inputs, and
@@ -26,9 +28,9 @@ The neutral MAUI runner covers:
 Visual validation still matters. Exercise every edge and corner, reversal,
 snap-back, committed settling, backward turns, all lock modes, large pages,
 light/dark appearance, compact and wide layouts, rotation, reduced motion,
-diagnostics, background/foreground transitions, live controls, video posters,
-snapshot failure, repeated image replacement, spread boundaries, and repeated
-gutter-crossing turns.
+background/foreground transitions, live controls, local video and its poster
+fallback, snapshot failure, repeated image replacement, spread boundaries, and
+repeated gutter-crossing turns.
 
 Every geometry or interaction fix needs a deterministic regression. Visual
 changes need a reproducible manual scenario or before/after evidence. Use the
