@@ -19,6 +19,72 @@ public enum PageEdge
     Left,
 }
 
+/// <summary>A stationary page edge, pinned corner, or automatic selection.</summary>
+public enum PageAnchor
+{
+    Auto,
+    Top,
+    Right,
+    Bottom,
+    Left,
+    TopLeft,
+    TopRight,
+    BottomRight,
+    BottomLeft,
+}
+
+/// <summary>Allocation-free conversions and positions for page anchors.</summary>
+public static class PageAnchorExtensions
+{
+    public static PageAnchor FromEdge(PageEdge edge) => edge switch
+    {
+        PageEdge.Auto => PageAnchor.Auto,
+        PageEdge.Top => PageAnchor.Top,
+        PageEdge.Right => PageAnchor.Right,
+        PageEdge.Bottom => PageAnchor.Bottom,
+        PageEdge.Left => PageAnchor.Left,
+        _ => throw new ArgumentOutOfRangeException(nameof(edge)),
+    };
+
+    public static bool TryGetEdge(this PageAnchor anchor, out PageEdge edge)
+    {
+        edge = anchor switch
+        {
+            PageAnchor.Auto => PageEdge.Auto,
+            PageAnchor.Top => PageEdge.Top,
+            PageAnchor.Right => PageEdge.Right,
+            PageAnchor.Bottom => PageEdge.Bottom,
+            PageAnchor.Left => PageEdge.Left,
+            _ => PageEdge.Auto,
+        };
+        return anchor is PageAnchor.Auto
+            or PageAnchor.Top
+            or PageAnchor.Right
+            or PageAnchor.Bottom
+            or PageAnchor.Left;
+    }
+
+    public static bool IsCorner(this PageAnchor anchor) => anchor is
+        PageAnchor.TopLeft
+        or PageAnchor.TopRight
+        or PageAnchor.BottomRight
+        or PageAnchor.BottomLeft;
+
+    public static Vector2 GetPosition(this PageAnchor anchor, Vector2 pageSize) => anchor switch
+    {
+        PageAnchor.Auto => pageSize * 0.5f,
+        PageAnchor.Top => new(pageSize.X * 0.5f, 0),
+        PageAnchor.Right => new(pageSize.X, pageSize.Y * 0.5f),
+        PageAnchor.Bottom => new(pageSize.X * 0.5f, pageSize.Y),
+        PageAnchor.Left => new(0, pageSize.Y * 0.5f),
+        PageAnchor.TopLeft => Vector2.Zero,
+        PageAnchor.TopRight => new(pageSize.X, 0),
+        PageAnchor.BottomRight => pageSize,
+        PageAnchor.BottomLeft => new(0, pageSize.Y),
+        _ => throw new ArgumentOutOfRangeException(nameof(anchor)),
+    };
+}
+
 /// <summary>The interaction/animation phase of a page turn.</summary>
 public enum PageTurnState
 {
@@ -65,6 +131,8 @@ public sealed class PageTurnPointerCapture
 /// <summary>Options shared by the interaction controller and the mesh builder.</summary>
 public sealed class PageCurlOptions
 {
+    private float _pageChangeThreshold = 0.5f;
+
     public int MeshColumns { get; init; } = 48;
 
     public int MeshRows { get; init; } = 48;
@@ -72,8 +140,25 @@ public sealed class PageCurlOptions
     /// <summary>Base cylinder radius as a fraction of page width.</summary>
     public float RadiusScale { get; init; } = 1f / 3f;
 
-    /// <summary>Release progress at or above which the page is committed.</summary>
-    public float SnapThreshold { get; init; } = 0.5f;
+    /// <summary>Page-travel fraction at or above which release commits the turn.</summary>
+    public float PageChangeThreshold
+    {
+        get => _pageChangeThreshold;
+        init => _pageChangeThreshold = value;
+    }
+
+    /// <summary>Compatibility alias for <see cref="PageChangeThreshold"/>.</summary>
+    public float SnapThreshold
+    {
+        get => _pageChangeThreshold;
+        init => _pageChangeThreshold = value;
+    }
+
+    /// <summary>Whether release velocity may override the page-change threshold.</summary>
+    public bool FlickEnabled { get; init; } = true;
+
+    /// <summary>Normalized page-progress velocity required to recognize a flick.</summary>
+    public float FlickVelocityThreshold { get; init; } = 1.5f;
 
     /// <summary>Angular frequency used by the critically damped settle animation.</summary>
     public float SpringFrequency { get; init; } = 18f;
@@ -95,9 +180,18 @@ public sealed class PageCurlOptions
             throw new ArgumentOutOfRangeException(nameof(RadiusScale), "RadiusScale must be finite and positive.");
         }
 
-        if (!float.IsFinite(SnapThreshold) || SnapThreshold is < 0 or > 1)
+        if (!float.IsFinite(PageChangeThreshold) || PageChangeThreshold is < 0 or > 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(SnapThreshold), "SnapThreshold must be between zero and one.");
+            throw new ArgumentOutOfRangeException(
+                nameof(PageChangeThreshold),
+                "PageChangeThreshold must be between zero and one.");
+        }
+
+        if (!float.IsFinite(FlickVelocityThreshold) || FlickVelocityThreshold <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(FlickVelocityThreshold),
+                "FlickVelocityThreshold must be finite and positive.");
         }
 
         if (!float.IsFinite(SpringFrequency) || SpringFrequency <= 0)
@@ -105,6 +199,36 @@ public sealed class PageCurlOptions
             throw new ArgumentOutOfRangeException(nameof(SpringFrequency), "SpringFrequency must be finite and positive.");
         }
     }
+}
+
+/// <summary>Raised when a drag enters or leaves page-change intent.</summary>
+public sealed class PageChangeThresholdCrossedEventArgs : EventArgs
+{
+    public PageChangeThresholdCrossedEventArgs(
+        PageTurnDirection direction,
+        bool isCommitCandidate,
+        float progress)
+    {
+        if (direction is not (PageTurnDirection.Forward or PageTurnDirection.Backward))
+        {
+            throw new ArgumentOutOfRangeException(nameof(direction));
+        }
+
+        if (!float.IsFinite(progress) || progress is < 0 or > 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(progress));
+        }
+
+        Direction = direction;
+        IsCommitCandidate = isCommitCandidate;
+        Progress = progress;
+    }
+
+    public PageTurnDirection Direction { get; }
+
+    public bool IsCommitCandidate { get; }
+
+    public float Progress { get; }
 }
 
 /// <summary>The geometry state consumed by a renderer for one frame.</summary>
