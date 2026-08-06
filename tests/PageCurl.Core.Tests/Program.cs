@@ -16,6 +16,7 @@ internal static class Program
             (nameof(PageAnchorTests), PageAnchorTests.RunAll),
             (nameof(PageAspectLayoutTests), PageAspectLayoutTests.RunAll),
             (nameof(PageBacksideMappingTests), PageBacksideMappingTests.RunAll),
+            (nameof(PageSpreadNavigationStateTests), PageSpreadNavigationStateTests.RunAll),
         };
 
         try

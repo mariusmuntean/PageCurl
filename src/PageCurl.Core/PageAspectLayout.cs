@@ -2,6 +2,13 @@ using System.Numerics;
 
 namespace PageCurl.Core;
 
+public enum PageHorizontalPlacement
+{
+    Center,
+    Left,
+    Right,
+}
+
 /// <summary>Resolves a page ratio and fits it into a viewport.</summary>
 public static class PageAspectLayout
 {
@@ -31,6 +38,26 @@ public static class PageAspectLayout
                 : fallbackAspectRatio;
 
         return PageViewportRect.AspectFit(viewport, new Vector2(ratio, 1));
+    }
+
+    public static PageViewportRect PlaceHorizontal(
+        PageViewportRect page,
+        float viewportWidth,
+        PageHorizontalPlacement placement)
+    {
+        if (!page.IsValid || !float.IsFinite(viewportWidth) || viewportWidth < page.Size.X)
+        {
+            return default;
+        }
+
+        var x = placement switch
+        {
+            PageHorizontalPlacement.Center => (viewportWidth - page.Size.X) * 0.5f,
+            PageHorizontalPlacement.Left => 0,
+            PageHorizontalPlacement.Right => viewportWidth - page.Size.X,
+            _ => throw new ArgumentOutOfRangeException(nameof(placement)),
+        };
+        return page with { Origin = new Vector2(x, page.Origin.Y) };
     }
 
     private static bool IsValidSize(Vector2 size) =>

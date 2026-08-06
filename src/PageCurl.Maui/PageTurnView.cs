@@ -98,6 +98,15 @@ public sealed class PageTurnView : SKGLView
             && ratio >= 0,
         propertyChanged: OnVisualPropertyChanged);
 
+    public static readonly BindableProperty PageHorizontalPlacementProperty = BindableProperty.Create(
+        nameof(PageHorizontalPlacement),
+        typeof(PageHorizontalPlacement),
+        typeof(PageTurnView),
+        PageHorizontalPlacement.Center,
+        validateValue: static (_, value) => value is PageHorizontalPlacement placement
+            && Enum.IsDefined(placement),
+        propertyChanged: OnVisualPropertyChanged);
+
     public static readonly BindableProperty BacksideModeProperty = BindableProperty.Create(
         nameof(BacksideMode),
         typeof(PageBacksideMode),
@@ -256,6 +265,12 @@ public sealed class PageTurnView : SKGLView
     {
         get => (float)GetValue(PageAspectRatioProperty);
         set => SetValue(PageAspectRatioProperty, value);
+    }
+
+    public PageHorizontalPlacement PageHorizontalPlacement
+    {
+        get => (PageHorizontalPlacement)GetValue(PageHorizontalPlacementProperty);
+        set => SetValue(PageHorizontalPlacementProperty, value);
     }
 
     public PageBacksideMode BacksideMode
@@ -846,7 +861,11 @@ public sealed class PageTurnView : SKGLView
             var intrinsicSize = image is null
                 ? Vector2.Zero
                 : new Vector2(image.Width, image.Height);
-            return PageAspectLayout.Fit(canvasSize, PageAspectRatio, intrinsicSize);
+            var fitted = PageAspectLayout.Fit(canvasSize, PageAspectRatio, intrinsicSize);
+            return PageAspectLayout.PlaceHorizontal(
+                fitted,
+                canvasSize.X,
+                PageHorizontalPlacement);
         }
 
         return new PageViewportRect(Vector2.Zero, canvasSize);

@@ -12,7 +12,9 @@ internal static class Program
             Console.WriteLine($"PASS {nameof(PageSnapshotStateTests)}");
             await PageCurlViewTests.RunAllAsync();
             Console.WriteLine($"PASS {nameof(PageCurlViewTests)}");
-            Console.WriteLine("All 3 MAUI test groups passed.");
+            await PageSpreadViewTests.RunAllAsync();
+            Console.WriteLine($"PASS {nameof(PageSpreadViewTests)}");
+            Console.WriteLine("All 4 MAUI test groups passed.");
             return 0;
         }
         catch (Exception exception)
