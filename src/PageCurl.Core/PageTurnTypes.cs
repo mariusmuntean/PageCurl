@@ -153,20 +153,6 @@ public readonly record struct PageTurnSnapshot(
     public PageEdge FreeEdge { get; init; } = PageEdge.Auto;
 }
 
-internal enum PaperConstraintKind
-{
-    Stretch,
-    Shear,
-    Bend,
-}
-
-internal readonly record struct PaperConstraint(
-    int A,
-    int B,
-    int DeltaColumn,
-    int DeltaRow,
-    PaperConstraintKind Kind);
-
 /// <summary>Raised once when a release animation reaches its endpoint.</summary>
 public sealed class PageTurnCompletedEventArgs : EventArgs
 {
@@ -188,15 +174,6 @@ public sealed class PageMeshBuffer
     internal readonly int Rows;
     internal readonly GridVertex[] Grid;
     internal readonly TriangleOrder[] Orders;
-    internal readonly Vector3[] Positions;
-    internal readonly Vector3[] PreviousPositions;
-    internal readonly Vector3[] Targets;
-    internal readonly PaperConstraint[] Constraints;
-    internal readonly float[] ConstraintMultipliers;
-    internal Vector2 SimulationPageSize;
-    internal PageEdge SimulationHingeEdge;
-    internal PageEdge SimulationFreeEdge;
-    internal bool IsSimulationInitialized;
 
     public PageMeshBuffer(PageCurlOptions options)
     {
@@ -207,12 +184,6 @@ public sealed class PageMeshBuffer
         Rows = options.MeshRows;
         Grid = new GridVertex[(Columns + 1) * (Rows + 1)];
         Orders = new TriangleOrder[Columns * Rows * 2];
-        Positions = new Vector3[Grid.Length];
-        PreviousPositions = new Vector3[Grid.Length];
-        Targets = new Vector3[Grid.Length];
-        Constraints = CreateConstraints(Columns, Rows);
-        ConstraintMultipliers = new float[Constraints.Length];
-
         var vertexCapacity = Math.Max(6, Orders.Length * 3);
         FrontVertices = new MeshVertex[vertexCapacity];
         BackVertices = new MeshVertex[vertexCapacity];
@@ -225,76 +196,6 @@ public sealed class PageMeshBuffer
     public int FrontVertexCount { get; internal set; }
 
     public int BackVertexCount { get; internal set; }
-
-    internal void ResetSimulation()
-    {
-        IsSimulationInitialized = false;
-        SimulationPageSize = Vector2.Zero;
-        SimulationHingeEdge = PageEdge.Auto;
-        SimulationFreeEdge = PageEdge.Auto;
-        ConstraintMultipliers.AsSpan().Clear();
-    }
-
-    private static PaperConstraint[] CreateConstraints(int columns, int rows)
-    {
-        var horizontalCount = columns * (rows + 1);
-        var verticalCount = (columns + 1) * rows;
-        var diagonalCount = columns * rows * 2;
-        var horizontalBendCount = (columns - 1) * (rows + 1);
-        var verticalBendCount = (columns + 1) * Math.Max(0, rows - 1);
-        var constraints = new PaperConstraint[
-            horizontalCount + verticalCount + diagonalCount + horizontalBendCount + verticalBendCount];
-        var count = 0;
-        var stride = columns + 1;
-
-        for (var row = 0; row <= rows; row++)
-        {
-            for (var column = 0; column < columns; column++)
-            {
-                var first = (row * stride) + column;
-                constraints[count++] = new(first, first + 1, 1, 0, PaperConstraintKind.Stretch);
-            }
-        }
-
-        for (var row = 0; row < rows; row++)
-        {
-            for (var column = 0; column <= columns; column++)
-            {
-                var first = (row * stride) + column;
-                constraints[count++] = new(first, first + stride, 0, 1, PaperConstraintKind.Stretch);
-            }
-        }
-
-        for (var row = 0; row < rows; row++)
-        {
-            for (var column = 0; column < columns; column++)
-            {
-                var topLeft = (row * stride) + column;
-                constraints[count++] = new(topLeft, topLeft + stride + 1, 1, 1, PaperConstraintKind.Shear);
-                constraints[count++] = new(topLeft + 1, topLeft + stride, -1, 1, PaperConstraintKind.Shear);
-            }
-        }
-
-        for (var row = 0; row <= rows; row++)
-        {
-            for (var column = 0; column + 2 <= columns; column++)
-            {
-                var first = (row * stride) + column;
-                constraints[count++] = new(first, first + 2, 2, 0, PaperConstraintKind.Bend);
-            }
-        }
-
-        for (var row = 0; row + 2 <= rows; row++)
-        {
-            for (var column = 0; column <= columns; column++)
-            {
-                var first = (row * stride) + column;
-                constraints[count++] = new(first, first + (stride * 2), 0, 2, PaperConstraintKind.Bend);
-            }
-        }
-
-        return constraints;
-    }
 
     internal readonly struct GridVertex
     {

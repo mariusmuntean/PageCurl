@@ -21,12 +21,14 @@ internal static class PageCurlGeometryTests
         Inactive_pose_generates_a_flat_front_page();
         Invalid_pose_generates_a_flat_front_page();
         Repeated_builds_reuse_mesh_arrays();
+        Build_result_depends_only_on_the_current_pose();
         Sampled_drag_poses_remain_finite_and_bounded();
         Corner_origin_drag_poses_remain_finite_and_bounded();
         Dragged_free_corner_tracks_pointer_before_limit();
         Every_free_edge_produces_a_finite_bounded_mesh();
         Every_selected_hinge_edge_remains_stationary();
         Curl_radius_relaxes_at_both_turn_endpoints();
+        Developable_surface_preserves_material_triangle_lengths();
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()
@@ -136,6 +138,43 @@ internal static class PageCurlGeometryTests
 
         TestAssert.Same(frontArray, buffer.FrontVertices);
         TestAssert.Same(backArray, buffer.BackVertices);
+    }
+
+    private static void Build_result_depends_only_on_the_current_pose()
+    {
+        var options = new PageCurlOptions { MeshColumns = 12, MeshRows = 8 };
+        var reused = new PageMeshBuffer(options);
+        var fresh = new PageMeshBuffer(options);
+        var firstPose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, 80),
+            new Vector2(72, 62),
+            PageTurnDirection.Forward,
+            0.28f,
+            options);
+        var currentPose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, 80),
+            new Vector2(38, 105),
+            PageTurnDirection.Forward,
+            0.62f,
+            options);
+
+        PageCurlGeometry.Build(reused, PageSize, firstPose, options);
+        PageCurlGeometry.Build(reused, PageSize, currentPose, options);
+        PageCurlGeometry.Build(fresh, PageSize, currentPose, options);
+
+        TestAssert.Equal(fresh.FrontVertexCount, reused.FrontVertexCount);
+        TestAssert.Equal(fresh.BackVertexCount, reused.BackVertexCount);
+        for (var index = 0; index < fresh.FrontVertexCount; index++)
+        {
+            TestAssert.Equal(fresh.FrontVertices[index], reused.FrontVertices[index]);
+        }
+
+        for (var index = 0; index < fresh.BackVertexCount; index++)
+        {
+            TestAssert.Equal(fresh.BackVertices[index], reused.BackVertices[index]);
+        }
     }
 
     private static void Sampled_drag_poses_remain_finite_and_bounded()
@@ -364,6 +403,113 @@ internal static class PageCurlGeometryTests
         TestAssert.True(start.Radius > middle.Radius * 2);
         TestAssert.True(end.Radius > middle.Radius * 2);
     }
+
+    private static void Developable_surface_preserves_material_triangle_lengths()
+    {
+        const int columns = 24;
+        const int rows = 24;
+        var options = new PageCurlOptions { MeshColumns = columns, MeshRows = rows };
+        var buffer = new PageMeshBuffer(options);
+        var pose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, 80),
+            new Vector2(52, 48),
+            PageEdge.Left,
+            PageEdge.Right,
+            PageTurnDirection.Forward,
+            0.48f,
+            options);
+
+        PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+        var horizontalRestLength = PageSize.X / columns;
+        var verticalRestLength = PageSize.Y / rows;
+        var diagonalRestLength = MathF.Sqrt(
+            (horizontalRestLength * horizontalRestLength)
+            + (verticalRestLength * verticalRestLength));
+        for (var row = 0; row <= rows; row++)
+        {
+            for (var column = 0; column <= columns; column++)
+            {
+                var texture = new Vector2(column / (float)columns, row / (float)rows);
+                if (column < columns)
+                {
+                    AssertRestLength(
+                        buffer,
+                        texture,
+                        new Vector2((column + 1) / (float)columns, texture.Y),
+                        horizontalRestLength,
+                        $"horizontal edge ({column}, {row})");
+                }
+
+                if (row < rows)
+                {
+                    AssertRestLength(
+                        buffer,
+                        texture,
+                        new Vector2(texture.X, (row + 1) / (float)rows),
+                        verticalRestLength,
+                        $"vertical edge ({column}, {row})");
+                }
+
+                if (column < columns && row < rows)
+                {
+                    AssertRestLength(
+                        buffer,
+                        new Vector2((column + 1) / (float)columns, texture.Y),
+                        new Vector2(texture.X, (row + 1) / (float)rows),
+                        diagonalRestLength,
+                        $"triangle diagonal ({column}, {row})");
+                }
+            }
+        }
+    }
+
+    private static void AssertRestLength(
+        PageMeshBuffer buffer,
+        Vector2 firstTexture,
+        Vector2 secondTexture,
+        float restLength,
+        string label)
+    {
+        var first = ToPosition3(FindVertexAtTexture(buffer, firstTexture));
+        var second = ToPosition3(FindVertexAtTexture(buffer, secondTexture));
+        var relativeError = MathF.Abs(Vector3.Distance(first, second) - restLength) / restLength;
+        TestAssert.True(relativeError <= 0.01f, $"{label} changed length by {relativeError:P2}.");
+    }
+
+    private static MeshVertex FindVertexAtTexture(PageMeshBuffer buffer, Vector2 texture)
+    {
+        var closest = default(MeshVertex);
+        var closestDistanceSquared = float.PositiveInfinity;
+        FindClosestTexture(buffer.FrontVertices, buffer.FrontVertexCount, texture, ref closest, ref closestDistanceSquared);
+        FindClosestTexture(buffer.BackVertices, buffer.BackVertexCount, texture, ref closest, ref closestDistanceSquared);
+        TestAssert.True(
+            closestDistanceSquared <= 0.001f * 0.001f,
+            $"No mesh vertex represents texture coordinate {texture}.");
+        return closest;
+    }
+
+    private static void FindClosestTexture(
+        MeshVertex[] vertices,
+        int count,
+        Vector2 texture,
+        ref MeshVertex closest,
+        ref float closestDistanceSquared)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            var distanceSquared = Vector2.DistanceSquared(vertices[i].TextureCoordinate, texture);
+            if (distanceSquared < closestDistanceSquared)
+            {
+                closest = vertices[i];
+                closestDistanceSquared = distanceSquared;
+            }
+        }
+    }
+
+    private static Vector3 ToPosition3(MeshVertex vertex) =>
+        new(vertex.Position, vertex.Depth);
 
     private static int AssertHingeVerticesAreStationary(MeshVertex[] vertices, int count, PageEdge hingeEdge)
     {

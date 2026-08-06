@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace PageCurl.Core;
 
-/// <summary>Builds a reusable, shaded cylinder-style page curl mesh.</summary>
+/// <summary>Builds a reusable, shaded developable page curl mesh.</summary>
 public static class PageCurlGeometry
 {
     private const float Epsilon = 0.0001f;
@@ -115,29 +115,27 @@ public static class PageCurlGeometry
 
         var freeEdge = ResolveFreeEdge(pose.HingeEdge, pose.FreeEdge, pose.TurnDirection);
         var hingeEdge = ResolveHingeEdge(pose.HingeEdge, freeEdge, pose.TurnDirection);
-        var localPosition = ToFreeLocal(pose.Position, pageSize, freeEdge);
-        var localDirection = ToFreeLocalVector(pose.Direction, freeEdge);
-        if (localDirection.LengthSquared() <= Epsilon)
+        var grabSource = pose.HasDragStart && IsFinite(pose.DragStart)
+            ? pose.DragStart
+            : EdgeCenter(freeEdge, pageSize);
+        var drag = grabSource - pose.Position;
+        if (drag.LengthSquared() <= Epsilon)
         {
-            WriteFlatPage(buffer, pageSize);
-            return;
+            drag = -pose.Direction;
         }
 
-        var direction = Vector2.Normalize(localDirection);
-        var angle = MathF.Atan2(direction.Y, direction.X);
-        var cos = MathF.Cos(angle);
-        var sin = MathF.Sin(angle);
-        var radius = MathF.Max(pose.Radius, 1f);
+        var direction = Vector2.Normalize(drag);
+        var axis = new Vector2(-direction.Y, direction.X);
+        var minimumRadius = MathF.Min(pageSize.X, pageSize.Y) * 0.06f;
+        var radius = MathF.Max(pose.Radius, minimumRadius);
+        var grabProjection = Vector2.Dot(grabSource, direction);
+        var requestedTravel = Vector2.Distance(grabSource, pose.Position);
+        var hingeProjection = MaximumEdgeProjection(hingeEdge, pageSize, direction);
+        var maximumArcLength = MathF.Max(0, grabProjection - hingeProjection);
+        radius = FitRadiusToTravel(maximumArcLength, requestedTravel, radius, minimumRadius);
         var curlLength = MathF.PI * radius;
-        var anchorOffset = GetAnchorOffset(
-            pose,
-            pageSize,
-            freeEdge,
-            localPosition,
-            cos,
-            sin,
-            radius,
-            curlLength);
+        var arcLength = MathF.Min(SolveArcLength(requestedTravel, radius), maximumArcLength);
+        var curlStart = grabProjection - arcLength;
         var columns = buffer.Columns;
         var rows = buffer.Rows;
 
@@ -149,31 +147,28 @@ public static class PageCurlGeometry
             {
                 var u = column / (float)columns;
                 var source = new Vector2(pageSize.X * u, sourceY);
-                var sourceLocal = ToFreeLocal(source, pageSize, freeEdge);
-                var local = Rotate(sourceLocal - localPosition, cos, -sin);
-                var localX = local.X;
-                var transformedX = localX;
+                var sourceProjection = Vector2.Dot(source, direction);
+                var axisProjection = Vector2.Dot(source, axis);
+                var distanceIntoCurl = sourceProjection - curlStart;
+                var transformedProjection = sourceProjection;
                 var depth = 0f;
                 var shade = 1f;
 
-                if (localX <= -curlLength)
+                if (distanceIntoCurl >= curlLength)
                 {
-                    transformedX = -(curlLength + localX);
+                    transformedProjection = curlStart - (distanceIntoCurl - curlLength);
                     depth = radius * 2f;
                     shade = 0.35f;
                 }
-                else if (localX < 0)
+                else if (distanceIntoCurl > 0)
                 {
-                    var theta = MathF.PI * (localX / curlLength);
-                    transformedX = radius * MathF.Sin(theta);
+                    var theta = distanceIntoCurl / radius;
+                    transformedProjection = curlStart + (radius * MathF.Sin(theta));
                     depth = radius - (radius * MathF.Cos(theta));
-                    shade = 0.1f + (0.9f * MathF.Sqrt(MathF.Max(0, MathF.Sin(theta) + 1f)));
+                    shade = 0.15f + (0.85f * MathF.Max(0, MathF.Cos(theta * 0.75f)));
                 }
 
-                var worldLocal = Rotate(new Vector2(transformedX, local.Y), cos, sin) + localPosition;
-                var curled = FromFreeLocal(worldLocal, pageSize, freeEdge) + anchorOffset;
-                var anchorWeight = HingeWeight(source, pageSize, hingeEdge);
-                var world = source + ((curled - source) * anchorWeight);
+                var world = (direction * transformedProjection) + (axis * axisProjection);
                 var texture = new Vector2(
                     Math.Clamp(source.X / pageSize.X, 0, 1),
                     Math.Clamp(source.Y / pageSize.Y, 0, 1));
@@ -218,37 +213,94 @@ public static class PageCurlGeometry
         }
     }
 
-    private static Vector2 GetAnchorOffset(
-        CurlPose pose,
-        Vector2 pageSize,
-        PageEdge freeEdge,
-        Vector2 localPosition,
-        float cos,
-        float sin,
-        float radius,
-        float curlLength)
+    private static float SolveArcLength(float screenTravel, float radius)
     {
-        if (!pose.HasDragStart || !IsFinite(pose.DragStart))
+        var halfTurnLength = MathF.PI * radius;
+        if (screenTravel >= halfTurnLength)
         {
-            return Vector2.Zero;
+            return (screenTravel + halfTurnLength) * 0.5f;
         }
 
-        var anchorSource = ToFreeLocal(pose.DragStart, pageSize, freeEdge);
-        var localAnchor = Rotate(anchorSource - localPosition, cos, -sin);
-        var transformedX = localAnchor.X;
-        if (localAnchor.X <= -curlLength)
+        var lower = 0f;
+        var upper = halfTurnLength;
+        for (var iteration = 0; iteration < 16; iteration++)
         {
-            transformedX = -(curlLength + localAnchor.X);
-        }
-        else if (localAnchor.X < 0)
-        {
-            var theta = MathF.PI * (localAnchor.X / curlLength);
-            transformedX = radius * MathF.Sin(theta);
+            var candidate = (lower + upper) * 0.5f;
+            var projectedTravel = candidate - (radius * MathF.Sin(candidate / radius));
+            if (projectedTravel < screenTravel)
+            {
+                lower = candidate;
+            }
+            else
+            {
+                upper = candidate;
+            }
         }
 
-        var worldLocal = Rotate(new Vector2(transformedX, localAnchor.Y), cos, sin) + localPosition;
-        var curledAnchor = FromFreeLocal(worldLocal, pageSize, freeEdge);
-        return pose.Position - curledAnchor;
+        return (lower + upper) * 0.5f;
+    }
+
+    private static float FitRadiusToTravel(
+        float availableArcLength,
+        float requestedTravel,
+        float preferredRadius,
+        float minimumRadius)
+    {
+        if (ProjectedTravel(availableArcLength, preferredRadius) >= requestedTravel)
+        {
+            return preferredRadius;
+        }
+
+        if (ProjectedTravel(availableArcLength, minimumRadius) <= requestedTravel)
+        {
+            return minimumRadius;
+        }
+
+        var lower = minimumRadius;
+        var upper = preferredRadius;
+        for (var iteration = 0; iteration < 16; iteration++)
+        {
+            var candidate = (lower + upper) * 0.5f;
+            if (ProjectedTravel(availableArcLength, candidate) > requestedTravel)
+            {
+                lower = candidate;
+            }
+            else
+            {
+                upper = candidate;
+            }
+        }
+
+        return (lower + upper) * 0.5f;
+    }
+
+    private static float ProjectedTravel(float arcLength, float radius)
+    {
+        var halfTurnLength = MathF.PI * radius;
+        return arcLength <= halfTurnLength
+            ? arcLength - (radius * MathF.Sin(arcLength / radius))
+            : (2f * arcLength) - halfTurnLength;
+    }
+
+    private static float MaximumEdgeProjection(PageEdge edge, Vector2 pageSize, Vector2 direction)
+    {
+        var (first, second) = EdgeEndpoints(edge, pageSize);
+        return MathF.Max(Vector2.Dot(first, direction), Vector2.Dot(second, direction));
+    }
+
+    private static (Vector2 First, Vector2 Second) EdgeEndpoints(PageEdge edge, Vector2 pageSize) => edge switch
+    {
+        PageEdge.Top => (Vector2.Zero, new Vector2(pageSize.X, 0)),
+        PageEdge.Right => (new Vector2(pageSize.X, 0), pageSize),
+        PageEdge.Bottom => (new Vector2(0, pageSize.Y), pageSize),
+        PageEdge.Left => (Vector2.Zero, new Vector2(0, pageSize.Y)),
+        _ => (Vector2.Zero, Vector2.Zero),
+    };
+
+    private static Vector2 EdgeCenter(PageEdge edge, Vector2 pageSize)
+    {
+        var (first, second) = EdgeEndpoints(edge, pageSize);
+        return (first + second) * 0.5f;
     }
 
     private static PageEdge ResolveFreeEdge(PageEdge hingeEdge, PageEdge freeEdge, PageTurnDirection direction)
@@ -323,15 +375,6 @@ public static class PageCurlGeometry
         _ => vector,
     };
 
-    private static float HingeWeight(Vector2 source, Vector2 pageSize, PageEdge hingeEdge) => hingeEdge switch
-    {
-        PageEdge.Left => source.X / pageSize.X,
-        PageEdge.Right => (pageSize.X - source.X) / pageSize.X,
-        PageEdge.Top => source.Y / pageSize.Y,
-        PageEdge.Bottom => (pageSize.Y - source.Y) / pageSize.Y,
-        _ => 1,
-    };
-
     private static bool IsPhysicalEdge(PageEdge edge) => edge is
         PageEdge.Top or PageEdge.Right or PageEdge.Bottom or PageEdge.Left;
 
@@ -399,9 +442,6 @@ public static class PageCurlGeometry
         buffer.FrontVertexCount = 6;
         buffer.BackVertexCount = 0;
     }
-
-    private static Vector2 Rotate(Vector2 value, float cos, float sin) =>
-        new((value.X * cos) - (value.Y * sin), (value.X * sin) + (value.Y * cos));
 
     private static bool IsValidPageSize(Vector2 value) =>
         IsFinite(value) && value.X > 0 && value.Y > 0;
