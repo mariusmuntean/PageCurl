@@ -12,7 +12,7 @@ timestamp: 2026-07-18T00:00:00Z
 # Scope
 
 This record covers the iOS simulator gates from
-[`knowledge/project/release-readiness.md`](../../knowledge/project/release-readiness.md).
+[`docs/release-readiness.md`](../release-readiness.md).
 It separates repeatable simulator evidence from physical-device and store-signing
 work that cannot be proven by this local run.
 

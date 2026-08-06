@@ -9,7 +9,7 @@ The matrix summarizes the latest recorded local evidence. Detailed commands,
 dates, screenshots, and unverified gates belong in
 [`docs/validation/ios-release-readiness.md`](validation/ios-release-readiness.md)
 and the release criteria belong in
-[`knowledge/project/release-readiness.md`](../knowledge/project/release-readiness.md).
+[`release-readiness.md`](release-readiness.md).
 
 | Layer/target | Minimum | Current status | Evidence |
 | --- | --- | --- | --- |

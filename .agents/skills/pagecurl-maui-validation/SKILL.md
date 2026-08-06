@@ -9,12 +9,12 @@ Read only the relevant project references before choosing commands:
 
 - `README.md`
 - `global.json`
-- `knowledge/project/testing.md`
-- `knowledge/project/workarounds.md`
+- `docs/testing.md`
+- `docs/platform-notes.md`
 - `docs/validation/ios-release-readiness.md` for simulator work
 
 The command matrix below is the authoritative routing for this repository.
-Project knowledge explains why a check matters; it should not duplicate these
+Project documentation explains why a check matters; it should not duplicate these
 commands.
 
 ## Route changes to checks
@@ -50,4 +50,4 @@ set.
 
 ## Report
 
-End the run with the commands executed, the status of each command, evidence paths, environment blockers, and any project knowledge or validation record that needs updating.
+End the run with the commands executed, the status of each command, evidence paths, environment blockers, and any project documentation or validation record that needs updating.

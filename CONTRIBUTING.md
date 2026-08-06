@@ -13,9 +13,8 @@ and the public API understandable to a MAUI application developer.
    core project.
 4. Run the core test runner and the builds for the target frameworks you can
    install locally.
-5. Update the relevant concept in [`knowledge/`](knowledge/index.md) when a
-   design decision, workaround, platform limitation, or release assumption
-   changes.
+5. Update the relevant page under [`docs/`](docs/index.md) when behavior, a
+   design decision, platform limitation, or release assumption changes.
 6. Open a pull request. Keep it draft while device testing or visual review is
    still outstanding.
 
@@ -40,8 +39,8 @@ physical device.
   gestures must share the same completion path.
 - Avoid per-frame allocations and unbounded mesh growth. If a visual improvement
   needs more work, measure it and expose a deliberate option.
-- Preserve unknown YAML frontmatter fields in OKF documents and use normal
-  Markdown links between concepts.
+- Keep durable documentation current and use relative Markdown links inside
+  the repository.
 
 ## Review checklist
 
@@ -49,7 +48,7 @@ Reviewers should look for behavior at the edges of a page, cancellation and
 re-entry during settling, multi-touch ownership, image disposal, allocations in
 the paint loop, accessibility alternatives, reduced-motion behavior, theme and
 safe-area layout, and platform-specific build or workload assumptions. See
-[`knowledge/project/testing.md`](knowledge/project/testing.md),
+[`docs/testing.md`](docs/testing.md),
 [`docs/compatibility.md`](docs/compatibility.md), and
-[`knowledge/project/release-readiness.md`](knowledge/project/release-readiness.md)
+[`docs/release-readiness.md`](docs/release-readiness.md)
 for the current validation and release gates.

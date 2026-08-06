@@ -6,7 +6,7 @@ tested without a device or UI toolkit:
 
 * `src/PageCurl.Core` targets `net10.0` and contains the allocation-free drag
   state machine, spring settling, edge-aware hinge selection, aspect-fit
-  viewport math, and cylinder page mesh.
+  viewport math, and developable cylinder page mesh.
 * `src/PageCurl.Maui` exposes `PageTurnView`, a GPU-backed `SKGLView` that
   draws the mesh with SkiaSharp texture coordinates and per-vertex shading. It
   supports `LockedEdge` (`Auto`, `Top`, `Right`, `Bottom`, or `Left`) and
@@ -98,7 +98,8 @@ for existing callers. `AspectFit` keeps source images undistorted and maps
 touch coordinates into the same fitted content rectangle used by the mesh.
 During a drag, the renderer keeps the grabbed edge point or corner attached to
 the pointer until the cylinder reaches its physical curl limit; beyond that
-limit the pose is bounded rather than stretching without end.
+limit the pose stays bounded instead of stretching. The default material is a
+stiff sheet: it curls without cloth-like lag or permanent fold state.
 Set `PreviousPageImage` when backward turns should reveal a different page;
 when it is not set, the control falls back to `UnderPageImage` for compatibility.
 
@@ -125,14 +126,15 @@ The view uses `SKGLView` and invalidates only while a finger is moving or a
 release is settling. Mesh arrays, Skia point arrays and color arrays are
 allocated once. Image shaders are cached per `SKImage`; the settle animation
 uses a critically damped spring and a single 60 Hz dispatcher timer. The
-default mesh is 24 columns by 24 rows (1,152 triangles); increase it only if a
-larger page or closer inspection warrants the extra work.
+default mesh is 48 columns by 48 rows. Crossing triangles are clipped at the
+analytic front/back tangent, so the visible seam does not stair-step along the
+mesh grid.
 
-The geometry is a bounded analytic cylinder approximation whose radius relaxes
-near the start and end of a turn and tightens around the midpoint. It has no
-z-buffer dependency, so front and back triangle streams are depth-sorted and
-drawn in two passes. The same approach works on Android OpenGL ES, iOS, Mac
-Catalyst and Windows through the SkiaSharp MAUI handlers.
+The geometry is a bounded, developable cylinder approximation whose preferred
+radius relaxes near the endpoints and tightens around the midpoint. It has no
+z-buffer dependency, so the outgoing front and turned underside are
+depth-sorted and drawn in two passes. The same approach works on Android, iOS,
+Mac Catalyst, and Windows through the SkiaSharp MAUI handlers.
 
 ## Verification
 
@@ -165,10 +167,7 @@ physical-device limitations, see
 The project is released under the [MIT License](LICENSE) with the policy in
 [`SUPPORT.md`](SUPPORT.md).
 
-## Project knowledge
+## Documentation
 
-The [`knowledge/`](knowledge/index.md) directory is an Open Knowledge Format
-(OKF) bundle for this project. It captures the goal, architecture, rendering
-trade-offs, workarounds, testing strategy, release gates, and roadmap as linked
-Markdown concepts so the reasoning remains easy to inspect and update with the
-code.
+The current architecture, rendering contract, lifecycle rules, platform notes,
+testing strategy, and release gates live under [`docs/`](docs/index.md).
