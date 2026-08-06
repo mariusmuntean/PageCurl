@@ -14,7 +14,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>PageCurl.Maui</PackageId>
     <Title>PageCurl.Maui</Title>
-    <Description>A high-performance interactive cylinder page curl for .NET MAUI.</Description>
+    <Description>A high-performance interactive stiff-paper page curl for .NET MAUI.</Description>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
@@ -30,5 +30,20 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="PageContentSnapshotter.cs" />
+    <Compile Remove="Platforms/Android/PageContentSnapshotter.Android.cs" />
+    <Compile Remove="Platforms/Apple/PageContentSnapshotter.Apple.cs" />
+    <Compile Remove="Platforms/Windows/PageContentSnapshotter.Windows.cs" />
+    <Compile Include="PageContentSnapshotter.cs"
+             Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == ''" />
+    <Compile Include="Platforms/Android/PageContentSnapshotter.Android.cs"
+             Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'" />
+    <Compile Include="Platforms/Apple/PageContentSnapshotter.Apple.cs"
+             Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" />
+    <Compile Include="Platforms/Windows/PageContentSnapshotter.Windows.cs"
+             Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'" />
   </ItemGroup>
 </Project>
