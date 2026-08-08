@@ -9,6 +9,7 @@ internal static class PageSpreadViewTests
     {
         await Refresh_captures_current_and_destination_pages();
         await Destination_content_and_snapshots_control_navigation_availability();
+        Overlay_surface_preserves_the_stationary_page();
     }
 
     private static async Task Refresh_captures_current_and_destination_pages()
@@ -50,6 +51,13 @@ internal static class PageSpreadViewTests
 
         TestAssert.True(spread.CanTurnForward);
         TestAssert.True(spread.CanTurnBackward);
+    }
+
+    private static void Overlay_surface_preserves_the_stationary_page()
+    {
+        var spread = new PageSpreadView(new CountingSnapshotter());
+
+        TestAssert.Equal(0f, spread.Overlay.SurfaceColor.Alpha);
     }
 
     private sealed class CountingSnapshotter : IPageContentSnapshotter

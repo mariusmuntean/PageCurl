@@ -208,6 +208,7 @@ public sealed class PageSpreadView : Grid
             Opacity = 0,
             InputTransparent = true,
             ContentScale = PageContentScale.AspectFit,
+            SurfaceColor = Colors.Transparent,
         };
         Grid.SetColumnSpan(Overlay, 2);
         _spreadFrame.Children.Add(Overlay);
