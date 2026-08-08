@@ -31,6 +31,8 @@ internal static class PageCurlGeometryTests
         Developable_surface_preserves_material_triangle_lengths();
         Triangle_streams_follow_surface_orientation();
         Front_and_back_streams_share_a_straight_tangent_seam();
+        Cylinder_backside_triangles_have_smooth_light_transitions();
+        Cylinder_backside_retains_readable_ambient_light();
         Every_pinned_corner_builds_a_developable_cone();
     }
 
@@ -531,6 +533,54 @@ internal static class PageCurlGeometryTests
             var offset = point - start;
             var distance = MathF.Abs((offset.X * seamDirection.Y) - (offset.Y * seamDirection.X));
             TestAssert.True(distance <= 0.001f, $"Tangent seam deviates by {distance:F4} pixels.");
+        }
+    }
+
+    private static void Cylinder_backside_retains_readable_ambient_light()
+    {
+        var options = new PageCurlOptions();
+        var buffer = new PageMeshBuffer(options);
+        var pose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, PageSize.Y * 0.5f),
+            new Vector2(12, PageSize.Y * 0.5f),
+            PageTurnDirection.Forward,
+            0.88f,
+            options);
+
+        PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+        TestAssert.True(buffer.BackVertexCount > 0);
+        foreach (var vertex in buffer.BackVertices.AsSpan(0, buffer.BackVertexCount))
+        {
+            TestAssert.True(vertex.Shade >= 0.54f, $"Backside shade {vertex.Shade:F3} is too dark.");
+        }
+    }
+
+    private static void Cylinder_backside_triangles_have_smooth_light_transitions()
+    {
+        var options = new PageCurlOptions();
+        var buffer = new PageMeshBuffer(options);
+        var pose = PageCurlGeometry.ComputePose(
+            PageSize,
+            new Vector2(PageSize.X, 0),
+            new Vector2(32, 58),
+            PageTurnDirection.Forward,
+            0.68f,
+            options);
+
+        PageCurlGeometry.Build(buffer, PageSize, pose, options);
+
+        for (var index = 0; index < buffer.BackVertexCount; index += 3)
+        {
+            var first = buffer.BackVertices[index].Shade;
+            var second = buffer.BackVertices[index + 1].Shade;
+            var third = buffer.BackVertices[index + 2].Shade;
+            var minimum = MathF.Min(first, MathF.Min(second, third));
+            var maximum = MathF.Max(first, MathF.Max(second, third));
+            TestAssert.True(
+                maximum - minimum <= 0.08f,
+                $"Backside triangle shade changes by {maximum - minimum:F3}.");
         }
     }
 

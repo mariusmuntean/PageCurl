@@ -134,9 +134,9 @@ public sealed class PageCurlOptions
     private float _pageChangeThreshold = 0.5f;
     private float _flickVelocityThreshold = 1.5f;
 
-    public int MeshColumns { get; init; } = 48;
+    public int MeshColumns { get; init; } = 64;
 
-    public int MeshRows { get; init; } = 48;
+    public int MeshRows { get; init; } = 64;
 
     /// <summary>Base cylinder radius as a fraction of page width.</summary>
     public float RadiusScale { get; init; } = 1f / 3f;

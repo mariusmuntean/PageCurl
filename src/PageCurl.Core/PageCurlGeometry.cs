@@ -172,14 +172,14 @@ public static class PageCurlGeometry
                 {
                     transformedProjection = curlStart - (distanceIntoCurl - curlLength);
                     depth = radius * 2f;
-                    shade = 0.35f;
+                    shade = ComputeCylinderShade(MathF.PI);
                 }
                 else if (distanceIntoCurl > 0)
                 {
                     var theta = distanceIntoCurl / radius;
                     transformedProjection = curlStart + (radius * MathF.Sin(theta));
                     depth = radius - (radius * MathF.Cos(theta));
-                    shade = 0.15f + (0.85f * MathF.Max(0, MathF.Cos(theta * 0.75f)));
+                    shade = ComputeCylinderShade(theta);
                 }
 
                 var world = (direction * transformedProjection) + (axis * axisProjection);
@@ -726,7 +726,7 @@ public static class PageCurlGeometry
         var source = new Vector2(texture.X * pageSize.X, texture.Y * pageSize.Y);
         var axisProjection = Vector2.Dot(source, axis);
         var tangentProjection = curlStart + radius;
-        var tangentShade = 0.15f + (0.85f * MathF.Cos(MathF.PI * 0.375f));
+        var tangentShade = ComputeCylinderShade(MathF.PI * 0.5f);
         var intersection = new PageMeshBuffer.GridVertex(
             (direction * tangentProjection) + (axis * axisProjection),
             texture,
@@ -736,6 +736,9 @@ public static class PageCurlGeometry
         buffer.Grid[gridVertexCount] = intersection;
         return gridVertexCount++;
     }
+
+    private static float ComputeCylinderShade(float theta) =>
+        0.55f + (0.45f * MathF.Abs(MathF.Cos(theta * 0.5f)));
 
     private static void AddTriangleOrder(
         PageMeshBuffer buffer,
