@@ -26,7 +26,6 @@ public partial class MainPage : ContentPage
         [ShowcaseScene.Single] = new(8),
         [ShowcaseScene.Content] = new(8),
         [ShowcaseScene.Backside] = new(8),
-        [ShowcaseScene.CornerPin] = new(8),
     };
     private readonly PageSpreadNavigationState _spreadNavigation = new(8);
     private readonly PageTurnHaptics _haptics = new();
@@ -34,10 +33,10 @@ public partial class MainPage : ContentPage
     private ImagePageView? _imagePage;
     private InteractivePageView? _interactivePage;
     private VideoPosterPageView? _videoPage;
+    private CustomBacksideView? _customBacksidePage;
     private ShowcaseScene _scene;
     private ShowcaseContentKind _contentKind = ShowcaseContentKind.Image;
-    private PageBacksideMode _backsideMode = PageBacksideMode.MirroredFront;
-    private PageAnchor _cornerAnchor = PageAnchor.TopLeft;
+    private PageBacksideMode _backsideMode = PageBacksideMode.CustomContent;
     private bool _isCompact;
     private bool _snapshotRetryQueued;
 
@@ -78,6 +77,7 @@ public partial class MainPage : ContentPage
         _interactivePage = null;
         _videoPage?.Dispose();
         _videoPage = null;
+        _customBacksidePage = null;
         _pageSet?.Dispose();
         _pageSet = null;
         base.OnDisappearing();
@@ -104,26 +104,21 @@ public partial class MainPage : ContentPage
         SpreadPageView.IsVisible = scene == ShowcaseScene.Spread;
         ContentPageView.IsVisible = scene == ShowcaseScene.Content;
         BacksidePageView.IsVisible = scene == ShowcaseScene.Backside;
-        CornerPageView.IsVisible = scene == ShowcaseScene.CornerPin;
-        CornerPinMarker.IsVisible = scene == ShowcaseScene.CornerPin;
         ContentOptions.IsVisible = scene == ShowcaseScene.Content;
         BacksideOptions.IsVisible = scene == ShowcaseScene.Backside;
-        CornerOptions.IsVisible = scene == ShowcaseScene.CornerPin;
-        AnchorOptions.IsVisible = scene is not ShowcaseScene.Spread and not ShowcaseScene.CornerPin;
+        AnchorOptions.IsVisible = scene is not ShowcaseScene.Spread;
         SceneTitleLabel.Text = scene switch
         {
             ShowcaseScene.Single => "One page",
             ShowcaseScene.Spread => "Open spread",
             ShowcaseScene.Content => "Live content",
             ShowcaseScene.Backside => "The other side",
-            ShowcaseScene.CornerPin => "Pinned corner",
             _ => "Page curl",
         };
         OptionsTitleLabel.Text = scene switch
         {
             ShowcaseScene.Content => "Content + capture",
             ShowcaseScene.Backside => "Backside material",
-            ShowcaseScene.CornerPin => "Corner geometry",
             ShowcaseScene.Spread => "Spread behaviour",
             _ => "Page behaviour",
         };
@@ -132,7 +127,6 @@ public partial class MainPage : ContentPage
             ShowcaseScene.Spread => "Drag the outer edge of either page.",
             ShowcaseScene.Content => "Use the live view, then curl from its edge.",
             ShowcaseScene.Backside => "Curl far enough to inspect the underside.",
-            ShowcaseScene.CornerPin => "The marked corner stays pinned. Drag elsewhere.",
             _ => "Drag from any free edge or corner.",
         };
         DetailLabel.Text = scene switch
@@ -140,7 +134,6 @@ public partial class MainPage : ContentPage
             ShowcaseScene.Spread => "Forward and backward turns share one completion path.",
             ShowcaseScene.Content => "MAUI content remains interactive while the page is flat.",
             ShowcaseScene.Backside => "Mirror, color, or supply another MAUI view.",
-            ShowcaseScene.CornerPin => "The paper wraps a developable cone without stretching.",
             _ => "The page follows the pointer without stretching.",
         };
 
@@ -167,7 +160,6 @@ public partial class MainPage : ContentPage
             ShowcaseScene.Spread => SpreadPageView.TryTurnBackward(),
             ShowcaseScene.Content => ContentPageView.TryTurn(direction),
             ShowcaseScene.Backside => BacksidePageView.TryTurn(direction),
-            ShowcaseScene.CornerPin => CornerPageView.TryTurn(direction),
             _ => false,
         };
         StatusLabel.Text = started ? "Turning" : "Not available";
@@ -231,7 +223,6 @@ public partial class MainPage : ContentPage
         SpreadPageView.PageChangeThreshold = threshold;
         ContentPageView.PageChangeThreshold = threshold;
         BacksidePageView.PageChangeThreshold = threshold;
-        CornerPageView.PageChangeThreshold = threshold;
     }
 
     private void OnFlickToggled(object? sender, ToggledEventArgs e)
@@ -240,7 +231,6 @@ public partial class MainPage : ContentPage
         SpreadPageView.FlickEnabled = e.Value;
         ContentPageView.FlickEnabled = e.Value;
         BacksidePageView.FlickEnabled = e.Value;
-        CornerPageView.FlickEnabled = e.Value;
     }
 
     private void OnRatioChanged(object? sender, EventArgs e)
@@ -254,7 +244,6 @@ public partial class MainPage : ContentPage
         SinglePageView.PageAspectRatio = ratio;
         ContentPageView.PageAspectRatio = ratio;
         BacksidePageView.PageAspectRatio = ratio;
-        CornerPageView.PageAspectRatio = ratio;
         SpreadPageView.PageAspectRatio = ratio > 0 ? ratio : 0.75f;
     }
 
@@ -264,7 +253,6 @@ public partial class MainPage : ContentPage
         SpreadPageView.ReduceMotion = e.Value;
         ContentPageView.ReduceMotion = e.Value;
         BacksidePageView.ReduceMotion = e.Value;
-        CornerPageView.ReduceMotion = e.Value;
     }
 
     private void OnHapticsToggled(object? sender, ToggledEventArgs e)
@@ -295,19 +283,6 @@ public partial class MainPage : ContentPage
             BacksidePageView.BacksideMode = mode;
             UpdateSelectionStyles();
             QueueSnapshotRefresh();
-        }
-    }
-
-    private void OnCornerPinClicked(object? sender, EventArgs e)
-    {
-        if (sender is Button { CommandParameter: string value }
-            && Enum.TryParse<PageAnchor>(value, out var anchor))
-        {
-            _cornerAnchor = anchor;
-            CornerPageView.LockedAnchor = anchor;
-            PositionCornerMarker(anchor);
-            UpdateSelectionStyles();
-            StatusLabel.Text = $"{FormatAnchor(anchor)} pinned";
         }
     }
 
@@ -446,6 +421,7 @@ public partial class MainPage : ContentPage
         _interactivePage = new InteractivePageView();
         _interactivePage.ContentChanged += OnInteractiveContentChanged;
         _videoPage = new VideoPosterPageView();
+        _customBacksidePage = new CustomBacksideView();
     }
 
     private async void OnInteractiveContentChanged(object? sender, EventArgs e)
@@ -481,10 +457,6 @@ public partial class MainPage : ContentPage
                 break;
             case ShowcaseScene.Backside:
                 UpdateBacksideScene();
-                break;
-            case ShowcaseScene.CornerPin:
-                SetImagePage(CornerPageView, _navigation[_scene]);
-                PositionCornerMarker(_cornerAnchor);
                 break;
         }
 
@@ -533,7 +505,7 @@ public partial class MainPage : ContentPage
     {
         var navigation = _navigation[ShowcaseScene.Backside];
         BacksidePageView.FrontContent = CreatePageView(navigation.PageIndex);
-        BacksidePageView.BackContent = new CustomBacksideView();
+        BacksidePageView.BackContent = _customBacksidePage;
         BacksidePageView.BacksideMode = _backsideMode;
         BacksidePageView.BacksideColor = Color.FromArgb("#D5CBAF");
         BacksidePageView.UnderPageImage = _pageSet!.Pages[navigation.GetUnderPageIndex(PageTurnDirection.Forward)];
@@ -628,7 +600,6 @@ public partial class MainPage : ContentPage
         SetSceneButtonStyle(SpreadSceneButton, MobileSpreadSceneButton, ShowcaseScene.Spread, normalScene, selectedScene);
         SetSceneButtonStyle(ContentSceneButton, MobileContentSceneButton, ShowcaseScene.Content, normalScene, selectedScene);
         SetSceneButtonStyle(BacksideSceneButton, MobileBacksideSceneButton, ShowcaseScene.Backside, normalScene, selectedScene);
-        SetSceneButtonStyle(CornerSceneButton, MobileCornerSceneButton, ShowcaseScene.CornerPin, normalScene, selectedScene);
 
         var segment = (Style)Application.Current.Resources["SegmentButton"];
         var selected = (Style)Application.Current.Resources["CobaltButton"];
@@ -638,10 +609,6 @@ public partial class MainPage : ContentPage
         MirrorBackButton.Style = _backsideMode == PageBacksideMode.MirroredFront ? selected : segment;
         ColorBackButton.Style = _backsideMode == PageBacksideMode.SolidColor ? selected : segment;
         CustomBackButton.Style = _backsideMode == PageBacksideMode.CustomContent ? selected : segment;
-        TopLeftPinButton.Style = _cornerAnchor == PageAnchor.TopLeft ? selected : segment;
-        TopRightPinButton.Style = _cornerAnchor == PageAnchor.TopRight ? selected : segment;
-        BottomLeftPinButton.Style = _cornerAnchor == PageAnchor.BottomLeft ? selected : segment;
-        BottomRightPinButton.Style = _cornerAnchor == PageAnchor.BottomRight ? selected : segment;
     }
 
     private void SetSceneButtonStyle(
@@ -655,35 +622,20 @@ public partial class MainPage : ContentPage
         mobile.Style = _scene == scene ? selected : normal;
     }
 
-    private void PositionCornerMarker(PageAnchor anchor)
-    {
-        CornerPinMarker.HorizontalOptions = anchor is PageAnchor.TopRight or PageAnchor.BottomRight
-            ? LayoutOptions.End
-            : LayoutOptions.Start;
-        CornerPinMarker.VerticalOptions = anchor is PageAnchor.BottomLeft or PageAnchor.BottomRight
-            ? LayoutOptions.End
-            : LayoutOptions.Start;
-        CornerPinMarker.Margin = new Thickness(18);
-    }
-
     private void CancelAllInteractions()
     {
         SinglePageView.CancelInteraction();
         ContentPageView.CancelInteraction();
         BacksidePageView.CancelInteraction();
-        CornerPageView.CancelInteraction();
         SpreadPageView.Overlay.CancelInteraction();
     }
 
     private void ClearAllContent()
     {
-        foreach (var view in new[] { SinglePageView, CornerPageView })
-        {
-            view.FrontImage = null;
-            view.BackImage = null;
-            view.UnderPageImage = null;
-            view.PreviousPageImage = null;
-        }
+        SinglePageView.FrontImage = null;
+        SinglePageView.BackImage = null;
+        SinglePageView.UnderPageImage = null;
+        SinglePageView.PreviousPageImage = null;
 
         ContentPageView.FrontContent = null;
         ContentPageView.BackContent = null;

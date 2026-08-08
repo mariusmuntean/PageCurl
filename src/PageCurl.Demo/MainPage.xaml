@@ -26,7 +26,6 @@
                         <Button x:Name="SpreadSceneButton" Text="02  Spread" CommandParameter="Spread" Clicked="OnSceneClicked" />
                         <Button x:Name="ContentSceneButton" Text="03  Content" CommandParameter="Content" Clicked="OnSceneClicked" />
                         <Button x:Name="BacksideSceneButton" Text="04  Backside" CommandParameter="Backside" Clicked="OnSceneClicked" />
-                        <Button x:Name="CornerSceneButton" Text="05  Corner pin" CommandParameter="CornerPin" Clicked="OnSceneClicked" />
                     </VerticalStackLayout>
                     <Label Grid.Row="2" Text="Drag slowly or flick. Every scene uses the same completion event." Style="{StaticResource QuietText}" Margin="10" />
                 </Grid>
@@ -68,28 +67,6 @@
                         PageTurnCompleted="OnPageTurnCompleted"
                         PageChangeThresholdCrossed="OnThresholdCrossed"
                         SnapshotFailed="OnSnapshotFailed" />
-                    <curl:PageTurnView
-                        x:Name="CornerPageView"
-                        IsVisible="False"
-                        ContentScale="AspectFit"
-                        LockedAnchor="TopLeft"
-                        SurfaceColor="{AppThemeBinding Light={StaticResource StageLight}, Dark={StaticResource StageDark}}"
-                        PageTurnCompleted="OnPageTurnCompleted"
-                        PageChangeThresholdCrossed="OnThresholdCrossed"
-                        SemanticProperties.Description="Page pinned at one corner. Drag another edge or corner." />
-
-                    <Border
-                        x:Name="CornerPinMarker"
-                        IsVisible="False"
-                        WidthRequest="16"
-                        HeightRequest="16"
-                        BackgroundColor="{StaticResource Cobalt}"
-                        Stroke="White"
-                        StrokeThickness="3"
-                        StrokeShape="RoundRectangle 8"
-                        HorizontalOptions="Start"
-                        VerticalOptions="Start"
-                        InputTransparent="True" />
                 </Grid>
             </Border>
 
@@ -152,16 +129,6 @@
                                 </Grid>
                             </VerticalStackLayout>
 
-                            <VerticalStackLayout x:Name="CornerOptions" IsVisible="False" Spacing="7">
-                                <Label Text="PINNED CORNER" Style="{StaticResource Eyebrow}" />
-                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="5" RowSpacing="5">
-                                    <Button x:Name="TopLeftPinButton" Text="Top left" CommandParameter="TopLeft" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
-                                    <Button x:Name="TopRightPinButton" Grid.Column="1" Text="Top right" CommandParameter="TopRight" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
-                                    <Button x:Name="BottomLeftPinButton" Grid.Row="1" Text="Bottom left" CommandParameter="BottomLeft" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
-                                    <Button x:Name="BottomRightPinButton" Grid.Row="1" Grid.Column="1" Text="Bottom right" CommandParameter="BottomRight" Style="{StaticResource SegmentButton}" Clicked="OnCornerPinClicked" />
-                                </Grid>
-                            </VerticalStackLayout>
-
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Text="Haptics" FontAttributes="Bold" FontSize="13" />
@@ -211,7 +178,6 @@
                         <Button x:Name="MobileSpreadSceneButton" Text="Spread" CommandParameter="Spread" Clicked="OnSceneClicked" />
                         <Button x:Name="MobileContentSceneButton" Text="Content" CommandParameter="Content" Clicked="OnSceneClicked" />
                         <Button x:Name="MobileBacksideSceneButton" Text="Backside" CommandParameter="Backside" Clicked="OnSceneClicked" />
-                        <Button x:Name="MobileCornerSceneButton" Text="Corner" CommandParameter="CornerPin" Clicked="OnSceneClicked" />
                     </HorizontalStackLayout>
                 </ScrollView>
                 <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto" ColumnSpacing="7">

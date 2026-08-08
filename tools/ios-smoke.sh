@@ -40,7 +40,6 @@ assert_demo_foreground() {
             && echo "$ui" | rg -q '"AXLabel":"Spread"' \
             && echo "$ui" | rg -q '"AXLabel":"Content"' \
             && echo "$ui" | rg -q '"AXLabel":"Backside"' \
-            && echo "$ui" | rg -q '"AXLabel":"Corner"' \
             && echo "$ui" | rg -q '"AXLabel":"Options"' \
             && ! echo "$ui" | rg -q '"AXLabel":"(↖|↗|↙|↘|‹|›|⌃  TOP EDGE  ⌃|⌄  BOTTOM EDGE  ⌄)"'; then
             return 0
@@ -104,6 +103,9 @@ capture_feature_scenes() {
 
     tap_label "Content"
     wait_for_label "Live content"
+    wait_for_label "Big Buck Bunny standing beside a tree"
+    sleep 1
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/content-image.png" >/dev/null
     tap_label "Options"
     wait_for_label "View"
     tap_label "View"
@@ -118,25 +120,14 @@ capture_feature_scenes() {
     wait_for_label "Video"
     tap_label "Video"
     tap_label "Close"
-    wait_for_label "Looping local video page with snapshot poster fallback"
+    wait_for_label "Looping Big Buck Bunny excerpt with a still-image fallback"
     sleep 2
     xcrun simctl io "$DEVICE" screenshot "$OUTPUT/content-video.png" >/dev/null
 
     tap_label "Backside"
     wait_for_label "The other side"
-    tap_label "Options"
-    wait_for_label "View"
-    tap_label "View"
-    tap_label "Close"
     sleep 1
     xcrun simctl io "$DEVICE" screenshot "$OUTPUT/backside.png" >/dev/null
-
-    tap_label "Corner"
-    wait_for_label "Pinned corner"
-    tap_label "Options"
-    wait_for_label "Top left"
-    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/corner.png" >/dev/null
-    tap_label "Close"
 
     tap_label "Single"
     wait_for_label "One page"
@@ -181,4 +172,4 @@ echo "Device: $DEVICE"
 echo "Device record:"
 xcrun simctl list devices | awk -v id="$DEVICE" 'index($0, id) && record == "" { record = $0 } END { print record }'
 echo "App: $APP"
-echo "Screenshots: $OUTPUT/light.png $OUTPUT/dark.png $OUTPUT/options.png $OUTPUT/spread.png $OUTPUT/content-view.png $OUTPUT/content-video.png $OUTPUT/backside.png $OUTPUT/corner.png"
+echo "Screenshots: $OUTPUT/light.png $OUTPUT/dark.png $OUTPUT/options.png $OUTPUT/spread.png $OUTPUT/content-image.png $OUTPUT/content-view.png $OUTPUT/content-video.png $OUTPUT/backside.png"

@@ -33,7 +33,7 @@ internal sealed class CustomBacksideView : ContentView
                     {
                         new Label
                         {
-                            Text = "CUSTOM BACK",
+                            Text = "CUSTOM BACKSIDE",
                             FontSize = 10,
                             FontAttributes = FontAttributes.Bold,
                             CharacterSpacing = 1.7,
@@ -41,7 +41,7 @@ internal sealed class CustomBacksideView : ContentView
                         },
                         new Label
                         {
-                            Text = "A completely different MAUI view.",
+                            Text = "Notes, credits, or an entirely different MAUI view.",
                             FontSize = 25,
                             FontAttributes = FontAttributes.Bold,
                             TextColor = Color.FromArgb("#F4F3E7"),

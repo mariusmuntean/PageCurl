@@ -6,7 +6,6 @@ internal enum ShowcaseScene
     Spread,
     Content,
     Backside,
-    CornerPin,
 }
 
 internal enum ShowcaseContentKind
