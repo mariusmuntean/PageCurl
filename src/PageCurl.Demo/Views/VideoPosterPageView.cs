@@ -12,25 +12,22 @@ internal sealed class VideoPosterPageView : ContentView, IDisposable
 
         var poster = new Grid
         {
-            BackgroundColor = Color.FromArgb("#E9E4D8"),
+            BackgroundColor = Colors.Black,
             Children =
             {
-                new BoxView
+                new Image
                 {
-                    Color = Color.FromArgb("#3157D5"),
-                    WidthRequest = 96,
-                    HeightRequest = 96,
-                    CornerRadius = 48,
-                    HorizontalOptions = LayoutOptions.Center,
-                    VerticalOptions = LayoutOptions.Center,
+                    Source = "big_buck_bunny_still.jpg",
+                    Aspect = Aspect.AspectFit,
                 },
                 new Label
                 {
-                    Text = "PLAY",
-                    FontSize = 11,
+                    Text = "▶",
+                    FontSize = 34,
                     FontAttributes = FontAttributes.Bold,
-                    CharacterSpacing = 1.4,
                     TextColor = Colors.White,
+                    BackgroundColor = Color.FromArgb("#803157D5"),
+                    Padding = new Thickness(15, 8),
                     HorizontalOptions = LayoutOptions.Center,
                     VerticalOptions = LayoutOptions.Center,
                 },
@@ -41,11 +38,11 @@ internal sealed class VideoPosterPageView : ContentView, IDisposable
         {
             _media = new MediaElement
             {
-                Source = MediaSource.FromResource("paper-motion.mp4"),
+                Source = MediaSource.FromResource("big_buck_bunny_demo.mp4"),
                 ShouldAutoPlay = true,
                 ShouldLoopPlayback = true,
                 ShouldShowPlaybackControls = false,
-                Aspect = Aspect.AspectFill,
+                Aspect = Aspect.AspectFit,
                 InputTransparent = true,
             };
         }
@@ -75,8 +72,8 @@ internal sealed class VideoPosterPageView : ContentView, IDisposable
                     new Label
                     {
                         Text = usesPosterFallback
-                            ? "Poster fallback on this desktop; the bundled clip plays on mobile."
-                            : "A bundled local clip, with a capturable poster underneath.",
+                            ? "This device uses the bundled still when video playback is unavailable."
+                            : "Big Buck Bunny · Blender Foundation · CC BY 3.0",
                         FontSize = 13,
                         TextColor = Color.FromArgb("#1C211F"),
                     },
@@ -92,7 +89,7 @@ internal sealed class VideoPosterPageView : ContentView, IDisposable
 
         layers.Children.Add(caption);
         Content = layers;
-        SemanticProperties.SetDescription(this, "Looping local video page with snapshot poster fallback");
+        SemanticProperties.SetDescription(this, "Looping Big Buck Bunny excerpt with a still-image fallback");
     }
 
     public void Dispose()
@@ -120,9 +117,7 @@ internal sealed class VideoPosterPageView : ContentView, IDisposable
 
     private static bool SupportsVideoPlayback()
     {
-#if MACCATALYST
-        return false;
-#elif ANDROID
+#if ANDROID
         return OperatingSystem.IsAndroidVersionAtLeast(26);
 #else
         return true;

@@ -18,7 +18,7 @@ public static class MauiProgram
         {
             builder.UseMauiCommunityToolkitMediaElement();
         }
-#elif !MACCATALYST
+#else
         builder.UseMauiCommunityToolkitMediaElement();
 #endif
 
