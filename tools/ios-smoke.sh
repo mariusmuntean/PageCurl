@@ -20,7 +20,11 @@ fi
 
 OUTPUT="${IOS_SMOKE_OUTPUT:-$ROOT/.artifacts/ios-smoke/$(date -u +%Y%m%dT%H%M%SZ)}"
 APP="$ROOT/src/PageCurl.Demo/bin/Release/net10.0-ios/iossimulator-arm64/PageCurl.Demo.app"
-BUNDLE_ID="com.example.pagecurldemo"
+BUNDLE_ID="$(sed -n 's/^[[:space:]]*<ApplicationId>\([^<]*\)<\/ApplicationId>.*/\1/p' "$ROOT/src/PageCurl.Demo/PageCurl.Demo.csproj" | head -1)"
+if [[ -z "$BUNDLE_ID" ]]; then
+    echo "Could not read the demo ApplicationId." >&2
+    exit 1
+fi
 mkdir -p "$OUTPUT"
 
 assert_demo_foreground() {

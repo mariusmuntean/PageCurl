@@ -56,6 +56,15 @@ open src/PageCurl.Demo/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.
 The demo supports Android, iOS, Mac Catalyst and Windows. See the
 [compatibility matrix](docs/compatibility.md) for the current evidence status.
 
+### Run on a physical iPhone
+
+The demo uses the device bundle identifier `de.marius.PageCurlDemo`. With a
+matching Apple Development profile installed, select the paired iPhone as the
+run target in Rider and run `PageCurl.Demo`. Developers using another Apple
+team should replace `ApplicationId` in
+`src/PageCurl.Demo/PageCurl.Demo.csproj` with an identifier owned by that team
+and let Xcode create or download the matching development profile.
+
 ### Showcase scenes
 
 The sample opens with a single-page reader and includes four focused scenes:

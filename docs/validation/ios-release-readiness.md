@@ -6,7 +6,7 @@ tags:
   - validation
   - ios
   - release
-timestamp: 2026-08-07T00:00:00Z
+timestamp: 2026-08-08T00:00:00Z
 ---
 
 # Scope
@@ -27,7 +27,8 @@ From the repository root:
 The optional first argument is an iPhone simulator UDID. Set
 `IOS_SMOKE_OUTPUT` to choose a durable output directory. The script uses the
 user-local SDK at `/Users/marius/.dotnet`, builds the explicit
-`net10.0-ios` simulator target, installs `com.example.pagecurldemo`, launches
+`net10.0-ios` simulator target, reads the bundle identifier from the demo
+project, installs `de.marius.PageCurlDemo`, launches
 it, verifies the compact foreground accessibility surface, rejects decorative
 hint glyphs, captures light/dark portrait screenshots, opens the options sheet,
 and visits the spread, video, backside, and pinned-corner scenes when `idb` and
@@ -39,14 +40,14 @@ completed its simulator compositor warm-up.
 
 ## Latest simulator run
 
-Validation date: 2026-08-07. Output:
-`.artifacts/ios-smoke/20260807-showcase-final/`.
+Validation date: 2026-08-08. Output:
+`.artifacts/ios-smoke/20260808-signing/`.
 
 | Evidence | Result | Location/notes |
 | --- | --- | --- |
 | SDK/workload alignment | Pass | User-local .NET 10 SDK and explicit iOS target restore/build completed |
 | iOS simulator build | Pass | Release `iossimulator-arm64`; 0 warnings, 0 errors |
-| Install and launch | Pass | Bundle `com.example.pagecurldemo`; foreground accessibility check passed |
+| Install and launch | Pass | Bundle `de.marius.PageCurlDemo`; foreground accessibility check passed |
 | Light appearance | Pass | `light.png`; generated page art and compact controls visible |
 | Dark appearance | Pass | `dark.png`; page surface recovered after simulator compositor warm-up |
 | Portrait frame | Pass | iPhone 17 Pro simulator |
@@ -58,6 +59,18 @@ Validation date: 2026-08-07. Output:
 | MacCatalyst responsive build | Pass | Debug `net10.0-maccatalyst` build and wide-window visual review completed; video uses the stable poster fallback on this target |
 | Programmatic page navigation | Follow-up | Controls are exposed and boundary states render correctly; this smoke does not yet wait through and assert a completed animated turn |
 | Rotation, large page, gestures, and device performance | Follow-up | Manual/device gates remain below |
+
+## Latest physical-device deployment
+
+Validation date: 2026-08-08. Target: iPhone 17 Pro, iOS 26.6.
+
+| Evidence | Result | Notes |
+| --- | --- | --- |
+| Development identity | Pass | Current Apple Development certificate is valid through March 2027 |
+| Provisioning | Pass | Xcode-managed development profile matches `de.marius.PageCurlDemo`, includes the target device, and expires in August 2027 |
+| Clean device build | Pass | Debug `ios-arm64`; 0 warnings, 0 errors |
+| Install | Pass | `devicectl` installed `Page Curl Demo` and reported the matching bundle identifier |
+| Launch | Pass | `devicectl` launched the installed app and the PageCurl demo process remained active |
 
 ## Manual simulator review
 
@@ -105,7 +118,8 @@ regressions, not a physical-device frame-rate claim.
 ## Not proven locally
 
 - Physical-device GPU frame pacing, low-end Android performance, and texture
-  pressure remain release gates.
+  pressure remain release gates; the device build/install above is deployment
+  evidence, not a performance pass.
 - VoiceOver/TalkBack behavior needs a screen-reader pass on supported hardware
   or a clearly documented simulator accessibility run.
 - App Store signing, archive validation, provisioning, and distribution are not
