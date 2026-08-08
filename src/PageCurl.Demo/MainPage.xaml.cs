@@ -31,6 +31,7 @@ public partial class MainPage : ContentPage
     private readonly PageSpreadNavigationState _spreadNavigation = new(8);
     private readonly PageTurnHaptics _haptics = new();
     private DemoPageSet? _pageSet;
+    private ImagePageView? _imagePage;
     private InteractivePageView? _interactivePage;
     private VideoPosterPageView? _videoPage;
     private ShowcaseScene _scene;
@@ -73,6 +74,7 @@ public partial class MainPage : ContentPage
     {
         CancelAllInteractions();
         ClearAllContent();
+        _imagePage = null;
         _interactivePage = null;
         _videoPage?.Dispose();
         _videoPage = null;
@@ -146,7 +148,7 @@ public partial class MainPage : ContentPage
         UpdateSelectionStyles();
         if (_isCompact)
         {
-            MobileOptionsOverlay.IsVisible = false;
+            SetMobileOptionsOpen(false);
         }
     }
 
@@ -353,8 +355,19 @@ public partial class MainPage : ContentPage
     {
         if (_isCompact)
         {
-            MobileOptionsOverlay.IsVisible = !MobileOptionsOverlay.IsVisible;
+            SetMobileOptionsOpen(!MobileOptionsOverlay.IsVisible);
         }
+    }
+
+    private void SetMobileOptionsOpen(bool open)
+    {
+        if (open)
+        {
+            CancelAllInteractions();
+        }
+
+        StageHost.InputTransparent = open;
+        MobileOptionsOverlay.IsVisible = open;
     }
 
     private void OnPageSizeChanged(object? sender, EventArgs e) =>
@@ -412,7 +425,7 @@ public partial class MainPage : ContentPage
         }
         else
         {
-            MobileOptionsOverlay.IsVisible = false;
+            SetMobileOptionsOpen(false);
             MobileOptionsContent.Children.Remove(OptionsScroll);
             if (!InspectorContent.Children.Contains(OptionsScroll))
             {
@@ -429,6 +442,7 @@ public partial class MainPage : ContentPage
         }
 
         _pageSet = DemoPageSet.Create();
+        _imagePage = new ImagePageView();
         _interactivePage = new InteractivePageView();
         _interactivePage.ContentChanged += OnInteractiveContentChanged;
         _videoPage = new VideoPosterPageView();
@@ -438,6 +452,7 @@ public partial class MainPage : ContentPage
     {
         try
         {
+            await Task.Yield();
             await ContentPageView.RefreshSnapshotAsync();
             StatusLabel.Text = "Live content updated";
         }
@@ -508,12 +523,7 @@ public partial class MainPage : ContentPage
         {
             ShowcaseContentKind.Interactive => _interactivePage,
             ShowcaseContentKind.Video => _videoPage,
-            _ => new Image
-            {
-                Source = _pageSet!.GetImageSource(navigation.PageIndex),
-                Aspect = Aspect.AspectFill,
-                BackgroundColor = Color.FromArgb("#FAF8F1"),
-            },
+            _ => _imagePage,
         };
         ContentPageView.UnderPageImage = _pageSet!.Pages[navigation.GetUnderPageIndex(PageTurnDirection.Forward)];
         ContentPageView.PreviousPageImage = _pageSet.Pages[navigation.GetUnderPageIndex(PageTurnDirection.Backward)];

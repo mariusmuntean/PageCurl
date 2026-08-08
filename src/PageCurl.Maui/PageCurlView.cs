@@ -109,6 +109,7 @@ public sealed class PageCurlView : Grid
         _frontHost = new Grid();
         Renderer = new PageTurnView
         {
+            IsVisible = false,
             Opacity = 0,
             InputTransparent = true,
             ContentScale = PageContentScale.Fill,
@@ -237,6 +238,7 @@ public sealed class PageCurlView : Grid
     {
         _activePointerId = null;
         Renderer.CancelInteraction();
+        ShowLiveContent();
     }
 
     protected override void OnHandlerChanged()
@@ -540,12 +542,14 @@ public sealed class PageCurlView : Grid
     private void ShowRenderer()
     {
         _frontHost.IsVisible = false;
+        Renderer.IsVisible = true;
         Renderer.Opacity = 1;
     }
 
     private void ShowLiveContent()
     {
         Renderer.Opacity = 0;
+        Renderer.IsVisible = false;
         _frontHost.IsVisible = true;
     }
 
