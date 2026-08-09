@@ -82,9 +82,44 @@ wait_for_label() {
     return 1
 }
 
+capture_mid_swipe() {
+    local label="$1"
+    local output_name="$2"
+    local start_y_ratio="${3:-0.78}"
+    local end_x_ratio="${4:-0.38}"
+    local frame_time="${5:-2}"
+    local ui frame values x y width height start_x start_y end_x end_y recording recorder_pid
+    ui="$(idb ui describe-all --udid "$DEVICE" --json 2>/dev/null || true)"
+    frame="$(echo "$ui" | jq -r --arg label "$label" '.. | objects | select(.AXLabel? == $label) | .AXFrame' | head -1)"
+    if [[ -z "$frame" || "$frame" == "null" || "$frame" == "{{0, 0}, {0, 0}}" ]]; then
+        echo "The '$label' page surface was not visible." >&2
+        return 1
+    fi
+
+    values="$(echo "$frame" | tr -d '{}' | tr ',' ' ')"
+    read -r x y width height <<< "$values"
+    start_x="$(awk -v x="$x" -v width="$width" 'BEGIN { printf "%d", x + width * 0.94 }')"
+    start_y="$(awk -v y="$y" -v height="$height" -v ratio="$start_y_ratio" 'BEGIN { printf "%d", y + height * ratio }')"
+    end_x="$(awk -v x="$x" -v width="$width" -v ratio="$end_x_ratio" 'BEGIN { printf "%d", x + width * ratio }')"
+    end_y="$(awk -v y="$y" -v height="$height" 'BEGIN { printf "%d", y + height * 0.42 }')"
+
+    recording="$OUTPUT/${output_name%.png}.mov"
+    xcrun simctl io "$DEVICE" recordVideo --force "$recording" >/dev/null 2>&1 &
+    recorder_pid=$!
+    sleep 1
+    idb ui swipe --udid "$DEVICE" --duration 4 \
+        "$start_x" "$start_y" "$end_x" "$end_y" >/dev/null
+    sleep 1
+    kill -INT "$recorder_pid"
+    wait "$recorder_pid" || true
+    ffmpeg -hide_banner -loglevel error -y -ss "$frame_time" -i "$recording" -frames:v 1 "$OUTPUT/$output_name"
+}
+
 capture_feature_scenes() {
-    if ! command -v idb >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-        echo "Skipping feature-scene capture because idb or jq is unavailable."
+    if ! command -v idb >/dev/null 2>&1 \
+        || ! command -v jq >/dev/null 2>&1 \
+        || ! command -v ffmpeg >/dev/null 2>&1; then
+        echo "Skipping feature-scene capture because idb, jq, or ffmpeg is unavailable."
         return 0
     fi
 
@@ -100,6 +135,7 @@ capture_feature_scenes() {
     wait_for_label "Open spread"
     sleep 1
     xcrun simctl io "$DEVICE" screenshot "$OUTPUT/spread.png" >/dev/null
+    capture_mid_swipe "Two-page spread. Drag the outer edge of either page." "spread-curl.png" 0.54
 
     tap_label "Content"
     wait_for_label "Live content"
@@ -123,11 +159,14 @@ capture_feature_scenes() {
     wait_for_label "Looping Big Buck Bunny excerpt with a still-image fallback"
     sleep 2
     xcrun simctl io "$DEVICE" screenshot "$OUTPUT/content-video.png" >/dev/null
+    sleep 2
+    xcrun simctl io "$DEVICE" screenshot "$OUTPUT/content-video-later.png" >/dev/null
 
     tap_label "Backside"
     wait_for_label "The other side"
     sleep 1
     xcrun simctl io "$DEVICE" screenshot "$OUTPUT/backside.png" >/dev/null
+    capture_mid_swipe "Page 1. A page should feel certain." "backside-curl.png" 0.78 0.55 4.25
 
     tap_label "Single"
     wait_for_label "One page"
@@ -172,4 +211,4 @@ echo "Device: $DEVICE"
 echo "Device record:"
 xcrun simctl list devices | awk -v id="$DEVICE" 'index($0, id) && record == "" { record = $0 } END { print record }'
 echo "App: $APP"
-echo "Screenshots: $OUTPUT/light.png $OUTPUT/dark.png $OUTPUT/options.png $OUTPUT/spread.png $OUTPUT/content-image.png $OUTPUT/content-view.png $OUTPUT/content-video.png $OUTPUT/backside.png"
+echo "Screenshots: $OUTPUT/light.png $OUTPUT/dark.png $OUTPUT/options.png $OUTPUT/spread.png $OUTPUT/spread-curl.png $OUTPUT/content-image.png $OUTPUT/content-view.png $OUTPUT/content-video.png $OUTPUT/content-video-later.png $OUTPUT/backside.png $OUTPUT/backside-curl.png"

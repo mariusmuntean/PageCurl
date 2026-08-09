@@ -24,13 +24,14 @@ in Git history and do not define unfinished work.
   capture implementations.
 - A two-page spread with right-forward and left-backward turns, full-gutter
   overlay rendering, readiness-aware commands, and a restrained gutter shadow.
-- A responsive five-scene showcase for single pages, spreads, images, live
-  `ContentView` controls, bundled video with poster fallback, configurable
-  backsides, and all four corner pins.
+- A responsive four-scene showcase for single pages, spreads, a licensed image,
+  live `ContentView` controls, bundled licensed video with poster fallback,
+  configurable backsides, and all edge/corner anchors through shared options.
 - Mobile haptics with distinct threshold and committed-completion patterns,
   plus a user-facing enable switch.
 - Fixed render buffers, allocation-free warmed core paths, depth ordering,
-  exact front/back tangent clipping, and deep-curl underside layering.
+  exact front/back tangent clipping, deep-curl underside layering, and smooth
+  readable underside lighting.
 - Accessible Previous/Next commands, edge/corner settings, light and dark
   resources, safe-area layout, compact options sheet, desktop inspector, and
   generated high-resolution content.
@@ -45,7 +46,6 @@ in Git history and do not define unfinished work.
 - Windows build and visual validation.
 - Store signing, archive validation, publication rehearsal, and API
   compatibility automation.
-- Reliable active-gesture screenshot or UI automation coverage.
 
 ## Deliberate non-goals
 

@@ -137,7 +137,7 @@ setting disables haptics. Unsupported platforms silently skip feedback.
 
 ## Showcase scenes
 
-The shell contains five scenes:
+The shell contains four scenes:
 
 1. **Single page:** forward/backward paging, every edge/corner anchor, threshold
    slider, flicks, and aspect ratio.
@@ -146,7 +146,9 @@ The shell contains five scenes:
 3. **Content:** image, interactive MAUI `ContentView`, and video/poster snapshot
    examples.
 4. **Backside:** mirrored/dim, solid-color, and custom-content backsides.
-5. **Corner pin:** focused conical-curl demonstration with clear anchor state.
+
+Single's shared anchor picker demonstrates all four edges and all four corners;
+a separate corner-only scene would duplicate that capability.
 
 Diagnostics stay behind the options surface. Every visible button performs a
 real action and reflects disabled boundary states.
@@ -186,7 +188,7 @@ allocations.
 Neutral MAUI builds cover the public controls and snapshot abstractions.
 Mac Catalyst visual checks cover wide and compact desktop windows. iOS and
 Android checks cover portrait/landscape layout, safe areas, content snapshots,
-video fallback, spread turns, haptics, reduced motion, accessibility, and
+video playback/fallback, spread turns, haptics, reduced motion, accessibility, and
 lifecycle transitions. Physical-device performance remains a release gate.
 
 ## Non-goals

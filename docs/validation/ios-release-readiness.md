@@ -31,8 +31,10 @@ user-local SDK at `/Users/marius/.dotnet`, builds the explicit
 project, installs `de.marius.PageCurlDemo`, launches
 it, verifies the compact foreground accessibility surface, rejects decorative
 hint glyphs, captures light/dark portrait screenshots, opens the options sheet,
-and visits the spread, video, backside, and pinned-corner scenes when `idb` and
-`jq` are available.
+and visits the Spread, Content, and Backside scenes when `idb` and `jq` are
+available. It switches Content through Image, View, and Video, updates the live
+counter, records spread/backside drags, and extracts active-curl frames with
+`ffmpeg`.
 The script cleans generated native artifacts before the build, verifies the
 demo is still foregrounded through the accessibility tree when `idb` is
 available, and waits 10 seconds after that check so the first Skia surface has
@@ -41,7 +43,7 @@ completed its simulator compositor warm-up.
 ## Latest simulator run
 
 Validation date: 2026-08-08. Output:
-`.artifacts/ios-smoke/20260808-signing/`.
+`.artifacts/ios-smoke/20260808-showcase-feedback/`.
 
 | Evidence | Result | Location/notes |
 | --- | --- | --- |
@@ -51,12 +53,16 @@ Validation date: 2026-08-08. Output:
 | Light appearance | Pass | `light.png`; generated page art and compact controls visible |
 | Dark appearance | Pass | `dark.png`; page surface recovered after simulator compositor warm-up |
 | Portrait frame | Pass | iPhone 17 Pro simulator |
-| Accessibility surface | Pass | Five scene buttons, Previous/Next, Options, all anchor settings, threshold slider, flick, haptics, and reduced motion exposed; decorative curl hints absent |
+| Accessibility surface | Pass | Four scene buttons, Previous/Next, Options, all anchor settings, threshold slider, flick, haptics, and reduced motion exposed; decorative curl hints absent |
 | Compact options sheet | Pass | `options.png`; anchor picker, percentage threshold, flick, ratio, haptics, reduced motion, and Close visible |
-| Showcase scenes | Pass | `spread.png`, `content-view.png`, `content-video.png`, `backside.png`, and `corner.png` captured after accessibility-driven scene changes |
-| Bundled video | Pass | The local MP4 is present in the app bundle; Content → Video remains foregrounded and renders a moving frame over the poster fallback |
+| Showcase scenes | Pass | `spread.png`, `content-image.png`, `content-view.png`, `content-video.png`, and `backside.png` captured after accessibility-driven scene changes |
+| Active spread curl | Pass | `spread-curl.mov` and `spread-curl.png`; stationary left page and gutter remain visible while the right page crosses them |
+| Custom backside and lighting | Pass | `backside-curl.mov` and `backside-curl.png`; custom dark-green content is visible through a smooth, readable underside without the former sawtooth band |
+| Bundled image | Pass | The JPEG is present in the app bundle and visible by default in `content-image.png` |
+| Bundled video | Pass | The local MP4 is present in the app bundle; `content-video.png` and `content-video-later.png` show different Big Buck Bunny frames |
 | Aspect-preserving page | Pass | Portrait source page remains undistorted in the fitted content rectangle |
-| MacCatalyst responsive build | Pass | Debug `net10.0-maccatalyst` build and wide-window visual review completed; video uses the stable poster fallback on this target |
+| MacCatalyst build | Pass | Debug `net10.0-maccatalyst`; 0 warnings, 0 errors; bundled JPEG and MP4 included and native video initialized with the same poster underneath |
+| MacCatalyst video playback | Follow-up | Current visual playback check was blocked by the locked Mac session; the earlier responsive-window review did not exercise this new clip |
 | Programmatic page navigation | Follow-up | Controls are exposed and boundary states render correctly; this smoke does not yet wait through and assert a completed animated turn |
 | Rotation, large page, gestures, and device performance | Follow-up | Manual/device gates remain below |
 
@@ -68,15 +74,15 @@ Validation date: 2026-08-08. Target: iPhone 17 Pro, iOS 26.6.
 | --- | --- | --- |
 | Development identity | Pass | Current Apple Development certificate is valid through March 2027 |
 | Provisioning | Pass | Xcode-managed development profile matches `de.marius.PageCurlDemo`, includes the target device, and expires in August 2027 |
-| Clean device build | Pass | Debug `ios-arm64`; 0 warnings, 0 errors |
-| Install | Pass | `devicectl` installed `Page Curl Demo` and reported the matching bundle identifier |
-| Launch | Pass | `devicectl` launched the installed app and the PageCurl demo process remained active |
+| Current clean device build | Pass | Debug `ios-arm64`; 0 warnings, 0 errors; includes the showcase corrections and bundled media |
+| Earlier install and launch | Pass | `devicectl` installed and launched the provisioning checkpoint with bundle identifier `de.marius.PageCurlDemo` |
+| Current install and launch | Follow-up | The paired phone is connected but passcode-locked; the install connection was reset before transfer |
 
 ## Manual simulator review
 
 After the script launches the app:
 
-1. Use Previous and Next in Single, Spread, Content, Backside, and Corner and
+1. Use Previous and Next in Single, Spread, Content, and Backside and
    confirm their enabled states at both boundaries.
 2. Enable Reduce motion and confirm a command changes page state without a
    settle animation; disable it and confirm the animated turn returns.
@@ -88,8 +94,9 @@ After the script launches the app:
    then repeat command, lock, and drag checks in landscape.
 6. Switch light/dark appearance and inspect page edges, surface contrast,
    labels, shadows, and texture scaling.
-7. In Content, use the live counter, refresh its snapshot, play the local
-   video, and curl each. In Backside, inspect mirror, color, and custom view.
+7. In Content, switch Image/View/Video after a curl, use the live counter,
+   refresh its snapshot, play the local video, and curl each. In Backside,
+   inspect mirror, color, and custom view.
 8. Cross the page-change threshold in both directions and confirm the light
    haptic cue; complete a turn and confirm the stronger cue.
 

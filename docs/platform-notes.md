@@ -24,6 +24,11 @@ window is still becoming active. `PageTurnView` schedules one generation-
 guarded retry after handler attachment. This recovers an idle page without a
 permanent render loop or a callback that can outlive a disconnected handler.
 
+The demo initializes CommunityToolkit `MediaElement` on iOS and Mac Catalyst,
+and on Android API 26 or newer. Its local H.264 clip has a still image beneath
+the native video layer so page snapshots and playback failures do not produce
+an empty page.
+
 A physical iOS build requires the demo `ApplicationId` to match a development
 provisioning profile from the selected Apple team. The repository uses
 `de.marius.PageCurlDemo`; do not reuse an unrelated application's bundle ID or

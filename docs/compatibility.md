@@ -16,7 +16,7 @@ and the release criteria belong in
 | PageCurl.Core | .NET 10 | Build | Core tests and allocation guard pass locally |
 | PageCurl.Maui neutral | .NET 10 | Build | `net10.0` Release build passes locally |
 | Android | API 24 | Build | Explicit `net10.0-android` Release demo build passes locally |
-| iOS | iOS 15 | Device build + simulator | Signed Debug build and install pass on an iPhone 17 Pro running iOS 26.6; simulator showcase smoke passes on Xcode 26.6 / iOS 26.2 |
+| iOS | iOS 15 | Device build + simulator | Signed Debug build and install pass on an iPhone 17 Pro running iOS 26.6; four-scene simulator smoke, live media, and active-curl recordings pass on Xcode 26.6 / iOS 26.2 |
 | Mac Catalyst | macOS 15 / Catalyst 15 | Build + visual | Debug `net10.0-maccatalyst` build and resizable-window visual check pass locally |
 | Windows | Windows 10.0.19041 | Not validated | No Windows host in this validation run |
 

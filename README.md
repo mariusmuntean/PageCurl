@@ -11,9 +11,10 @@ tested without a device or UI toolkit:
   `PageCurlView`, and two-page `PageSpreadView`. The Skia renderer draws fixed
   mesh buffers with per-vertex shading. A neutral `net10.0` target supports
   source and lifecycle tests without a device.
-* `src/PageCurl.Demo` is a responsive five-scene showcase with eight generated
-  pages, one- and two-page navigation, live MAUI content, a bundled video,
-  backside choices, pinned corners, haptics, and non-gesture commands.
+* `src/PageCurl.Demo` is a responsive four-scene showcase with eight generated
+  pages, one- and two-page navigation, live MAUI content, licensed image and
+  video assets, backside choices, every edge/corner anchor, haptics, and
+  non-gesture commands.
 * `tests/PageCurl.Core.Tests` is a dependency-free executable test runner. It
   does not require an internet package feed or a test adapter.
 * `tests/PageCurl.Maui.Tests` covers snapshot replacement, content wrappers,
@@ -67,12 +68,14 @@ and let Xcode create or download the matching development profile.
 
 ### Showcase scenes
 
-The sample opens with a single-page reader and includes four focused scenes:
-an open spread, live `ContentView`/image/video content, configurable backsides,
-and a pinned-corner cone. Shared options expose every anchor, a percentage
-threshold, flicks, page ratios, reduced motion, and mobile haptics. Desktop uses
-a scene rail and inspector; compact layouts move those controls into a scene
-strip and options sheet.
+The sample has four scenes: Single, Spread, Content, and Backside. Content opens
+with a real image and can switch to a live `ContentView` or a bundled Big Buck
+Bunny excerpt. Backside opens with unmistakable custom MAUI content and can
+switch to mirrored or solid-color modes. Shared options expose every edge and
+corner anchor, a percentage threshold, flicks, page ratios, reduced motion, and
+mobile haptics. Desktop uses a scene rail and inspector; compact layouts move
+those controls into a scene strip and options sheet. Third-party media details
+are in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ## Use the control
 
@@ -179,8 +182,9 @@ Call `RefreshSnapshotAsync()` after dynamic content changes. Capture failures
 raise `SnapshotFailed` and leave the last good texture in place. A live video
 can remain in `FrontContent`; the curl uses its latest captured frame. Supply a
 poster view when the platform video layer does not appear in native snapshots.
-The demo keeps the media dependency outside the library, plays a bundled local
-clip on Android/iOS, and uses its capturable poster fallback on Mac Catalyst.
+The demo keeps the media dependency outside the library and plays a bundled
+local clip on Android, iOS, and Mac Catalyst. Its still-image poster remains
+under the native video surface as a useful fallback and snapshot source.
 
 ### Use a two-page spread
 
@@ -205,9 +209,10 @@ The view uses `SKGLView` and invalidates only while a finger is moving or a
 release is settling. Mesh arrays, Skia point arrays and color arrays are
 allocated once. Image shaders are cached per `SKImage`; the settle animation
 uses a critically damped spring and a single 60 Hz dispatcher timer. The
-default mesh is 48 columns by 48 rows. Crossing triangles are clipped at the
+default mesh is 64 columns by 64 rows. Crossing triangles are clipped at the
 analytic front/back tangent, so the visible seam does not stair-step along the
-mesh grid.
+mesh grid. Underside lighting has a continuous ambient floor, avoiding dark
+faceted bands while leaving backside dimming under application control.
 
 Edge curls use a bounded, developable cylinder whose preferred radius relaxes
 near the endpoints and tightens around the midpoint. Pinned corners use an
