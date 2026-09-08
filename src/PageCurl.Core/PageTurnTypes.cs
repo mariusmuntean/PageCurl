@@ -131,11 +131,16 @@ public sealed class PageTurnPointerCapture
 /// <summary>Options shared by the interaction controller and the mesh builder.</summary>
 public sealed class PageCurlOptions
 {
+    /// <summary>Maximum number of cells in a reusable page mesh.</summary>
+    public const int MaximumMeshCellCount = 16_384;
+
     private float _pageChangeThreshold = 0.5f;
     private float _flickVelocityThreshold = 1.5f;
 
+    /// <summary>Horizontal mesh resolution. The column/row product may not exceed <see cref="MaximumMeshCellCount"/>.</summary>
     public int MeshColumns { get; init; } = 64;
 
+    /// <summary>Vertical mesh resolution. The column/row product may not exceed <see cref="MaximumMeshCellCount"/>.</summary>
     public int MeshRows { get; init; } = 64;
 
     /// <summary>Base cylinder radius as a fraction of page width.</summary>
@@ -190,6 +195,14 @@ public sealed class PageCurlOptions
         if (MeshRows < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(MeshRows), "At least one mesh row is required.");
+        }
+
+        var cellCount = checked((long)MeshColumns * MeshRows);
+        if (cellCount > MaximumMeshCellCount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MeshColumns),
+                $"MeshColumns multiplied by MeshRows may not exceed {MaximumMeshCellCount} cells.");
         }
 
         if (!float.IsFinite(RadiusScale) || RadiusScale <= 0)
@@ -338,11 +351,11 @@ public sealed class PageMeshBuffer
 
         Columns = options.MeshColumns;
         Rows = options.MeshRows;
-        BaseGridVertexCount = (Columns + 1) * (Rows + 1);
-        var cellCount = Columns * Rows;
-        Grid = new GridVertex[BaseGridVertexCount + (cellCount * 8)];
-        Orders = new TriangleOrder[cellCount * 6];
-        var vertexCapacity = Math.Max(6, Orders.Length * 3);
+        BaseGridVertexCount = checked((Columns + 1) * (Rows + 1));
+        var cellCount = checked(Columns * Rows);
+        Grid = new GridVertex[checked(BaseGridVertexCount + (cellCount * 8))];
+        Orders = new TriangleOrder[checked(cellCount * 6)];
+        var vertexCapacity = Math.Max(6, checked(Orders.Length * 3));
         FrontVertices = new MeshVertex[vertexCapacity];
         BackVertices = new MeshVertex[vertexCapacity];
     }

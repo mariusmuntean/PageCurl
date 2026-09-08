@@ -14,6 +14,7 @@ internal static class PageAnchorTests
         Snap_threshold_remains_an_alias_for_page_change_threshold();
         Threshold_event_args_preserve_valid_semantics();
         Page_change_threshold_can_be_tuned_after_controller_creation();
+        Oversized_meshes_are_rejected_before_allocation();
     }
 
     private static void Every_physical_edge_round_trips_through_an_anchor()
@@ -123,5 +124,21 @@ internal static class PageAnchorTests
         controller.EndDrag();
 
         TestAssert.Equal(0f, controller.Snapshot.TargetProgress);
+    }
+
+    private static void Oversized_meshes_are_rejected_before_allocation()
+    {
+        TestAssert.Throws<ArgumentOutOfRangeException>(() =>
+            _ = new PageMeshBuffer(new PageCurlOptions
+            {
+                MeshColumns = 129,
+                MeshRows = 128,
+            }));
+        TestAssert.Throws<ArgumentOutOfRangeException>(() =>
+            _ = new PageMeshBuffer(new PageCurlOptions
+            {
+                MeshColumns = int.MaxValue,
+                MeshRows = 2,
+            }));
     }
 }
