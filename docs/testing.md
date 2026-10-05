@@ -154,3 +154,19 @@ sessions retain their original appearance and boot state.
 The [latest interaction and Rider review](validation/rider-and-interaction-2026-10-04/README.md)
 records the completed regressions, native assertions, platform builds, and
 remaining environment limits for these fixes.
+
+## Workflow and documentation checks
+
+Verify runs pinned `actionlint` to check workflow syntax, expressions and runner
+labels. Script syntax and project-reference checks complement it; they cannot
+validate GitHub expression scopes. Run the same check before workflow edits are
+pushed:
+
+```bash
+go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck= -pyflakes=
+```
+
+The documentation build treats DocFX warnings as errors and checks local links,
+anchors, private source links and publication boundaries. Package inspection
+requires the requested platform assemblies, XML documentation and Core dependency.
+See [documentation publishing](documentation.md) and the Verify workflow.

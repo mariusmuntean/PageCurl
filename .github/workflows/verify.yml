@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
+      - name: Check workflow syntax and expressions
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck= -pyflakes=
       - name: Verify validation tooling
         run: |
           bash tools/check-workflow-projects.sh
@@ -85,12 +87,12 @@ jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 30
-    # A fresh SDK avoids upgrading unrelated workloads from the runner image.
-    env:
-      DOTNET_INSTALL_DIR: ${{ runner.temp }}/pagecurl-dotnet
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
+        # Avoid upgrading unrelated workloads from the runner image.
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.temp }}/pagecurl-dotnet
         with:
           global-json-file: global.json
       - name: Install Windows MAUI workload

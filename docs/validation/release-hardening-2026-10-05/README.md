@@ -41,3 +41,9 @@ Core separately for `net10.0`, then building and packing Android with
 `--no-restore`, passed with zero warnings/errors and valid Android package assets.
 The Windows workflow uses this same sequence, with matching restore/build
 packaging properties. Only a completed hosted Windows run establishes its pass.
+
+Workflow syntax validation reproduced the invalid job-level `runner.temp`
+expression and passed after the SDK installation path moved to the setup step.
+Pinned `actionlint` now runs in Verify, with the custom Xcode runner label
+configured explicitly. The Windows job uses a fresh SDK directory and a
+30-minute limit to avoid upgrading unrelated preinstalled workloads.
