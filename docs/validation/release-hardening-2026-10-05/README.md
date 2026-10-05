@@ -59,3 +59,10 @@ reproduced the same error when restore was framework-dependent and build was
 self-contained. Restoring and building with matching self-contained settings
 passed with zero warnings/errors. Windows restore and build now explicitly use
 Release, `win-x64` and `SelfContained=true` for the unpackaged demo.
+
+The subsequent Windows run compiled both projects, then failed with `PRI252`:
+WinUI searched the library's runtime-specific directory while the SDK built the
+library without a runtime suffix. The Windows library now declares
+`IsRidAgnostic=false` so its consuming application's runtime identifier flows
+through project references. A neutral Release library build still passed with
+zero warnings/errors; native resource indexing requires the hosted Windows check.

@@ -5,6 +5,12 @@ The repository pins .NET SDK 10.0.401 and the .NET 10 MAUI workload line.
 Native demo targets are selected conditionally so a host does not evaluate
 platforms it cannot build.
 
+The Windows library accepts the consuming application's runtime identifier so
+WinUI can find its PRI resources in the same runtime-specific output layout.
+It does not hardcode an architecture; neutral and mobile targets keep their
+normal SDK behavior. Windows CI restores and builds the unpackaged Release demo
+with matching runtime and self-contained settings.
+
 Use an explicit target framework for platform builds. On macOS, the installed
 workload-enabled SDK may live outside the system-wide .NET root; inspect the
 selected executable and workload list before diagnosing source. Android needs
