@@ -15,13 +15,13 @@ jobs:
     env:
       MSBuildEnableWorkloadResolver: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Run platform-free tests
         run: dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Verify validation tooling
@@ -35,14 +35,14 @@ jobs:
   mobile:
     runs-on: xcode-27
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Select Xcode 27.0
         run: sudo xcode-select --switch /Applications/Xcode_27.0.app/Contents/Developer
       - name: Select Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -76,7 +76,7 @@ jobs:
         run: python3 tools/run-native-fixture.py tests/PageCurl.Apple.Tests/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Apple.Tests.app/Contents/MacOS/PageCurl.Apple.Tests
       - name: Retain native assertion evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: native-assertions
           path: .artifacts/native-tests.log
@@ -85,8 +85,8 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Install Windows MAUI workload
