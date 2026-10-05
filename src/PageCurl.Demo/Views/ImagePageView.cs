@@ -45,7 +45,7 @@ internal sealed class ImagePageView : ContentView
                         },
                         new Label
                         {
-                            Text = "A real image, ready to curl.",
+                            Text = "Image content",
                             FontSize = 25,
                             FontAttributes = FontAttributes.Bold,
                             TextColor = Color.FromArgb("#1C211F"),

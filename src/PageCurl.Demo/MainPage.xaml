@@ -27,7 +27,7 @@
                         <Button x:Name="ContentSceneButton" Text="03  Content" CommandParameter="Content" Clicked="OnSceneClicked" />
                         <Button x:Name="BacksideSceneButton" Text="04  Backside" CommandParameter="Backside" Clicked="OnSceneClicked" />
                     </VerticalStackLayout>
-                    <Label Grid.Row="2" Text="Drag slowly or flick. Every scene uses the same completion event." Style="{StaticResource QuietText}" Margin="10" />
+                    <Label Grid.Row="2" Text="Drag an edge, or use Previous and Next." Style="{StaticResource QuietText}" Margin="10" />
                 </Grid>
             </Border>
 
@@ -77,36 +77,36 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Text="OPTIONS" Style="{StaticResource Eyebrow}" />
-                                    <Label x:Name="OptionsTitleLabel" Text="Page behaviour" FontSize="18" FontAttributes="Bold" />
+                                    <Label x:Name="OptionsTitleLabel" Text="Page options" FontSize="18" FontAttributes="Bold" />
                                 </VerticalStackLayout>
                                 <Button x:Name="CloseOptionsButton" Grid.Column="1" Text="Close" IsVisible="False" Style="{StaticResource QuietButton}" Clicked="OnOptionsClicked" />
                             </Grid>
 
                             <VerticalStackLayout x:Name="AnchorOptions" Spacing="5">
-                                <Label Text="LOCKED EDGE OR CORNER" Style="{StaticResource Eyebrow}" />
+                                <Label Text="ANCHOR" Style="{StaticResource Eyebrow}" />
                                 <Picker x:Name="AnchorPicker" SelectedIndexChanged="OnAnchorChanged" SemanticProperties.Description="Select the stationary edge or pinned corner" />
                                 <Label x:Name="AnchorHelpLabel" Text="Auto chooses from the first inward motion." Style="{StaticResource QuietText}" />
                             </VerticalStackLayout>
 
                             <VerticalStackLayout Spacing="4">
                                 <Grid ColumnDefinitions="*,Auto">
-                                    <Label Text="PAGE CHANGE" Style="{StaticResource Eyebrow}" />
+                                    <Label Text="TURN DISTANCE" Style="{StaticResource Eyebrow}" />
                                     <Label x:Name="ThresholdLabel" Grid.Column="1" Text="50%" FontSize="12" FontAttributes="Bold" />
                                 </Grid>
                                 <Slider x:Name="ThresholdSlider" Minimum="0.1" Maximum="0.9" Value="0.5" ValueChanged="OnThresholdChanged" SemanticProperties.Description="Page change threshold" />
-                                <Label Text="Travel needed before release commits the page." Style="{StaticResource QuietText}" />
+                                <Label Text="Drag this far before release changes the page." Style="{StaticResource QuietText}" />
                             </VerticalStackLayout>
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Text="Flick gestures" FontAttributes="Bold" FontSize="13" />
-                                    <Label Text="A quick release may finish sooner." Style="{StaticResource QuietText}" />
+                                    <Label Text="Turn a page with a quick drag." Style="{StaticResource QuietText}" />
                                 </VerticalStackLayout>
                                 <Switch x:Name="FlickSwitch" Grid.Column="1" IsToggled="True" Toggled="OnFlickToggled" SemanticProperties.Description="Enable flick gestures" />
                             </Grid>
 
                             <VerticalStackLayout Spacing="5">
-                                <Label Text="PAGE RATIO" Style="{StaticResource Eyebrow}" />
+                                <Label Text="PAGE SHAPE" Style="{StaticResource Eyebrow}" />
                                 <Picker x:Name="RatioPicker" SelectedIndexChanged="OnRatioChanged" SemanticProperties.Description="Choose page width to height ratio" />
                             </VerticalStackLayout>
 
@@ -132,7 +132,7 @@
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Text="Haptics" FontAttributes="Bold" FontSize="13" />
-                                    <Label Text="Distinct threshold and completion cues." Style="{StaticResource QuietText}" />
+                                    <Label Text="Feel when a turn is ready to finish." Style="{StaticResource QuietText}" />
                                 </VerticalStackLayout>
                                 <Switch x:Name="HapticsSwitch" Grid.Column="1" Toggled="OnHapticsToggled" SemanticProperties.Description="Enable page-turn haptic feedback" />
                             </Grid>
@@ -140,7 +140,7 @@
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                 <VerticalStackLayout Spacing="1">
                                     <Label Text="Reduce motion" FontAttributes="Bold" FontSize="13" />
-                                    <Label Text="Jump directly to the release result." Style="{StaticResource QuietText}" />
+                                    <Label Text="Finish turns without animation." Style="{StaticResource QuietText}" />
                                 </VerticalStackLayout>
                                 <Switch x:Name="ReduceMotionSwitch" Grid.Column="1" Toggled="OnReduceMotionToggled" SemanticProperties.Description="Reduce page-turn motion" />
                             </Grid>

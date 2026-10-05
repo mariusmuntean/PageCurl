@@ -7,6 +7,8 @@ run. Keep those separate from release and platform readiness. The latest
 includes failures, fixes, repeated runs and visible computer-control observations.
 The [test-quality audit](validation/test-quality-2026-10-05/README.md) records
 which tests were removed or strengthened and the hosted Actions fixes.
+The [showcase polish record](validation/showcase-polish-2026-10-05/README.md)
+covers shared page copy, theme contrast and stronger UI-replay assertions.
 
 | Layer | Purpose | Automation |
 | --- | --- | --- |
@@ -22,7 +24,7 @@ For computer control, load
 runtime providing `cua`, and call `runPageCurlChecks(cua, absoluteAppPath)`.
 Pass the optional scene list to run one scene per bounded tool call. It resolves
 buttons from fresh accessibility trees, waits for readiness and checks the
-visible counter after commands, instead of guessing coordinates or capture
+visible counter and enabled/disabled boundary buttons after commands, instead of guessing coordinates or capture
 durations. It temporarily enables reduced motion and restores its previous
 value. Counters finish at each scene's first page. The same replay resolves
 compact scene labels and opens/closes the Options sheet for settings.
@@ -30,6 +32,12 @@ compact scene labels and opens/closes the Options sheet for settings.
 counter, automatic refresh and explicit refresh in either layout.
 `runPageCurlGestureCheck(cua, absoluteAppPath, from, to, counter, status)` checks
 real pointer input; choose points from a fresh screenshot of the visible page.
+`runPageCurlAccessibilityCheck(cua, absoluteAppPath)` checks accessible names
+and native roles for navigation and option controls, closing compact Options
+when it opened them. Run `node --test tests/computer-control/pagecurl-checks.test.js`
+to check the replay itself, including false positives and failure cleanup.
+The [showcase checks skill](../.agents/skills/pagecurl-showcase-checks/SKILL.md)
+provides the repeatable visual and interaction workflow.
 Resize through the native window controls and inspect both layouts visually.
 AX counters alone cannot prove gesture routing or pixel quality.
 
@@ -38,10 +46,12 @@ The native driver removes stale evidence, bounds execution, and requires exit
 subprocess tests verify timeouts, missing/partial output and contradictory
 exit-code/result cases. The fixture itself tests automatic and explicit refresh failure and
 completion and delayed failure after changing or re-entering scenes, and the counter/button layout
-at a 250 by 333 page size. These are injected at the capture boundary
+at a 250 by 333 page size. It also checks the resolved option-heading contrast
+in light and dark themes against a 4.5:1 minimum, plus compact Options routing
+and restoration of wide controls at a constrained 600 by 750 page layout. These are injected at the capture boundary
 while the real page and event handlers run.
 
-CI runs Core, the isolated package consumer and validation-driver tests on Linux;
+CI runs Core, the isolated package consumer and validation-driver and UI-replay tests on Linux;
 the macOS job runs the neutral API/lifecycle suite and builds/runs the native
 fixture, retaining its assertion log even on failure. A workflow definition is
 not evidence of a hosted run. No computer-control or physical-device pass is

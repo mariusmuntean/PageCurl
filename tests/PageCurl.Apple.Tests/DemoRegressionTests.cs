@@ -31,6 +31,7 @@ internal static class DemoRegressionTests
         window.Height = 1000;
         window.Page = page;
         await Task.Delay(500);
+        await Check_theme_contrast(page, results);
         Invoke(page, "OnSceneClicked", new Button { CommandParameter = "Backside" }, EventArgs.Empty);
         await Task.Delay(250);
         var backside = page.FindByName<PageCurlView>("BacksidePageView");
@@ -153,6 +154,62 @@ internal static class DemoRegressionTests
         await Task.Delay(1500);
         results.Add(page.FindByName<Label>("StatusLabel").Text == "Turn complete"
             ? "PASS animated completion" : "FAIL animated completion");
+        Check_compact_options(page, results);
+    }
+
+    private static void Check_compact_options(MainPage page, List<string> results)
+    {
+        var originalBounds = page.Bounds;
+        ((IView)page).Measure(600, 750);
+        ((IView)page).Arrange(new Rect(0, 0, 600, 750));
+        Require(page.Width == 600 && page.FindByName<Grid>("MobileFooter").IsVisible,
+            "Compact layout must expose mobile controls.");
+        var overlay = page.FindByName<Grid>("MobileOptionsOverlay");
+        var stage = page.FindByName<Grid>("StageHost");
+        var options = page.FindByName<ScrollView>("OptionsScroll");
+        Require(!page.FindByName<Border>("InspectorPanel").IsVisible && !overlay.IsVisible,
+            "Compact layout must start with options closed.");
+        var footer = page.FindByName<Grid>("MobileFooter");
+        var optionsButton = ((Grid)footer.Children[1]).Children.OfType<Button>().Last();
+        ((IButtonController)optionsButton).SendClicked();
+        Require(overlay.IsVisible && stage.InputTransparent
+            && ReferenceEquals(options.Parent, page.FindByName<Grid>("MobileOptionsContent")),
+            "Compact options must open and prevent page interaction.");
+        ((IButtonController)page.FindByName<Button>("CloseOptionsButton")).SendClicked();
+        Require(!overlay.IsVisible && !stage.InputTransparent, "Closing options must restore page interaction.");
+        results.Add("PASS compact options open and close at a 600x750 page layout");
+        ((IView)page).Arrange(originalBounds);
+        Require(ReferenceEquals(options.Parent, page.FindByName<Grid>("InspectorContent")) && !overlay.IsVisible,
+            "Wide layout must restore the inspector and close the compact overlay.");
+        results.Add("PASS returning to wide layout restores option controls");
+    }
+
+    private static async Task Check_theme_contrast(MainPage page, List<string> results)
+    {
+        var app = Application.Current!;
+        var original = app.UserAppTheme;
+        static double Luminance(Color color)
+        {
+            static double Linear(double value) => value <= .04045 ? value / 12.92 : Math.Pow((value + .055) / 1.055, 2.4);
+            return .2126 * Linear(color.Red) + .7152 * Linear(color.Green) + .0722 * Linear(color.Blue);
+        }
+        try
+        {
+            foreach (var theme in new[] { AppTheme.Light, AppTheme.Dark })
+            {
+                app.UserAppTheme = theme;
+                await Task.Delay(100);
+                var label = page.FindByName<Label>("OptionsTitleLabel");
+                var eyebrow = (Label)((VerticalStackLayout)label.Parent).Children[0];
+                var panel = page.FindByName<Border>("InspectorPanel");
+                var foreground = Luminance(eyebrow.TextColor);
+                var background = Luminance(panel.BackgroundColor);
+                var ratio = (Math.Max(foreground, background) + .05) / (Math.Min(foreground, background) + .05);
+                results.Add(ratio >= 4.5 ? $"PASS {theme} option text contrast {ratio:F2}:1"
+                    : $"FAIL {theme} option text contrast {ratio:F2}:1");
+            }
+        }
+        finally { app.UserAppTheme = original; }
     }
 
     private static async Task Explicit_refresh_preserves_failure_and_scene_status(MainPage page, List<string> results)

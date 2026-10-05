@@ -1,0 +1,21 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Debug/net10.0/PageCurl.Core.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Debug/net10.0-maccatalyst/PageCurl.Maui.dll
+/Users/marius/.dotnet/packs/Microsoft.MacCatalyst.Sdk.net10.0_27.0/27.0.10722/tools/msbuild/Xamarin.Shared.targets(2129,3): warning : The settings file '/Users/marius/Library/Preferences/Xamarin/Settings.plist' is deprecated, and will be ignored in .NET 11+. Use the 'DEVELOPER_DIR' environment variable or the 'XcodeLocation' MSBuild property to use an Xcode other than the system's current default Xcode. [/Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj]
+  Detected signing identity:
+    Code Signing Key: "" (-)
+    Provisioning Profile: "" () - no entitlements
+    Bundle Id: de.marius.PageCurlRegressionTests
+    App Id: de.marius.PageCurlRegressionTests
+  PageCurl.Apple.Tests -> /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Apple.Tests.dll
+  Optimizing assemblies for size may change the behavior of the app. Be sure to test after publishing. See: https://aka.ms/dotnet-illink
+  Optimizing assemblies for size. This process might take a while.
+
+Build succeeded.
+
+/Users/marius/.dotnet/packs/Microsoft.MacCatalyst.Sdk.net10.0_27.0/27.0.10722/tools/msbuild/Xamarin.Shared.targets(2129,3): warning : The settings file '/Users/marius/Library/Preferences/Xamarin/Settings.plist' is deprecated, and will be ignored in .NET 11+. Use the 'DEVELOPER_DIR' environment variable or the 'XcodeLocation' MSBuild property to use an Xcode other than the system's current default Xcode. [/Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj]
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:06.57

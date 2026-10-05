@@ -28,6 +28,14 @@ async function runPageCurlChecks(cua, appPath, scenes) {
         await app.click(index(tree, description, 'button'));
         return settled();
     };
+    const expectBoundary = (tree, disabled, enabled) => {
+        for (const [description, expectedDisabled] of [[disabled, true], [enabled, false]]) {
+            const line = tree.split('\n').find(line => line.includes('button')
+                && line.includes(`Description: ${description},`));
+            if (!line || line.includes('(disabled)') !== expectedDisabled)
+                throw new Error(`${description} must be ${expectedDisabled ? 'disabled' : 'enabled'} at the boundary.`);
+        }
+    };
     const expectCounter = (tree, counter, step) => {
         if (!tree.includes(`Description: ${counter},`))
             throw new Error(`${step}: expected ${counter}\n${tree}`);
@@ -61,12 +69,14 @@ async function runPageCurlChecks(cua, appPath, scenes) {
             tree = await click(button);
             // Reach the first page even when the app already had navigation state.
             for (let turn = 0; turn < (spread ? 3 : 7); turn++) tree = await click('Previous');
+            expectBoundary(tree, 'Previous', 'Next');
             expectCounter(tree, spread ? '01–02 / 08' : '01 / 08', `${button} first boundary`);
             tree = await click('Next');
             expectCounter(tree, spread ? '03–04 / 08' : '02 / 08', `${button} forward`);
             tree = await click('Previous');
             expectCounter(tree, spread ? '01–02 / 08' : '01 / 08', `${button} backward`);
             for (let turn = 0; turn < (spread ? 3 : 7); turn++) tree = await click('Next');
+            expectBoundary(tree, 'Next', 'Previous');
             expectCounter(tree, spread ? '07–08 / 08' : '08 / 08', `${button} last boundary`);
             tree = await click('Next');
             expectCounter(tree, spread ? '07–08 / 08' : '08 / 08', `${button} rejects extra forward`);
@@ -142,4 +152,45 @@ async function runPageCurlLiveContentCheck(cua, appPath) {
     await close();
     return [`PASS R07/R10 live counter ${count} -> ${count + 1}, Live content updated`,
         'PASS R07/R10 explicit refresh: Snapshot refreshed'];
+}
+
+// Verify control roles and accessible names in the active scene's options.
+// This checks the AX contract; screen-reader usability still needs device testing.
+async function runPageCurlAccessibilityCheck(cua, appPath) {
+    const app = await cua.getApp(appPath);
+    const observe = () => app.getAXState({ emit: false, disableDiffing: true });
+    let tree = await observe();
+    const buttonIndex = (tree, description) => {
+        const line = tree.split('\n').find(line => line.includes('button')
+            && line.includes(`Description: ${description},`));
+        if (!line) throw new Error(`Missing button: ${description}`);
+        return Number(line.trim().match(/^\d+/)[0]);
+    };
+    const opened = !tree.includes('Description: Reduce page-turn motion,');
+    if (opened) {
+        await app.click(buttonIndex(tree, 'Options'));
+        tree = await observe();
+    }
+    try {
+        const controls = [
+            ['Previous', /button/], ['Next', /button/],
+            ['Page change threshold', /slider/],
+            ['Choose page width to height ratio', /text field|combo box/],
+            ['Enable flick gestures', /switch/],
+            ['Enable page-turn haptic feedback', /switch/],
+            ['Reduce page-turn motion', /switch/],
+        ];
+        for (const [name, role] of controls) {
+            const line = tree.split('\n').find(line => line.includes(`Description: ${name},`));
+            if (!line || !role.test(line.split('Description:')[0]))
+                throw new Error(`Missing accessible control or incorrect role: ${name}`);
+        }
+        return controls.map(([name]) => `PASS R10 accessible control: ${name}`);
+    } finally {
+        if (opened) {
+            tree = await observe();
+            await app.click(buttonIndex(tree, 'Close'));
+            await observe();
+        }
+    }
 }

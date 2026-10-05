@@ -15,24 +15,15 @@ public sealed class DemoPageSet : IDisposable
 
     public static DemoPageSet Create()
     {
-        var definitions = new PageDefinition[]
-        {
-            new("A page should feel certain.", "THE MATERIAL", "It follows the hand, keeps its length, and returns without a wrinkle.", 1, 900, 1200, "01"),
-            new("Turn from anywhere.", "EIGHT ANCHORS", "Lock an edge or pin a corner. The same completion path handles touch, mouse, and commands.", 2, 900, 1200, "02"),
-            new("One book. Two directions.", "NAVIGATION", "A page reveals what is underneath while it crosses the gutter, then commits once.", 3, 900, 1200, "03"),
-            new("Content stays content.", "MAUI VIEWS", "Keep controls and media live while flat. Snapshot only for the physical turn.", 4, 900, 1200, "04"),
-            new("The back is yours.", "PAGE BACKSIDE", "Mirror the front, choose a paper color, or render another view entirely.", 5, 900, 1200, "05"),
-            new("Fast hands welcome.", "FLICK + THRESHOLD", "Set a clear travel threshold, then let a deliberate flick finish the gesture sooner.", 6, 900, 1200, "06"),
-            new("Pixels under pressure.", "HIGH RESOLUTION", "A larger texture checks the seam, shadow, and page edge without changing the API.", 7, 1800, 2400, "07"),
-            new("Build something tactile.", "PAGECURL.MAUI", "The geometry is tested. The surface is yours.", 8, 900, 1200, "08"),
-        };
-
-        var pages = new List<SKImage>(definitions.Length);
+        var pages = new List<SKImage>(DemoPageCopy.Pages.Count);
         try
         {
-            foreach (var definition in definitions)
+            for (var index = 0; index < DemoPageCopy.Pages.Count; index++)
             {
-                var page = CreatePage(definition);
+                var copy = DemoPageCopy.Pages[index];
+                var scale = index == 6 ? 2 : 1;
+                var page = CreatePage(new PageDefinition(copy.Title, copy.Eyebrow, copy.Body,
+                    index + 1, 900 * scale, 1200 * scale, $"{index + 1:00}"));
                 pages.Add(page);
             }
 

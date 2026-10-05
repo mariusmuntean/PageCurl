@@ -125,15 +125,15 @@ public partial class MainPage : ContentPage
             ShowcaseScene.Single => "One page",
             ShowcaseScene.Spread => "Open spread",
             ShowcaseScene.Content => "Live content",
-            ShowcaseScene.Backside => "The other side",
+            ShowcaseScene.Backside => "Page back",
             _ => "Page curl",
         };
         OptionsTitleLabel.Text = scene switch
         {
-            ShowcaseScene.Content => "Content + capture",
-            ShowcaseScene.Backside => "Backside material",
-            ShowcaseScene.Spread => "Spread behaviour",
-            _ => "Page behaviour",
+            ShowcaseScene.Content => "Content options",
+            ShowcaseScene.Backside => "Page back options",
+            ShowcaseScene.Spread => "Spread options",
+            _ => "Page options",
         };
         PageHintLabel.Text = scene switch
         {
@@ -144,9 +144,9 @@ public partial class MainPage : ContentPage
         };
         DetailLabel.Text = scene switch
         {
-            ShowcaseScene.Spread => "Forward and backward turns share one completion path.",
-            ShowcaseScene.Content => "MAUI content remains interactive while the page is flat.",
-            ShowcaseScene.Backside => "Page 01 has page 02 on its reverse. Compare page, mirror, and color modes.",
+            ShowcaseScene.Spread => "Turn the right page forward or the left page backward.",
+            ShowcaseScene.Content => "Choose Image, View or Video in Options.",
+            ShowcaseScene.Backside => "Choose Page, Mirror or Color to compare reverse sides.",
             _ => "The page follows the pointer without stretching.",
         };
 
@@ -545,18 +545,8 @@ public partial class MainPage : ContentPage
 
     private DemoPageView CreatePageView(int pageIndex)
     {
-        var copy = pageIndex switch
-        {
-            0 => ("THE MATERIAL", "A page should feel certain.", "It follows the hand, keeps its length, and returns without a wrinkle."),
-            1 => ("EIGHT ANCHORS", "Turn from anywhere.", "Lock any edge or pin any corner."),
-            2 => ("NAVIGATION", "One book. Two directions.", "The next or previous page waits underneath."),
-            3 => ("MAUI VIEWS", "Content stays content.", "Controls remain live until the curl begins."),
-            4 => ("PAGE BACKSIDE", "The back is yours.", "Mirror, color, or provide another view."),
-            5 => ("FLICK + THRESHOLD", "Fast hands welcome.", "Intent and distance work together."),
-            6 => ("HIGH RESOLUTION", "Pixels under pressure.", "Inspect the seam and shadow up close."),
-            _ => ("PAGECURL.MAUI", "Build something tactile.", "The geometry is tested. The surface is yours."),
-        };
-        return new DemoPageView(pageIndex + 1, copy.Item1, copy.Item2, copy.Item3);
+        var copy = DemoPageCopy.Pages[pageIndex];
+        return new DemoPageView(pageIndex + 1, copy.Eyebrow, copy.Title, copy.Body);
     }
 
     private void UpdateCounter()

@@ -21,10 +21,14 @@ jobs:
           global-json-file: global.json
       - name: Run platform-free tests
         run: dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Verify validation tooling
         run: |
           bash tools/check-workflow-projects.sh
           python3 -m unittest discover -s tools/tests -p 'test_*.py'
+          node --test tests/computer-control/pagecurl-checks.test.js
       - name: Verify isolated public package consumer
         run: bash tools/test-package-consumer.sh
 

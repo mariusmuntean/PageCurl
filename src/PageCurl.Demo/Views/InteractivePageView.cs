@@ -20,7 +20,7 @@ internal sealed class InteractivePageView : ContentView
         };
         var button = new Button
         {
-            Text = "Add a mark",
+            Text = "Add one",
             HeightRequest = 46,
             CornerRadius = 7,
             BackgroundColor = Color.FromArgb("#3157D5"),
@@ -57,7 +57,7 @@ internal sealed class InteractivePageView : ContentView
                 },
                 new Label
                 {
-                    Text = "Alive while flat.",
+                    Text = "Interactive content",
                     FontSize = 30,
                     FontAttributes = FontAttributes.Bold,
                     TextColor = Color.FromArgb("#1C211F"),
@@ -66,7 +66,7 @@ internal sealed class InteractivePageView : ContentView
                 button,
                 new Label
                 {
-                    Text = "Tap the button, then curl. The live view becomes a cached texture only for the turn.",
+                    Text = "Tap the button to update the counter, then drag from an edge to turn the page.",
                     FontSize = 13,
                     LineHeight = 1.2,
                     TextColor = Color.FromArgb("#666B67"),

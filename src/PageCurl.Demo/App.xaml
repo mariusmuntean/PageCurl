@@ -18,6 +18,7 @@
             <Color x:Key="RuleLight">#C9C7BE</Color>
             <Color x:Key="RuleDark">#3B3D38</Color>
             <Color x:Key="Cobalt">#3157D5</Color>
+            <Color x:Key="CobaltDark">#91ADFF</Color>
             <Color x:Key="CobaltPressed">#2444AD</Color>
 
             <Style TargetType="Label">
@@ -27,7 +28,7 @@
                 <Setter Property="FontSize" Value="10" />
                 <Setter Property="FontAttributes" Value="Bold" />
                 <Setter Property="CharacterSpacing" Value="1.7" />
-                <Setter Property="TextColor" Value="{StaticResource Cobalt}" />
+                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Cobalt}, Dark={StaticResource CobaltDark}}" />
             </Style>
             <Style x:Key="QuietText" TargetType="Label">
                 <Setter Property="FontSize" Value="12" />
