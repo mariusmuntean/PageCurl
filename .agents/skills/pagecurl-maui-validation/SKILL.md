@@ -25,11 +25,20 @@ commands.
   `dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0`
 - Android demo:
   `dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android`
+- Public API, bindable validation, snapshot lifecycle, or neutral tests:
+  `dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release -f net10.0`
+- Package consumption: `bash tools/test-package-consumer.sh`. Set
+  `PAGECURL_DOTNET` to an explicit workload-enabled CLI if needed. This packs
+  neutral packages and tests a temporary external consumer with an isolated cache.
+- Validation-driver changes:
+  `python3 -m unittest discover -s tools/tests -p 'test_*.py'`.
 - iOS simulator evidence: `./tools/ios-smoke.sh`
 - Native Apple snapshot and linked demo regression fixture:
   `dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Debug -f net10.0-maccatalyst`,
   then execute the built app binary with `PAGECURL_TEST_OUTPUT` set to an absolute log path.
   The process exits nonzero on any assertion failure. Record any local Xcode override separately.
+  Prefer `python3 tools/run-native-fixture.py <absolute-built-app-binary>` to
+  bound execution and reject stale or incomplete assertion output.
 - Mac Catalyst layout:
   `dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst`
 - CI project references: run `bash tools/check-workflow-projects.sh` and

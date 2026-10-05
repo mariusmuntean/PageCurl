@@ -30,6 +30,8 @@ internal static class Program
     {
         try
         {
+            PublicApiTests.RunAll();
+            Console.WriteLine($"PASS {nameof(PublicApiTests)}");
             await PageContentSnapshotterTests.RunAllAsync();
             Console.WriteLine($"PASS {nameof(PageContentSnapshotterTests)}");
             PageSnapshotStateTests.RunAll();
@@ -38,7 +40,7 @@ internal static class Program
             Console.WriteLine($"PASS {nameof(PageCurlViewTests)}");
             await PageSpreadViewTests.RunAllAsync();
             Console.WriteLine($"PASS {nameof(PageSpreadViewTests)}");
-            Console.WriteLine("All 4 MAUI test groups passed.");
+            Console.WriteLine("All 5 MAUI test groups passed.");
             return 0;
         }
         catch (Exception exception)

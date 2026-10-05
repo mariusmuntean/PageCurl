@@ -114,6 +114,21 @@ internal static class DemoRegressionTests
             results.Add(page.FindByName<Button>("NextButton").IsEnabled
                 ? $"PASS {scene} next available" : $"FAIL {scene} next disabled");
         }
+        await Explicit_refresh_preserves_failure_and_scene_status(page, results);
+        Invoke(page, "OnContentKindClicked", new Button { CommandParameter = "Interactive" }, EventArgs.Empty);
+        var live = (ContentView)typeof(MainPage).GetField("_interactivePage", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(page)!;
+        await page.FindByName<PageCurlView>("ContentPageView").RefreshSnapshotAsync();
+        ((IView)live).Measure(250, 333);
+        ((IView)live).Arrange(new Rect(0, 0, 250, 333));
+        var liveGrid = (Grid)live.Content;
+        liveGrid.CrossPlatformMeasure(250 - live.Padding.HorizontalThickness, 333 - live.Padding.VerticalThickness);
+        liveGrid.CrossPlatformArrange(new Rect(live.Padding.Left, live.Padding.Top,
+            250 - live.Padding.HorizontalThickness, 333 - live.Padding.VerticalThickness));
+        var counter = (Label)liveGrid.Children[2];
+        var liveButton = (Button)liveGrid.Children[3];
+        results.Add(counter.Height >= counter.FontSize && liveButton.Bounds.Bottom <= live.Height
+            ? "PASS compact live content keeps counter and button visible"
+            : $"FAIL compact live content clipped: counter={counter.Height:F1} font={counter.FontSize:F1} button={liveButton.Bounds.Bottom:F1} page={live.Height:F1}");
         // Queue a refresh, disappear before its yield resumes, then verify
         // it cannot update the old page or recapture detached content.
         Invoke(page, "OnInteractiveContentChanged", null, EventArgs.Empty);
@@ -140,6 +155,85 @@ internal static class DemoRegressionTests
         await Task.Delay(1500);
         results.Add(page.FindByName<Label>("StatusLabel").Text == "Turn complete"
             ? "PASS animated completion" : "FAIL animated completion");
+    }
+
+    private static async Task Explicit_refresh_preserves_failure_and_scene_status(MainPage page, List<string> results)
+    {
+        ((IButtonController)page.FindByName<Button>("ContentSceneButton")).SendClicked();
+        var content = page.FindByName<PageCurlView>("ContentPageView");
+        await content.RefreshSnapshotAsync();
+        var field = typeof(PageCurlView).GetField("_snapshotter", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var original = field.GetValue(content);
+        var refresh = page.FindByName<Button>("RefreshSnapshotButton");
+        var status = page.FindByName<Label>("StatusLabel");
+        var previous = content.Renderer.FrontImage;
+        try
+        {
+            field.SetValue(content, new FailingSnapshotter());
+            ((IButtonController)refresh).SendClicked();
+            await WaitUntilAsync(() => refresh.IsEnabled);
+            results.Add(status.Text == "Using last snapshot" && ReferenceEquals(previous, content.Renderer.FrontImage)
+                ? "PASS explicit refresh reports failure and retains last frame"
+                : $"FAIL explicit refresh hid capture failure: {status.Text}");
+
+            var delayed = new SuspendedSnapshotter();
+            field.SetValue(content, delayed);
+            ((IButtonController)refresh).SendClicked();
+            await delayed.Started;
+            ((IButtonController)page.FindByName<Button>("SingleSceneButton")).SendClicked();
+            ((IButtonController)page.FindByName<Button>("NextButton")).SendClicked();
+            var activeStatus = status.Text;
+            using var surface = SKSurface.Create(new SKImageInfo(4, 4));
+            delayed.Finish(surface.Snapshot());
+            await WaitUntilAsync(() => refresh.IsEnabled);
+            results.Add(status.Text == activeStatus
+                ? "PASS suspended refresh cannot overwrite another scene"
+                : $"FAIL suspended refresh changed scene status: {activeStatus} -> {status.Text}");
+
+            delayed = new SuspendedSnapshotter();
+            field.SetValue(content, delayed);
+            ((IButtonController)page.FindByName<Button>("ContentSceneButton")).SendClicked();
+            ((IButtonController)refresh).SendClicked();
+            await delayed.Started;
+            ((IButtonController)page.FindByName<Button>("SingleSceneButton")).SendClicked();
+            ((IButtonController)page.FindByName<Button>("ContentSceneButton")).SendClicked();
+            activeStatus = status.Text;
+            delayed.Finish(surface.Snapshot());
+            await WaitUntilAsync(() => refresh.IsEnabled);
+            results.Add(status.Text == activeStatus
+                ? "PASS suspended refresh cannot overwrite a re-entered scene"
+                : $"FAIL suspended refresh changed re-entered scene status: {activeStatus} -> {status.Text}");
+        }
+        finally
+        {
+            field.SetValue(content, original);
+        }
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var timeout = Stopwatch.StartNew();
+        while (!condition() && timeout.Elapsed < TimeSpan.FromSeconds(3)) await Task.Delay(10);
+        Require(condition(), "Timed out waiting for the UI operation.");
+    }
+
+    private sealed class FailingSnapshotter : IPageContentSnapshotter
+    {
+        public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken) =>
+            Task.FromException<SKImage>(new InvalidOperationException("Capture unavailable in regression fixture."));
+    }
+
+    private sealed class SuspendedSnapshotter : IPageContentSnapshotter
+    {
+        private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<SKImage> _capture = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task Started => _started.Task;
+        public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
+        {
+            _started.TrySetResult();
+            return _capture.Task;
+        }
+        public void Finish(SKImage image) => _capture.SetResult(image);
     }
 
     private static void Invoke(MainPage page, string name, params object?[] args) =>

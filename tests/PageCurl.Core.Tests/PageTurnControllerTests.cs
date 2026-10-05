@@ -53,6 +53,75 @@ internal static class PageTurnControllerTests
         Custom_flick_velocity_threshold_controls_release_intent();
         Threshold_event_fires_once_on_entry_and_once_on_exit();
         Reused_controller_starts_each_turn_without_previous_release_intent();
+        Completion_handler_can_start_the_next_animated_turn();
+        Invalid_frame_times_do_not_change_a_settling_turn();
+        Repeated_commit_and_rollback_turns_remain_bounded_and_complete_once();
+    }
+
+    private static void Invalid_frame_times_do_not_change_a_settling_turn()
+    {
+        var controller = new PageTurnController();
+        controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Forward);
+        var initial = controller.Snapshot;
+        foreach (var time in new[] { -1d, 0d, double.NaN, double.PositiveInfinity, double.MaxValue })
+        {
+            TestAssert.True(controller.Tick(time));
+            TestAssert.Equal(initial, controller.Snapshot);
+        }
+        RunUntilIdle(controller);
+    }
+
+    private static void Repeated_commit_and_rollback_turns_remain_bounded_and_complete_once()
+    {
+        var controller = new PageTurnController(new PageCurlOptions { FlickEnabled = false });
+        var count = 0;
+        PageTurnCompletedEventArgs? last = null;
+        controller.PageTurnCompleted += (_, args) => { count++; last = args; };
+        for (var turn = 0; turn < 500; turn++)
+        {
+            var forward = turn % 2 == 0;
+            var commit = turn % 3 == 0;
+            var grab = new Vector2(forward ? PageSize.X : 0, PageSize.Y / 2);
+            TestAssert.True(controller.BeginDrag(grab, PageSize, forward ? PageAnchor.Left : PageAnchor.Right));
+            var distance = PageSize.X * (commit ? .8f : .2f);
+            controller.UpdateDrag(grab + new Vector2(forward ? -distance : distance, 0));
+            var beforeInvalidInput = controller.Snapshot;
+            controller.UpdateDrag(new(float.NaN, float.PositiveInfinity));
+            TestAssert.Equal(beforeInvalidInput, controller.Snapshot);
+            controller.EndDrag(animate: turn % 4 != 0);
+            RunUntilIdle(controller);
+            TestAssert.Equal(turn + 1, count);
+            TestAssert.Equal(commit, last!.Committed);
+            TestAssert.Equal(forward ? PageTurnDirection.Forward : PageTurnDirection.Backward, last.Direction);
+            TestAssert.Equal(commit ? 1f : 0f, controller.Snapshot.Progress);
+            controller.Cancel(animate: false);
+            controller.EndDrag(animate: false);
+            TestAssert.Equal(turn + 1, count);
+        }
+    }
+
+    private static void Completion_handler_can_start_the_next_animated_turn()
+    {
+        var controller = new PageTurnController();
+        var completions = 0;
+        controller.PageTurnCompleted += (_, args) =>
+        {
+            completions++;
+            TestAssert.True(args.Committed);
+            if (completions == 1)
+            {
+                TestAssert.True(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Backward));
+            }
+        };
+        TestAssert.True(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Forward));
+        for (var frame = 0; frame < 240; frame++)
+        {
+            var needsFrames = controller.Tick(1.0 / 60);
+            TestAssert.Equal(controller.Snapshot.State == PageTurnState.Settling, needsFrames);
+            if (!needsFrames) break;
+        }
+        TestAssert.Equal(2, completions);
+        TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
     }
 
     private static void Reused_controller_starts_each_turn_without_previous_release_intent()

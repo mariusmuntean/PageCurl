@@ -10,6 +10,11 @@
   `UnderPageImage` when `PreviousPageImage` is absent.
 - Commit the page model from `PageTurnCompleted`. Gesture and programmatic turns
   raise the same event once.
+- A completion subscriber may start another animated turn synchronously. The
+  controller's `Tick` continues to request frames for that new settling turn.
+- Invalid enum and non-finite setting assignments leave the last valid value
+  intact. Finite backside dim factors clamp to 0–1. Binding rejection follows
+  MAUI semantics and does not promise an exception for every invalid assignment.
 - Call `CancelInteraction()` before removing or recycling the view. It immediately
   rolls back and releases pointer ownership; it does not leave a hidden animation. On teardown,
   cancel interaction, clear image properties, unsubscribe events, and only then

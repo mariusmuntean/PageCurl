@@ -1,5 +1,50 @@
 # Testing and validation
 
+The [requirements contract](requirements.md) assigns stable IDs R01–R12.
+Tests prove acceptance behavior; a dated validation record proves a particular
+run. Keep those separate from release and platform readiness. The latest
+[requirements validation record](validation/requirements-2026-10-05/README.md)
+includes failures, fixes, repeated runs and visible computer-control observations.
+
+| Layer | Purpose | Automation |
+| --- | --- | --- |
+| Core | R01–R05/R08/R11: input, geometry, navigation, completion and allocations | Dependency-free deterministic runner, including chained turns from completion handlers |
+| Public control API | R04/R09: valid settings, forwarding, retained state and reduced motion | `PublicApiTests` in the neutral MAUI runner |
+| Snapshot/lifecycle | R06–R08: ownership, revisions, failure and cancellation | Neutral runner on one pumped UI thread |
+| Package consumer | R12: usable transitive packages and representative consumer calls | `tools/test-package-consumer.sh` with a temporary external project, mapped local feed and empty package cache |
+| Native Apple fixture | R02/R06/R08/R10: native snapshot pixels, mesh submission, actual layout and linked demo commands | Built Mac Catalyst assertion host plus bounded `tools/run-native-fixture.py`; driver tests under `tools/tests` |
+| Computer control | R04/R05/R08/R10: real input routing, visible counters, boundaries and live controls | Replayable AX-based journey plus screenshot-based drags and responsive-layout inspection |
+
+For computer control, load
+[`pagecurl-checks.js`](../tests/computer-control/pagecurl-checks.js) into a
+runtime providing `cua`, and call `runPageCurlChecks(cua, absoluteAppPath)`.
+Pass the optional scene list to run one scene per bounded tool call. It resolves
+buttons from fresh accessibility trees, waits for readiness and checks the
+visible counter after commands, instead of guessing coordinates or capture
+durations. It temporarily enables reduced motion and restores its previous
+value. Counters finish at each scene's first page. The same replay resolves
+compact scene labels and opens/closes the Options sheet for settings.
+`runPageCurlLiveContentCheck(cua, absoluteAppPath)` verifies the interactive
+counter, automatic refresh and explicit refresh in either layout.
+`runPageCurlGestureCheck(cua, absoluteAppPath, from, to, counter, status)` checks
+real pointer input; choose points from a fresh screenshot of the visible page.
+Resize through the native window controls and inspect both layouts visually.
+AX counters alone cannot prove gesture routing or pixel quality.
+
+The native driver removes stale evidence, bounds execution, and requires exit
+0, no failed assertions and the final `PASS all native suites` marker. Its
+subprocess tests verify timeouts, missing/partial output and contradictory
+exit-code/result cases. The fixture itself tests explicit refresh failure and
+completion after changing or re-entering scenes, and the counter/button layout
+at a 250 by 333 page size. These are injected at the capture boundary
+while the real page and event handlers run.
+
+CI runs Core, the isolated package consumer and validation-driver tests on Linux;
+the macOS job runs the neutral API/lifecycle suite and builds/runs the native
+fixture, retaining its assertion log even on failure. A workflow definition is
+not evidence of a hosted run. No computer-control or physical-device pass is
+implied by CI configuration.
+
 The neutral MAUI runner pumps asynchronous continuations on one thread to
 match the controls' UI-thread contract. Cancellation tests distinguish a
 cancelled caller wait from completion of the internal serialized capture;
@@ -30,6 +75,8 @@ The platform-free test runner covers:
 
 The neutral MAUI runner covers:
 
+- public enum/numeric validation before property publication, wrapper/renderer
+  consistency, finite dim-factor clamping and immediate reduced-motion cancellation;
 - unavailable-platform and pre-cancelled snapshot capture;
 - snapshot generations, stale-result disposal, last-good-frame retention,
   independent front/back replacement, and teardown order;

@@ -79,6 +79,15 @@ internal sealed class InteractivePageView : ContentView
         grid.SetRow(button, 3);
         grid.SetRow(grid.Children[4], 4);
         SemanticProperties.SetDescription(button, "Increment the live content counter");
+        SizeChanged += (_, _) =>
+        {
+            var compact = Width < 360 || Height < 450;
+            Padding = compact ? new Thickness(16) : new Thickness(32, 28, 32, 24);
+            grid.RowSpacing = compact ? 10 : 18;
+            ((Label)grid.Children[1]).FontSize = compact ? 20 : 30;
+            _countLabel.FontSize = compact ? 32 : 52;
+            ((Label)grid.Children[4]).FontSize = compact ? 11 : 13;
+        };
     }
 
     public event EventHandler? ContentChanged;

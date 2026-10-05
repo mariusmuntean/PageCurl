@@ -33,7 +33,7 @@ for workflow_path in "${workflow_paths[@]}"; do
       printf 'MISSING %s (%s)\n' "$project_path" "$workflow_path"
       missing=1
     fi
-  done < <(rg -o --no-filename 'src/[^[:space:]]+\.csproj' "$workflow_path" | sort -u)
+  done < <(rg -o --no-filename '(src|tests)/[^[:space:]]+\.csproj' "$workflow_path" | sort -u)
 done
 
 exit "$missing"

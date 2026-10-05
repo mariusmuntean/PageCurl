@@ -40,6 +40,7 @@ public partial class MainPage : ContentPage
     private bool _isCompact;
     private bool _pageActive;
     private int _lifecycleRevision;
+    private int _sceneRevision;
 
     public MainPage()
     {
@@ -105,6 +106,7 @@ public partial class MainPage : ContentPage
 
     private void SelectScene(ShowcaseScene scene)
     {
+        _sceneRevision++;
         CancelAllInteractions();
         _scene = scene;
         StatusLabel.Text = "Ready";
@@ -310,21 +312,30 @@ public partial class MainPage : ContentPage
 
     private async void OnRefreshSnapshotClicked(object? sender, EventArgs e)
     {
+        var revision = _lifecycleRevision;
+        var sceneRevision = _sceneRevision;
+        var failed = false;
+        void OnCaptureFailed(object? source, PageSnapshotFailedEventArgs args) => failed = true;
+        ContentPageView.SnapshotFailed += OnCaptureFailed;
         RefreshSnapshotButton.IsEnabled = false;
         StatusLabel.Text = "Capturing";
         try
         {
             await ContentPageView.RefreshSnapshotAsync();
-            StatusLabel.Text = "Snapshot refreshed";
+            if (CanReportResult() && !failed) StatusLabel.Text = "Snapshot refreshed";
         }
         catch (OperationCanceledException)
         {
-            StatusLabel.Text = "Capture replaced";
+            if (CanReportResult()) StatusLabel.Text = "Capture replaced";
         }
         finally
         {
+            ContentPageView.SnapshotFailed -= OnCaptureFailed;
             RefreshSnapshotButton.IsEnabled = true;
         }
+
+        bool CanReportResult() => _pageActive && revision == _lifecycleRevision
+            && sceneRevision == _sceneRevision && _scene == ShowcaseScene.Content;
     }
 
     private void OnSnapshotFailed(object? sender, PageSnapshotFailedEventArgs e)

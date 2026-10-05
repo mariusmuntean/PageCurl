@@ -1,0 +1,13 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Release/net10.0/PageCurl.Core.dll
+  Successfully created package '/var/folders/vy/wnlkv7r94fgdgwdy204r6c5h0000gn/T/pagecurl-consumer.1wcz2k/feed/PageCurl.Core.0.1.0.nupkg'.
+  Determining projects to restore...
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Core/PageCurl.Core.csproj (in 43 ms).
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Maui/PageCurl.Maui.csproj (in 124 ms).
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Release/net10.0/PageCurl.Core.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0/PageCurl.Maui.dll
+  Successfully created package '/var/folders/vy/wnlkv7r94fgdgwdy204r6c5h0000gn/T/pagecurl-consumer.1wcz2k/feed/PageCurl.Maui.0.1.0.nupkg'.
+  Determining projects to restore...
+  Restored /var/folders/vy/wnlkv7r94fgdgwdy204r6c5h0000gn/T/pagecurl-consumer.1wcz2k/consumer/Consumer.csproj (in 9,64 sec).
+PASS package consumer: PageCurl.Maui, transitive Core, command and mesh

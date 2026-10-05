@@ -74,6 +74,8 @@ public sealed class FixturePage : ContentPage
             await DemoRegressionTests.RunAsync(Window!, _results);
         }
         catch (Exception exception) { _results.Add("FAIL demo " + exception); }
+        if (!_results.Any(line => line.StartsWith("FAIL", StringComparison.Ordinal)))
+            _results.Add("PASS all native suites");
         File.WriteAllLines(Environment.GetEnvironmentVariable("PAGECURL_TEST_OUTPUT")
             ?? Path.Combine(Path.GetTempPath(), "pagecurl-native-tests.log"), _results);
         Environment.Exit(_results.Any(line => line.StartsWith("FAIL", StringComparison.Ordinal)) ? 1 : 0);

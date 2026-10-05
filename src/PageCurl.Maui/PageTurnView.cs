@@ -128,7 +128,8 @@ public sealed class PageTurnView : SKGLView
         typeof(float),
         typeof(PageTurnView),
         0.82f,
-        coerceValue: static (_, value) => Math.Clamp((float)value, 0, 1),
+        validateValue: static (_, value) => value is float factor && float.IsFinite(factor),
+        coerceValue: static (_, value) => float.IsFinite((float)value) ? Math.Clamp((float)value, 0, 1) : value,
         propertyChanged: OnVisualPropertyChanged);
 
     public static readonly BindableProperty ContentScaleProperty = BindableProperty.Create(
@@ -136,6 +137,7 @@ public sealed class PageTurnView : SKGLView
         typeof(PageContentScale),
         typeof(PageTurnView),
         PageContentScale.Fill,
+        validateValue: static (_, value) => value is PageContentScale scale && Enum.IsDefined(scale),
         propertyChanged: OnVisualPropertyChanged);
 
     public static readonly BindableProperty SurfaceColorProperty = BindableProperty.Create(
@@ -426,7 +428,7 @@ public sealed class PageTurnView : SKGLView
     {
         if (cancelled)
         {
-            Controller.Cancel();
+            Controller.Cancel(animate: !ReduceMotion);
         }
         else
         {

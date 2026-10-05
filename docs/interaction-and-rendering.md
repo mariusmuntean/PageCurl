@@ -43,7 +43,7 @@ contract. Low-level single-page turns keep their original progress convention.
 
 `CancelInteraction()` completes rollback immediately and releases pointer
 ownership before a view can be hidden or recycled. Touch cancellation can still
-animate. The demo ignores completion events from inactive scenes.
+animate when reduced motion is disabled. The demo ignores completion events from inactive scenes.
 
 ## Paper model
 

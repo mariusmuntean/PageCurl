@@ -117,6 +117,7 @@ public sealed class PageSpreadView : Grid
         typeof(PageBacksideMode),
         typeof(PageSpreadView),
         PageBacksideMode.MirroredFront,
+        validateValue: static (_, value) => value is PageBacksideMode mode && Enum.IsDefined(mode),
         propertyChanged: OnPresentationChanged);
 
     public static readonly BindableProperty BacksideColorProperty = BindableProperty.Create(
@@ -131,7 +132,8 @@ public sealed class PageSpreadView : Grid
         typeof(float),
         typeof(PageSpreadView),
         0.82f,
-        coerceValue: static (_, value) => Math.Clamp((float)value, 0, 1),
+        validateValue: static (_, value) => value is float factor && float.IsFinite(factor),
+        coerceValue: static (_, value) => float.IsFinite((float)value) ? Math.Clamp((float)value, 0, 1) : value,
         propertyChanged: OnPresentationChanged);
 
     public static readonly BindableProperty ReduceMotionProperty = BindableProperty.Create(

@@ -1,0 +1,39 @@
+PASS red 200x200 #fff90000
+PASS blue 200x200 #ff0000f9
+PASS white 200x200 #fff9f9f9
+PASS gray 200x200 #ff7d7d7d
+PASS half-red 200x200 #80f90000
+PASS Display-P3 red
+PASS all native snapshot tests
+PASS custom backside reads in landing orientation
+PASS shrinking mesh clears stale triangles
+MESH_SUBMISSION frames=1000 elapsed_ms=11446.9 managed_bytes=106944 rss_delta_bytes=1261568
+RESOURCE_CREATE elapsed_ms=16.0 managed_bytes=49256
+PASS no unused PNG API
+PASS page 01 back is page 02
+PASS curl surface spans stage
+SINGLE_PAINT frames=5 mean_ms=31.1 last_ms=31.5
+IMMEDIATE_SWITCH handler_ms=57.9 dispatcher_ms=197.9
+SPREAD_CAPTURE count=1 total_ms=77.8
+PASS immediate switch stays responsive
+PASS scene switch cancels immediately
+PASS inactive completion ignored
+PASS spread ready after Single drag
+ZONE logical={X=1586 Y=0 Width=52 Height=1092} native={{1586, 0}, {52, 1092}} center={1845.5, 669} hit=SKCanvasView enabled=True
+PASS spread outer edge receives input
+PASS Single immediate status
+PASS Single next available
+PASS Spread immediate status
+PASS Spread next available
+PASS Content immediate status
+PASS Content next available
+PASS Backside immediate status
+PASS Backside next available
+PASS explicit refresh reports failure and retains last frame
+PASS suspended refresh cannot overwrite another scene
+FAIL suspended refresh changed re-entered scene status: Ready -> Capture replaced
+PASS all six spread slots detached
+PASS queued callback ignores disappearance
+PASS resources recreated after return
+PASS animated command starts
+PASS animated completion

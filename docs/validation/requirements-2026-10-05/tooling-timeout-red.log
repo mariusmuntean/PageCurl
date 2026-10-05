@@ -1,0 +1,37 @@
+........
+======================================================================
+FAIL: test_timeout_must_be_finite_and_positive (test_native_runner.NativeRunnerTests) (value='nan')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_native_runner.py", line 30, in test_timeout_must_be_finite_and_positive
+    self.assertEqual(2, result.returncode)
+AssertionError: 2 != 1
+
+======================================================================
+FAIL: test_timeout_must_be_finite_and_positive (test_native_runner.NativeRunnerTests) (value='inf')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_native_runner.py", line 30, in test_timeout_must_be_finite_and_positive
+    self.assertEqual(2, result.returncode)
+AssertionError: 2 != 1
+
+======================================================================
+FAIL: test_timeout_must_be_finite_and_positive (test_native_runner.NativeRunnerTests) (value='0')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_native_runner.py", line 31, in test_timeout_must_be_finite_and_positive
+    self.assertIn("finite and positive", result.stderr)
+AssertionError: 'finite and positive' not found in 'usage: run-native-fixture.py [-h] [--output OUTPUT] [--timeout TIMEOUT] binary\nrun-native-fixture.py: error: --timeout must be positive\n'
+
+======================================================================
+FAIL: test_timeout_must_be_finite_and_positive (test_native_runner.NativeRunnerTests) (value='-1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_native_runner.py", line 31, in test_timeout_must_be_finite_and_positive
+    self.assertIn("finite and positive", result.stderr)
+AssertionError: 'finite and positive' not found in 'usage: run-native-fixture.py [-h] [--output OUTPUT] [--timeout TIMEOUT] binary\nrun-native-fixture.py: error: --timeout must be positive\n'
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.856s
+
+FAILED (failures=4)

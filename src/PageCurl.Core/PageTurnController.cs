@@ -293,7 +293,8 @@ public sealed class PageTurnController
         if (MathF.Abs(_progress - _targetProgress) <= 0.001f && MathF.Abs(_velocity) <= 0.01f)
         {
             CompleteAtTarget();
-            return false;
+            // Completion subscribers may synchronously start the next turn.
+            return _state == PageTurnState.Settling;
         }
 
         return true;

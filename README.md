@@ -234,6 +234,9 @@ Android, iOS, Mac Catalyst, and Windows through the SkiaSharp MAUI handlers.
 
 ## Verification
 
+Start with the [requirements and acceptance criteria](docs/requirements.md) to
+see which behaviors each test layer proves and which release gates remain open.
+
 Run the platform-independent checks with:
 
 ```bash

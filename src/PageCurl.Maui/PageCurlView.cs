@@ -42,7 +42,8 @@ public sealed class PageCurlView : Grid
 
     public static readonly BindableProperty LockedAnchorProperty = ForwardedProperty<PageAnchor>(
         nameof(LockedAnchor),
-        PageAnchor.Auto);
+        PageAnchor.Auto,
+        static value => Enum.IsDefined(value));
 
     public static readonly BindableProperty PageChangeThresholdProperty = ForwardedProperty<float>(
         nameof(PageChangeThreshold),
@@ -65,7 +66,8 @@ public sealed class PageCurlView : Grid
 
     public static readonly BindableProperty BacksideModeProperty = ForwardedProperty(
         nameof(BacksideMode),
-        PageBacksideMode.MirroredFront);
+        PageBacksideMode.MirroredFront,
+        static value => Enum.IsDefined(value));
 
     public static readonly BindableProperty BacksideColorProperty = ForwardedProperty(
         nameof(BacksideColor),
@@ -76,8 +78,9 @@ public sealed class PageCurlView : Grid
         typeof(float),
         typeof(PageCurlView),
         0.82f,
+        validateValue: static (_, value) => value is float factor && float.IsFinite(factor),
         propertyChanged: OnForwardedPropertyChanged,
-        coerceValue: static (_, value) => Math.Clamp((float)value, 0, 1));
+        coerceValue: static (_, value) => float.IsFinite((float)value) ? Math.Clamp((float)value, 0, 1) : value);
 
     public static readonly BindableProperty ReduceMotionProperty = ForwardedProperty(
         nameof(ReduceMotion),

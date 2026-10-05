@@ -18,16 +18,22 @@ jobs:
           global-json-file: global.json
       - name: Run platform-free tests
         run: dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
+      - name: Verify validation tooling
+        run: |
+          bash tools/check-workflow-projects.sh
+          python3 -m unittest discover -s tools/tests -p 'test_*.py'
       - name: Build neutral MAUI target
         shell: bash
         run: |
           set -euo pipefail
           dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
           dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0
-          dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 --no-restore
+          dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0 --no-restore
       - name: Pack the library metadata
         shell: bash
         run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -p:TargetFrameworks=net10.0 --no-restore --output .artifacts/packages
+      - name: Verify isolated public package consumer
+        run: bash tools/test-package-consumer.sh
 
   mobile:
     runs-on: xcode-27
@@ -53,12 +59,23 @@ jobs:
           set -euo pipefail
           dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0
           dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
-          dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 --no-restore
+          dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0 --no-restore
       - name: Run neutral MAUI tests
-        run: dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release
+        run: dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release -f net10.0
       - name: Build iOS simulator demo
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-ios -p:RuntimeIdentifier=iossimulator-arm64
       - name: Build Android demo
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
       - name: Build Mac Catalyst demo
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
+      - name: Build native regression fixture
+        run: dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Debug -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
+      - name: Run native regression assertions
+        run: python3 tools/run-native-fixture.py tests/PageCurl.Apple.Tests/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Apple.Tests.app/Contents/MacOS/PageCurl.Apple.Tests
+      - name: Retain native assertion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-assertions
+          path: .artifacts/native-tests.log
+          if-no-files-found: warn

@@ -5,6 +5,7 @@ stiff paper. Start with the [README](../README.md), then use these pages for the
 details:
 
 - [Architecture](architecture.md): project boundaries and frame flow.
+- [Requirements](requirements.md): acceptance criteria and links to automated coverage.
 - [Interaction and rendering](interaction-and-rendering.md): gestures, page
   geometry, shading, and performance choices.
 - [Renderer comparison](renderer-comparison.md): Simple3D suitability and current choice.
