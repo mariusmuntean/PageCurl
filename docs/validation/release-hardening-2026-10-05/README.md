@@ -31,3 +31,13 @@ reference, with publication through the documented script.
 These checks do not certify hardware performance, Windows runtime rendering,
 VoiceOver/TalkBack, signing, store packages or published NuGet consumption.
 See [release gates](../../release-readiness.md).
+
+## Framework override regression
+
+The first Windows build completed with `NETSDK1005`: a global `TargetFrameworks`
+override restored Core for Windows while Core still builds `net10.0`. The same
+failure was reproduced locally using an Android-only library restore. Restoring
+Core separately for `net10.0`, then building and packing Android with
+`--no-restore`, passed with zero warnings/errors and valid Android package assets.
+The Windows workflow uses this same sequence, with matching restore/build
+packaging properties. Only a completed hosted Windows run establishes its pass.
