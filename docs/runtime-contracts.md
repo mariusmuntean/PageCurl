@@ -35,6 +35,9 @@
   capture. Waiting preserves cancellation; textures and null slots are not
   replaced while the sheet is moving. Obsolete content revisions and cancelled
   capture failures cannot publish images or error events.
+- Hiding invalidates captures started in the previous presentation. Existing
+  snapshots remain available; late images are disposed and late failures are
+  suppressed even if the control becomes visible again.
 - A new capture cancels the previous generation. A late result is disposed and
   cannot replace the current frame. Front and back captures fail independently.
 - `SnapshotFailed` reports the content and exception. The wrapper keeps the
@@ -60,6 +63,8 @@
 - Public `RefreshSnapshotAsync` invalidates every slot so changes inside an
   existing content view are captured. Automatic property and layout refreshes
   serialize behind the running capture and drain only dirty slots.
+- Hiding ends the current refresh lifecycle and marks all slots dirty while
+  retaining their last good textures. Showing queues a fresh drain.
 - Each content/layout invalidation increments a slot revision. Obsolete results
   are disposed without replacing current images or acknowledging newer content.
   A current failed capture keeps the last good texture and its dirty state,

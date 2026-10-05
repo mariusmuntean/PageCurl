@@ -55,8 +55,10 @@ These are not platform certification claims.
   [invalid-timeout failures](tooling-timeout-red.log).
 
 Independent read-only review was repeated after fixes and found no remaining
-material source or harness defect. Hosted CI was configured but not executed in
-this local validation. No fresh iOS simulator interaction, Windows, physical
+material source or harness defect at revision `3766280`. Hosted CI was configured
+but not executed as part of that local validation. Subsequent hosted runs and
+test-quality findings are recorded in the
+[later audit](../test-quality-2026-10-05/README.md). No fresh iOS simulator interaction, Windows, physical
 device, screen-reader, signing/publication, sustained GPU/texture or published
 binary API-baseline certification was performed. Those remain explicit release
 gates. No task-started fixture process is retained; the pre-existing demo session

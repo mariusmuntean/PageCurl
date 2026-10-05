@@ -187,6 +187,31 @@ internal static class DemoRegressionTests
                 ? "PASS queued live refresh ignores scene re-entry"
                 : $"FAIL queued live refresh changed new scene status: {status.Text}");
 
+            foreach (var scene in new[] { "Content", "Spread" })
+            {
+                ((IButtonController)page.FindByName<Button>($"{scene}SceneButton")).SendClicked();
+                var control = scene == "Content" ? (View)content : page.FindByName<PageSpreadView>("SpreadPageView");
+                var snapshotterField = control.GetType().GetField("_snapshotter", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                var savedSnapshotter = snapshotterField.GetValue(control);
+                var failure = new DelayedFailureSnapshotter();
+                snapshotterField.SetValue(control, failure);
+                try
+                {
+                    var capture = scene == "Content" ? content.RefreshSnapshotAsync()
+                        : ((PageSpreadView)control).RefreshSnapshotAsync();
+                    await failure.Started;
+                    ((IButtonController)page.FindByName<Button>("SingleSceneButton")).SendClicked();
+                    ((IButtonController)page.FindByName<Button>($"{scene}SceneButton")).SendClicked();
+                    failure.Fail();
+                    try { await capture; } catch (OperationCanceledException) { }
+                    results.Add(status.Text == "Ready"
+                        ? $"PASS {scene} delayed failure ignores scene re-entry"
+                        : $"FAIL {scene} delayed failure changed new scene status: {status.Text}");
+                }
+                finally { snapshotterField.SetValue(control, savedSnapshotter); }
+            }
+            ((IButtonController)page.FindByName<Button>("ContentSceneButton")).SendClicked();
+
             var delayed = new SuspendedSnapshotter();
             field.SetValue(content, delayed);
             ((IButtonController)refresh).SendClicked();
@@ -232,6 +257,23 @@ internal static class DemoRegressionTests
     {
         public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken) =>
             Task.FromException<SKImage>(new InvalidOperationException("Capture unavailable in regression fixture."));
+    }
+
+    private sealed class DelayedFailureSnapshotter : IPageContentSnapshotter
+    {
+        private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<SKImage> _failure = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly PageContentSnapshotter _inner = new();
+        private bool _first = true;
+        public Task Started => _started.Task;
+        public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
+        {
+            if (!_first) return _inner.CaptureAsync(content, cancellationToken);
+            _first = false;
+            _started.SetResult();
+            return _failure.Task;
+        }
+        public void Fail() => _failure.SetException(new InvalidOperationException("Delayed stale capture failure."));
     }
 
     private sealed class SuspendedSnapshotter : IPageContentSnapshotter

@@ -354,7 +354,12 @@ public sealed class PageCurlView : Grid
     protected override void OnPropertyChanged(string? propertyName = null)
     {
         base.OnPropertyChanged(propertyName);
-        if (propertyName == IsVisibleProperty.PropertyName && IsVisible) QueueSnapshotRefresh();
+        if (propertyName == IsVisibleProperty.PropertyName)
+        {
+            // A capture started before hiding belongs to the previous presentation.
+            if (!IsVisible) _contentRevision++;
+            else QueueSnapshotRefresh();
+        }
     }
 
     private Grid CreateActivationLayer()

@@ -10,6 +10,7 @@ internal static class PageCurlViewTests
     public static async Task RunAllAsync()
     {
         await Superseded_capture_does_not_report_a_stale_failure();
+        await Hidden_capture_cannot_publish_after_visibility_returns();
         await Capture_failure_does_not_clear_the_active_sheet_back();
         await Active_curl_defers_snapshot_replacement();
         await Front_and_back_content_are_captured_independently();
@@ -41,6 +42,40 @@ internal static class PageCurlViewTests
         await TestAssert.ThrowsAsync<OperationCanceledException>(() => obsolete);
         TestAssert.Equal(0, failures);
         TestAssert.True(view.Renderer.FrontImage!.Handle != IntPtr.Zero);
+    }
+
+    private static async Task Hidden_capture_cannot_publish_after_visibility_returns()
+    {
+        foreach (var fails in new[] { true, false })
+        {
+            var snapshotter = new SuspendedSnapshotter();
+            var view = new PageCurlView(snapshotter) { FrontContent = new Grid() };
+            try
+            {
+                await view.RefreshSnapshotAsync();
+                var previous = view.Renderer.FrontImage!;
+                var failures = 0;
+                view.SnapshotFailed += (_, _) => failures++;
+                var pending = new TaskCompletionSource<SKImage>();
+                snapshotter.Pending = pending;
+                var capture = view.RefreshSnapshotAsync();
+                view.IsVisible = false;
+                view.IsVisible = true;
+                using var surface = SKSurface.Create(new SKImageInfo(4, 4));
+                var stale = surface.Snapshot();
+                if (fails) { stale.Dispose(); pending.SetException(new InvalidOperationException("hidden failure")); }
+                else pending.SetResult(stale);
+                await capture;
+                TestAssert.Equal(0, failures);
+                TestAssert.Same(previous, view.Renderer.FrontImage!);
+                TestAssert.Equal(IntPtr.Zero, stale.Handle);
+            }
+            finally
+            {
+                typeof(PageCurlView).GetMethod("OnHandlerChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(view, null);
+            }
+        }
     }
 
     private static async Task Capture_failure_does_not_clear_the_active_sheet_back()

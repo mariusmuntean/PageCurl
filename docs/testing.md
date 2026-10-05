@@ -37,7 +37,7 @@ The native driver removes stale evidence, bounds execution, and requires exit
 0, no failed assertions and the final `PASS all native suites` marker. Its
 subprocess tests verify timeouts, missing/partial output and contradictory
 exit-code/result cases. The fixture itself tests automatic and explicit refresh failure and
-completion after changing or re-entering scenes, and the counter/button layout
+completion and delayed failure after changing or re-entering scenes, and the counter/button layout
 at a 250 by 333 page size. These are injected at the capture boundary
 while the real page and event handlers run.
 
@@ -86,7 +86,7 @@ The neutral MAUI runner covers:
   consistency, finite dim-factor clamping and immediate reduced-motion cancellation;
 - unavailable-platform and pre-cancelled snapshot capture;
 - snapshot generations, stale-result disposal, last-good-frame retention,
-  independent front/back replacement, and teardown order;
+  independent front/back replacement, hide/reveal rejection and teardown order;
 - `PageCurlView` capture, failure events, and interaction property forwarding;
 - six-slot spread capture, transparent overlay composition, and
   readiness-aware forward/back state;

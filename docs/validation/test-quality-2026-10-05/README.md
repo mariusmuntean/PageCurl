@@ -27,6 +27,13 @@ adding public API surface.
   `FAIL live refresh hid capture failure: Live content updated`. Automatic and
   explicit refresh now share generation-guarded result reporting and preserve
   the last-good-snapshot failure status.
+- Independent review found delayed capture failures crossing a hide/re-entry
+  boundary. The [native red run](reentry-red.log) reproduced Spread status being
+  replaced by `Using last snapshot`; a neutral wrapper regression reproduced one
+  stale failure event instead of zero. Hiding now invalidates old capture
+  revisions, preserves existing snapshots and makes spread slots dirty for the
+  next presentation. Both delayed failures and stale successful-image disposal
+  are covered (R07/R10).
 - Compiled documented Skia handler registration in the isolated package consumer
   (R12), and corrected README custom-backside examples and setup instructions.
 
@@ -38,7 +45,7 @@ adding public API surface.
 | Neutral MAUI Release runner | [5 groups passed](maui-tests.log) |
 | Validation tooling | [10 tests passed](tooling-tests.log), including stock Unix PATH coverage |
 | External package consumer | Fresh local packages/cache restored and compiled; transitive Core command/mesh ran |
-| Native Mac Catalyst fixture | [All suites passed](native-assertions.log), including both new refresh regressions |
+| Native Mac Catalyst fixture | [All suites passed](native-assertions.log), including refresh and visibility regressions |
 | Workflow project references | All referenced projects exist |
 
 Environment: .NET SDK 10.0.401, workload set 10.0.401.1, Xcode 27.0;
@@ -58,11 +65,18 @@ steps were removed.
 [Verify run 37283932941](https://github.com/mariusmuntean/PageCurl/actions/runs/37283932941)
 on commit `57ea2c6` completed successfully: Linux Core/tooling/package consumer,
 macOS Core/MAUI tests, Android/iOS simulator/Mac Catalyst builds, and native
-fixture assertions. Historical failed runs remain as diagnostic evidence.
+fixture assertions. Historical failed runs remain as diagnostic evidence. GitHub links require access
+to this private repository; local assertion logs above remain available in the
+checkout.
+[Run 37285777668](https://github.com/mariusmuntean/PageCurl/actions/runs/37285777668)
+on `4c564bb` also passed both jobs with the expanded test audit and refresh fix.
 Subsequent revisions require their own green hosted run before reporting completion.
 
 The earlier record contains actual computer-control journeys for commands,
-live content, compact options and pointer drags. This audit's added failure
-checks are native injected regressions, not new physical-device interactions.
+live content, compact options and pointer drags. The rebuilt Mac showcase was also exercised through computer control: the live
+counter changed from 0 to 1 with `Live content updated`, then the actual Refresh
+button produced `Snapshot refreshed`. Task-started demo processes were closed.
+This audit's added failure checks are injected native/neutral regressions, not
+physical-device interactions.
 Physical iOS/low-end Android performance, Windows and hardware screen-reader
 certification remain [release gates](../../release-readiness.md).
