@@ -24,7 +24,7 @@ jobs:
       - name: Build and check documentation
         run: bash tools/build-docs.sh
       - name: Retain validated site
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: documentation-site
           path: .artifacts/site
