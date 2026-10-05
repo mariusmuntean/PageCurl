@@ -20,3 +20,5 @@ TestResults/
 *.pidb
 *.booproj
 *.pdb
+
+docs/site/api/

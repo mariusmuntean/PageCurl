@@ -13,7 +13,8 @@ completed screen-reader certification.
 
 Before a public or flagship-reader release:
 
-1. Retain clean hosted builds with pinned .NET, MAUI and SkiaSharp; extend
+1. Retain clean hosted builds with pinned .NET, MAUI and SkiaSharp, including
+   the Windows build and native package asset checks; extend
    the current unsigned build evidence to distributable Android/iOS packages.
 2. Run the core suite and platform smoke paths on supported OS versions.
 3. Profile drag and settling on low-end Android and current physical iOS
@@ -25,8 +26,17 @@ Before a public or flagship-reader release:
 5. Run VoiceOver and TalkBack passes for scene selection, the interactive page,
    Previous/Next, edge/corner anchors, threshold, haptics, reduced motion, and
    the options sheet.
-6. Validate signing, archives, store packaging, API compatibility, and package
-   publication before distribution.
+6. Validate signing, archives, store packaging, API compatibility against a
+   published baseline, and package publication before distribution. Native
+   packages packed on one host contain that host's selected targets; assemble
+   and verify a complete distribution before publishing a cross-platform package.
+
+The documentation site has a warning-free build, generated API reference and
+checks for local links, anchors and publication boundaries. See
+[documentation publishing](documentation.md). Package checks require assembly
+and XML documentation assets for each requested framework and a transitive Core
+dependency. Symbols use the SDK's Source Link support and snupkg format.
+GitHub Actions updates have a monthly Dependabot schedule.
 
 See [compatibility](compatibility.md) and [validation records](validation/) for
 the evidence currently in the repository. Do not infer a passed gate from an

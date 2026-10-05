@@ -18,7 +18,7 @@ and the release criteria belong in
 | Android | API 24 | Build + Rider launch | Release build passes; Rider launches the demo on Pixel 9 / Android 15 |
 | iOS | iOS 17 | Build + Rider simulator launch | Release simulator build passes on Xcode 27.0; Rider launches the demo on iPhone 17e / iOS 27.0. Automated HID interactions remain blocked by idb SimulatorKit |
 | Mac Catalyst | macOS 14 / Catalyst 17 | Build + Rider launch + native assertions | Supported Xcode 27.0 Debug build and Rider launch pass; native fixture checks snapshots, rendered interaction, immediate scene switching and teardown |
-| Windows | Windows 10.0.19041 | Not validated | No Windows host in this validation run |
+| Windows | Windows 10.0.17763 | CI build gate added | Windows Release build and package checks run on a Windows host; runtime evidence remains open |
 
 The package remains platform-portable at the core/API boundary. Physical-device
 performance, low-end hardware, store signing, VoiceOver/TalkBack hardware

@@ -6,7 +6,7 @@ API changes while the public contract settles.
 
 The supported baseline is .NET 10, .NET MAUI 10, and
 SkiaSharp.Views.Maui.Controls 4.150.1. The minimum platform targets are
-Android API 24 and iOS 15. See [`docs/compatibility.md`](docs/compatibility.md)
+Android API 24, iOS/Catalyst 17 and Windows 10.0.17763. See [`docs/compatibility.md`](docs/compatibility.md)
 for the validation matrix and evidence status.
 
 When reporting an issue, include the package version, target framework,

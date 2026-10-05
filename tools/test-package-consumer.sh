@@ -9,6 +9,8 @@ mkdir -p "$SCRATCH/feed" "$SCRATCH/consumer"
 
 "$DOTNET" pack "$ROOT/src/PageCurl.Core/PageCurl.Core.csproj" -c Release --output "$SCRATCH/feed"
 "$DOTNET" pack "$ROOT/src/PageCurl.Maui/PageCurl.Maui.csproj" -c Release -p:TargetFrameworks=net10.0 --output "$SCRATCH/feed"
+python3 "$ROOT/tools/check-packages.py" "$SCRATCH/feed/"PageCurl.Core.*.nupkg net10.0
+python3 "$ROOT/tools/check-packages.py" "$SCRATCH/feed/"PageCurl.Maui.*.nupkg net10.0
 cp "$ROOT/tests/PageCurl.Package.Tests/Consumer.csproj" "$ROOT/tests/PageCurl.Package.Tests/Program.cs" "$SCRATCH/consumer/"
 cp "$ROOT/global.json" "$SCRATCH/global.json"
 cat > "$SCRATCH/NuGet.Config" <<EOF

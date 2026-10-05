@@ -1,9 +1,11 @@
 # PageCurl.Maui documentation
 
 PageCurl.Maui provides .NET 10 MAUI controls for turning images, live views and
-two-page spreads like stiff paper. Start with the [README](../README.md), then use these pages for the
-details:
+two-page spreads like stiff paper. Use the [public documentation](https://mariusmuntean.github.io/PageCurl-docs/)
+for setup, usage and API reference. Start with the [README](../README.md), then
+use these repository pages for architecture and validation details:
 
+- [Documentation publishing](documentation.md): site sources, validation and publication.
 - [Architecture](architecture.md): project boundaries and frame flow.
 - [Requirements](requirements.md): acceptance criteria and links to automated coverage.
 - [Interaction and rendering](interaction-and-rendering.md): gestures, page

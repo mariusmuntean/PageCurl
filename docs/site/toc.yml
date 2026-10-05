@@ -1,0 +1,17 @@
+- name: Overview
+  href: index.md
+- name: Quick start
+  href: getting-started.md
+- name: Images and live content
+  href: content.md
+- name: Two-page spreads
+  href: spreads.md
+- name: Runtime and lifecycle
+  href: runtime.md
+- name: Platform support
+  href: platforms.md
+- name: Contributing and validation
+  href: contributing.md
+- name: API reference
+  href: api/toc.yml
+  topicHref: api-index.md

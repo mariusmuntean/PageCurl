@@ -1,0 +1,52 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../../.artifacts/docs-input",
+          "files": [
+            "PageCurl.Core.dll",
+            "PageCurl.Maui.dll"
+          ]
+        }
+      ],
+      "dest": "api",
+      "disableGitFeatures": true
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "*.md",
+          "toc.yml",
+          "api/*.yml"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ],
+    "dest": "../../.artifacts/site",
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_baseUrl": "https://mariusmuntean.github.io/PageCurl-docs/",
+      "_appTitle": "PageCurl.Maui",
+      "_appName": "PageCurl.Maui",
+      "_appLogoPath": "images/logo.svg",
+      "_appFaviconPath": "images/logo.svg",
+      "_appFooter": "PageCurl.Maui \u00b7 MIT license",
+      "_enableSearch": true,
+      "_disableContribution": true,
+      "_disableDefaultFilter": false
+    },
+    "disableGitFeatures": true
+  }
+}

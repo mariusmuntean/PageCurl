@@ -65,6 +65,11 @@ jobs:
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
       - name: Build Mac Catalyst demo
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
+      - name: Pack native library assets
+        run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release --output .artifacts/packages -m:1 -nr:false
+      - name: Check native package assets
+        shell: bash
+        run: python3 tools/check-packages.py .artifacts/packages/PageCurl.Maui.*.nupkg net10.0 net10.0-android net10.0-ios net10.0-maccatalyst
       - name: Build native regression fixture
         run: dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Debug -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
       - name: Run native regression assertions
@@ -76,3 +81,22 @@ jobs:
           name: native-assertions
           path: .artifacts/native-tests.log
           if-no-files-found: warn
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Install Windows MAUI workload
+        run: dotnet workload install maui-windows
+      - name: Build Windows demo
+        run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None -m:1 -nr:false
+      - name: Pack Windows library
+        run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -p:TargetFrameworks=net10.0-windows10.0.19041.0 --output .artifacts/packages -m:1 -nr:false
+      - name: Check Windows package assets
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem .artifacts/packages/PageCurl.Maui.*.nupkg | Select-Object -First 1
+          python tools/check-packages.py $package.FullName net10.0-windows
