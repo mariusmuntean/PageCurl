@@ -11,6 +11,9 @@ permissions:
 jobs:
   core:
     runs-on: ubuntu-latest
+    # This lane evaluates only net10.0; native workload pins belong to mobile.
+    env:
+      MSBuildEnableWorkloadResolver: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
