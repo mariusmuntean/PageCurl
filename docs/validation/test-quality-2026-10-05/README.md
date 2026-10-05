@@ -78,5 +78,8 @@ counter changed from 0 to 1 with `Live content updated`, then the actual Refresh
 button produced `Snapshot refreshed`. Task-started demo processes were closed.
 This audit's added failure checks are injected native/neutral regressions, not
 physical-device interactions.
+Custom snapshotters must complete their task and cooperate with cancellation;
+an unfinished provider can delay serialized spread refresh. This is an explicit
+provider contract, not a hard capture timeout guarantee.
 Physical iOS/low-end Android performance, Windows and hardware screen-reader
 certification remain [release gates](../../release-readiness.md).

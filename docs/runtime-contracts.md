@@ -40,6 +40,11 @@
   suppressed even if the control becomes visible again.
 - A new capture cancels the previous generation. A late result is disposed and
   cannot replace the current frame. Front and back captures fail independently.
+- Custom `IPageContentSnapshotter` implementations must eventually complete and
+  cooperate with cancellation. Caller cancellation cannot forcibly stop a native
+  capture or an arbitrary provider; spread refresh keeps its serialization barrier
+  until that capture completes. A provider that never completes can block later
+  refreshes, including after hide/reveal.
 - `SnapshotFailed` reports the content and exception. The wrapper keeps the
   last good frame. A missing native video layer needs an app-supplied poster.
 - Gesture start never waits for capture. Edge and corner activation zones use
