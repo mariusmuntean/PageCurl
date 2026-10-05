@@ -1,7 +1,7 @@
 # PageCurl.Maui documentation
 
-PageCurl.Maui is a .NET 10 MAUI control for turning caller-supplied images like
-stiff paper. Start with the [README](../README.md), then use these pages for the
+PageCurl.Maui provides .NET 10 MAUI controls for turning images, live views and
+two-page spreads like stiff paper. Start with the [README](../README.md), then use these pages for the
 details:
 
 - [Architecture](architecture.md): project boundaries and frame flow.

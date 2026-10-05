@@ -1,3 +1,5 @@
+using PageCurl.Core;
+
 namespace PageCurl.Maui.Tests;
 
 internal static class TestAssert
@@ -28,6 +30,19 @@ internal static class TestAssert
         {
             throw new InvalidOperationException($"Expected {expected}, but was {actual}.");
         }
+    }
+
+    public static void TickUntilIdle(PageTurnController controller)
+    {
+        for (var frame = 0; frame < 600; frame++)
+        {
+            if (!controller.Tick(0.1))
+            {
+                Equal(PageTurnState.Idle, controller.Snapshot.State);
+                return;
+            }
+        }
+        throw new InvalidOperationException($"Turn did not settle within 600 frames: {controller.Snapshot}");
     }
 
     public static async Task ThrowsAsync<TException>(Func<Task> action)

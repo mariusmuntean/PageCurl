@@ -27,5 +27,7 @@ passes, and long-run GPU/texture profiling are separate release gates.
 The [latest Rider and interaction validation](validation/rider-and-interaction-2026-10-04/README.md)
 uses SDK 10.0.401, workload set 10.0.401.1 and Xcode 27.0 with version checking
 enabled. Earlier October records used a diagnostic Xcode override; those
-historical results do not describe the current toolchain. The hosted GitHub
-workflow has been updated but has not been dispatched from this checkout.
+historical results do not describe the current toolchain. The hosted [Verify run on 5 October](https://github.com/mariusmuntean/PageCurl/actions/runs/37283932941)
+passed both Linux and macOS jobs, including the isolated package consumer,
+neutral API tests, Android/iOS/Mac Catalyst builds and native assertions.
+These unsigned builds do not certify store packaging or physical-device behavior.

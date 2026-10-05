@@ -1,7 +1,7 @@
 # PageCurl.Maui
 
-`PageCurl.Maui` is a small .NET MAUI control for dragging an image like a
-book page. It separates interaction, geometry and drawing so the math can be
+`PageCurl.Maui` provides interactive page curls for images, live MAUI content,
+and two-page spreads. It separates interaction, geometry and drawing so the math can be
 tested without a device or UI toolkit:
 
 * `src/PageCurl.Core` targets `net10.0` and contains the allocation-free drag
@@ -37,8 +37,8 @@ To build only Android, use the explicit target:
 dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
 ```
 
-The control pins `SkiaSharp.Views.Maui.Controls` 4.150.1, the current stable
-SkiaSharp.Views release with `net10.0-*` assets and MAUI 10 dependencies.
+The control pins `SkiaSharp.Views.Maui.Controls` 4.150.1 with `net10.0-*`
+assets and MAUI 10 dependencies.
 Keep the package and MAUI workload on the same .NET major line when upgrading.
 
 The project selects Android automatically on Linux. iOS and Mac Catalyst
@@ -79,7 +79,17 @@ are in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 ## Use the control
 
-The control accepts `SKImage` instances. The caller owns those images and can
+Reference `src/PageCurl.Maui` from your MAUI app, or consume a locally packed
+package. Register Skia's handlers in `MauiProgram`:
+
+```csharp
+using SkiaSharp.Views.Maui.Controls.Hosting;
+
+builder.UseMauiApp<App>().UseSkiaSharp();
+```
+
+Declare `xmlns:curl="clr-namespace:PageCurl.Maui;assembly=PageCurl.Maui"` on
+your XAML page. The image control accepts `SKImage` instances. The caller owns those images and can
 reuse or dispose them when the view is no longer using them.
 
 ```xml
@@ -91,7 +101,8 @@ reuse or dispose them when the view is no longer using them.
 
 ```csharp
 TurnView.FrontImage = currentPage;
-TurnView.BackImage = currentPage; // optional backside texture
+TurnView.BacksideMode = PageBacksideMode.CustomContent;
+TurnView.BackImage = reverseSide; // optional caller-supplied backside
 TurnView.UnderPageImage = nextPage;
 TurnView.PreviousPageImage = previousPage; // optional page for backward turns
 TurnView.PageTurnCompleted += (_, e) =>
@@ -170,7 +181,7 @@ texture after layout and swaps to that texture only during a curl.
     LockedAnchor="TopLeft"
     PageAspectRatio="0.72"
     PageChangeThreshold="0.42"
-    BacksideMode="MirroredFront">
+    BacksideMode="CustomContent">
     <curl:PageCurlView.FrontContent>
         <local:ArticleContentView />
     </curl:PageCurlView.FrontContent>
@@ -240,8 +251,8 @@ see which behaviors each test layer proves and which release gates remain open.
 Run the platform-independent checks with:
 
 ```bash
-dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj
-dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -f net10.0
+MSBuildEnableWorkloadResolver=false dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
+MSBuildEnableWorkloadResolver=false dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
 dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0
 ```
 
@@ -250,10 +261,10 @@ directions, custom thresholds and flicks, threshold transitions, cancellation,
 completion events, finite and bounded mesh coordinates, UV/shading ranges,
 mesh-buffer reuse, immediate and programmatic turns, semantic haptic cue
 mapping, every physical edge and pinned corner, locked anchoring,
-aspect-fit viewport math, direction-aware demo navigation, and warmed
+aspect-fit viewport math, direction-aware navigation state, and warmed
 1,000-iteration core allocation loops. Neutral MAUI checks cover platform
 capture fallback, snapshot cancellation/replacement, wrapper property
-forwarding, four-page spread capture, and readiness state. The MAUI control exposes opt-in
+forwarding, six-slot spread capture, and readiness state. The MAUI control exposes opt-in
 `PageTurnPerformanceSnapshot` values for interactive render diagnostics; the
 default render path does not collect those metrics.
 

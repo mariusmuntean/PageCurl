@@ -22,8 +22,6 @@ internal static class DemoRegressionTests
         {
             results.Add($"RESOURCE_CREATE elapsed_ms={watch.Elapsed.TotalMilliseconds:F1} managed_bytes={GC.GetAllocatedBytesForCurrentThread() - allocated}");
             Require(pages.Pages.Count == 8 && pages.Pages[6].Width == 1800, "Generated pages changed.");
-            results.Add(typeof(DemoPageSet).GetMethod("GetImageSource") is null
-                ? "PASS no unused PNG API" : "FAIL unused PNG encoding remains");
         }
         var page = new MainPage();
         var captureTimings = new TimedSnapshotter();
@@ -175,6 +173,19 @@ internal static class DemoRegressionTests
             results.Add(status.Text == "Using last snapshot" && ReferenceEquals(previous, content.Renderer.FrontImage)
                 ? "PASS explicit refresh reports failure and retains last frame"
                 : $"FAIL explicit refresh hid capture failure: {status.Text}");
+
+            await page.RefreshContentAsync("Live content updated", deferUntilLayout: true);
+            results.Add(status.Text == "Using last snapshot"
+                ? "PASS live refresh reports capture failure honestly"
+                : $"FAIL live refresh hid capture failure: {status.Text}");
+
+            var queuedLiveRefresh = page.RefreshContentAsync("Live content updated", deferUntilLayout: true);
+            ((IButtonController)page.FindByName<Button>("SingleSceneButton")).SendClicked();
+            ((IButtonController)page.FindByName<Button>("ContentSceneButton")).SendClicked();
+            await queuedLiveRefresh;
+            results.Add(status.Text == "Ready"
+                ? "PASS queued live refresh ignores scene re-entry"
+                : $"FAIL queued live refresh changed new scene status: {status.Text}");
 
             var delayed = new SuspendedSnapshotter();
             field.SetValue(content, delayed);

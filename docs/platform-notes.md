@@ -72,7 +72,11 @@ and Mac Catalyst. It also runs the core and neutral adapter tests. That image
 is currently a public preview; the workflow uses an explicit label rather
 than relying on the moving `macos-latest` default. Runner image availability
 is documented by [GitHub](https://github.com/actions/runner-images#available-images).
-Local verification does not imply a hosted workflow has run successfully.
+The Linux job evaluates only neutral .NET projects and disables the MAUI workload
+resolver. This avoids requiring the pinned native workload set for Core and
+package-consumer checks; native resolution stays enabled on macOS. The workflow
+project checker uses standard Unix tools so it also runs on stock hosted images.
+See [compatibility](compatibility.md) for completed hosted evidence.
 
 After tests, terminate the apps and emulator processes started for verification,
 shut down newly booted simulators, and remove temporary test files after retaining

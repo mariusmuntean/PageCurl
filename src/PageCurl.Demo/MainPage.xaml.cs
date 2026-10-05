@@ -312,26 +312,41 @@ public partial class MainPage : ContentPage
 
     private async void OnRefreshSnapshotClicked(object? sender, EventArgs e)
     {
-        var revision = _lifecycleRevision;
-        var sceneRevision = _sceneRevision;
-        var failed = false;
-        void OnCaptureFailed(object? source, PageSnapshotFailedEventArgs args) => failed = true;
-        ContentPageView.SnapshotFailed += OnCaptureFailed;
         RefreshSnapshotButton.IsEnabled = false;
         StatusLabel.Text = "Capturing";
         try
         {
+            await RefreshContentAsync("Snapshot refreshed", reportCancellation: true);
+        }
+        finally
+        {
+            RefreshSnapshotButton.IsEnabled = true;
+        }
+    }
+
+    internal async Task RefreshContentAsync(string successStatus, bool deferUntilLayout = false,
+        bool reportCancellation = false)
+    {
+        var revision = _lifecycleRevision;
+        var sceneRevision = _sceneRevision;
+        if (deferUntilLayout) await Task.Yield();
+        if (!CanReportResult()) return;
+
+        var failed = false;
+        void OnCaptureFailed(object? source, PageSnapshotFailedEventArgs args) => failed = true;
+        ContentPageView.SnapshotFailed += OnCaptureFailed;
+        try
+        {
             await ContentPageView.RefreshSnapshotAsync();
-            if (CanReportResult() && !failed) StatusLabel.Text = "Snapshot refreshed";
+            if (CanReportResult() && !failed) StatusLabel.Text = successStatus;
         }
         catch (OperationCanceledException)
         {
-            if (CanReportResult()) StatusLabel.Text = "Capture replaced";
+            if (reportCancellation && CanReportResult()) StatusLabel.Text = "Capture replaced";
         }
         finally
         {
             ContentPageView.SnapshotFailed -= OnCaptureFailed;
-            RefreshSnapshotButton.IsEnabled = true;
         }
 
         bool CanReportResult() => _pageActive && revision == _lifecycleRevision
@@ -441,21 +456,8 @@ public partial class MainPage : ContentPage
         _videoPage = new VideoPosterPageView();
     }
 
-    private async void OnInteractiveContentChanged(object? sender, EventArgs e)
-    {
-        var revision = _lifecycleRevision;
-        try
-        {
-            await Task.Yield();
-            if (!_pageActive || revision != _lifecycleRevision) return;
-            await ContentPageView.RefreshSnapshotAsync();
-            if (!_pageActive || revision != _lifecycleRevision) return;
-            StatusLabel.Text = "Live content updated";
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
+    private async void OnInteractiveContentChanged(object? sender, EventArgs e) =>
+        await RefreshContentAsync("Live content updated", deferUntilLayout: true);
 
     private void UpdateActiveSceneContent()
     {

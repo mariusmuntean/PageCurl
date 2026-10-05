@@ -5,6 +5,8 @@ Tests prove acceptance behavior; a dated validation record proves a particular
 run. Keep those separate from release and platform readiness. The latest
 [requirements validation record](validation/requirements-2026-10-05/README.md)
 includes failures, fixes, repeated runs and visible computer-control observations.
+The [test-quality audit](validation/test-quality-2026-10-05/README.md) records
+which tests were removed or strengthened and the hosted Actions fixes.
 
 | Layer | Purpose | Automation |
 | --- | --- | --- |
@@ -34,7 +36,7 @@ AX counters alone cannot prove gesture routing or pixel quality.
 The native driver removes stale evidence, bounds execution, and requires exit
 0, no failed assertions and the final `PASS all native suites` marker. Its
 subprocess tests verify timeouts, missing/partial output and contradictory
-exit-code/result cases. The fixture itself tests explicit refresh failure and
+exit-code/result cases. The fixture itself tests automatic and explicit refresh failure and
 completion after changing or re-entering scenes, and the counter/button layout
 at a 250 by 333 page size. These are injected at the capture boundary
 while the real page and event handlers run.
@@ -48,7 +50,12 @@ implied by CI configuration.
 The neutral MAUI runner pumps asynchronous continuations on one thread to
 match the controls' UI-thread contract. Cancellation tests distinguish a
 cancelled caller wait from completion of the internal serialized capture;
-disposal assertions wait for that capture cleanup.
+disposal assertions wait for that capture cleanup. Settling loops have a 600-frame
+limit so a broken completion path produces a failure instead of hanging. Spread
+touch tests exercise owned and foreign pointer release/cancellation in both
+directions, including duplicate terminal events. Native rendering regressions
+remain alongside these behavioral checks; private IL call-name inspections and
+checks for an already removed API are intentionally omitted.
 
 The platform-free test runner covers:
 
@@ -81,7 +88,7 @@ The neutral MAUI runner covers:
 - snapshot generations, stale-result disposal, last-good-frame retention,
   independent front/back replacement, and teardown order;
 - `PageCurlView` capture, failure events, and interaction property forwarding;
-- four-page spread capture, transparent overlay composition, and
+- six-slot spread capture, transparent overlay composition, and
   readiness-aware forward/back state;
 - spread refresh coalescing: automatic requests capture only dirty slots,
   explicit requests recapture in-place changes, obsolete revisions are rejected,
@@ -90,9 +97,8 @@ The neutral MAUI runner covers:
   cancellation and handler teardown;
 - immediate cancellation and release of spread pointer ownership, stable
   snapshot textures during curls (including failed capture and null backs),
-  suppressed stale failures, stage-sized renderers, and native vertex disposal;
-- first programmatic turns from a hidden snapshot renderer and no filesystem
-  calls in touch dispatch;
+  suppressed stale failures, stage-sized renderers, and caller-owned image survival through replacement and teardown;
+- first programmatic turns from a hidden snapshot renderer;
 - book-model spread wiring: the turning sheet's back face is the adjacent
   page it lands on, in both directions;
 - renderer visibility while flat, during a turn, and after cancellation.

@@ -26,7 +26,7 @@ commands.
 - Android demo:
   `dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android`
 - Public API, bindable validation, snapshot lifecycle, or neutral tests:
-  `dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release -f net10.0`
+  `dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0`
 - Package consumption: `bash tools/test-package-consumer.sh`. Set
   `PAGECURL_DOTNET` to an explicit workload-enabled CLI if needed. This packs
   neutral packages and tests a temporary external consumer with an isolated cache.
@@ -46,6 +46,11 @@ commands.
   default; pass one workflow path to narrow the check.
 
 Use explicit target frameworks. Do not evaluate iOS, Mac Catalyst, or Windows targets on Linux.
+The Linux neutral lane disables workload resolution with
+`MSBuildEnableWorkloadResolver=false`; native builds keep workload resolution enabled.
+On this Mac, use `-m:1 -nr:false` for serial builds if MSBuild worker nodes exit
+prematurely, then execute the built test DLL. Classify this as a toolchain failure,
+not a source compilation failure.
 
 ## Handle failures
 

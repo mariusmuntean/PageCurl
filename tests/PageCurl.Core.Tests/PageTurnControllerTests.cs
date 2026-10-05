@@ -256,8 +256,7 @@ internal static class PageTurnControllerTests
                     $"{item.Anchor}: material grab expected {pointer}, got {vertex.Position}");
             }
             controller.EndDrag();
-            while (controller.Tick(0.1)) { }
-            TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
+            RunUntilIdle(controller);
         }
     }
 

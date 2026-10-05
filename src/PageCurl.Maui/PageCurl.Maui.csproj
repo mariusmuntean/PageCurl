@@ -24,7 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="../PageCurl.Core/PageCurl.Core.csproj" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-    <!-- 4.150.1 is the current stable SkiaSharp.Views.Maui line with net10.0 assets. -->
+    <!-- Keep the SkiaSharp.Views.Maui line aligned with net10.0 assets. -->
     <PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="4.150.1" />
   </ItemGroup>
 

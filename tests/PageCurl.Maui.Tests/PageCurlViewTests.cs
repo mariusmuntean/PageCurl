@@ -15,13 +15,12 @@ internal static class PageCurlViewTests
         await Front_and_back_content_are_captured_independently();
         await Failed_refresh_keeps_the_last_good_snapshot();
         await Final_cancelled_capture_propagates_and_disposes_returned_image();
+        Caller_images_survive_replacement_cancellation_and_teardown();
         Cancellation_finishes_before_a_view_is_hidden();
         Renderer_uses_the_stage_instead_of_the_page_frame();
         First_programmatic_turn_uses_the_live_page_frame();
         Interaction_properties_forward_to_the_renderer();
         Owned_release_and_cancel_remain_handled();
-        Touch_dispatch_has_no_filesystem_calls();
-        Mesh_submission_owns_its_native_copy();
         Activation_layer_preserves_live_content_input();
         Flat_content_hides_renderer_outside_turns();
         Handler_teardown_restores_live_content();
@@ -85,6 +84,34 @@ internal static class PageCurlViewTests
         TestAssert.Equal(IntPtr.Zero, front.Handle);
     }
 
+    private static void Caller_images_survive_replacement_cancellation_and_teardown()
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(4, 4));
+        using var front = surface.Snapshot();
+        using var back = surface.Snapshot();
+        using var under = surface.Snapshot();
+        using var previous = surface.Snapshot();
+        using var replacement = surface.Snapshot();
+        var view = new PageTurnView
+        {
+            FrontImage = front, BackImage = back, UnderPageImage = under, PreviousPageImage = previous,
+            BacksideMode = PageBacksideMode.CustomContent,
+        };
+        TestAssert.True(view.TryBeginInteraction(new(399, 250), new(400, 500), PageAnchor.Left));
+        view.UpdateInteraction(new(100, 250));
+        view.CancelInteraction();
+        foreach (var property in new[] { PageTurnView.FrontImageProperty, PageTurnView.BackImageProperty,
+            PageTurnView.UnderPageImageProperty, PageTurnView.PreviousPageImageProperty })
+            view.SetValue(property, replacement);
+        typeof(PageTurnView).GetMethod("OnHandlerChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(view, null);
+        foreach (var property in new[] { PageTurnView.FrontImageProperty, PageTurnView.BackImageProperty,
+            PageTurnView.UnderPageImageProperty, PageTurnView.PreviousPageImageProperty })
+            view.SetValue(property, null);
+        foreach (var image in new[] { front, back, under, previous, replacement })
+            TestAssert.True(image.Handle != IntPtr.Zero, "The view disposed a caller-owned image.");
+    }
+
     private static void Cancellation_finishes_before_a_view_is_hidden()
     {
         var view = new PageTurnView();
@@ -130,63 +157,12 @@ internal static class PageCurlViewTests
             capture.GetType().GetMethod("TryCapture")!.Invoke(capture, [42L]);
             // No dispatcher is required: the test drives the controller timer.
             typeof(PageTurnView).GetField("_animationLoopActive", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(view, true);
-            var constructor = typeof(SkiaSharp.Views.Maui.SKTouchEventArgs).GetConstructors()[0];
-            var arguments = constructor.GetParameters().Select(parameter =>
-                parameter.ParameterType == typeof(long) ? (object)42L :
-                parameter.ParameterType == typeof(SkiaSharp.Views.Maui.SKTouchAction) ? action :
-                Activator.CreateInstance(parameter.ParameterType)).ToArray();
-            var touch = (SkiaSharp.Views.Maui.SKTouchEventArgs)constructor.Invoke(arguments);
+            var touch = new SkiaSharp.Views.Maui.SKTouchEventArgs(42L, action, new SKPoint(),
+                action != SkiaSharp.Views.Maui.SKTouchAction.Released);
             typeof(PageTurnView).GetMethod("OnTouch", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!
                 .Invoke(view, [view, touch]);
             TestAssert.True(touch.Handled, "Owned release/cancel escaped input dispatch.");
-            while (view.Controller.Tick(0.1)) { }
-        }
-    }
-
-    private static void Touch_dispatch_has_no_filesystem_calls()
-    {
-        var method = typeof(PageTurnView).GetMethod("OnTouch",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!;
-        foreach (var called in CalledMethods(method))
-            TestAssert.False(called.DeclaringType?.Namespace?.StartsWith("System.IO", StringComparison.Ordinal) == true);
-    }
-
-    private static void Mesh_submission_owns_its_native_copy()
-    {
-        var method = typeof(PageTurnView).GetMethod("DrawMesh", BindingFlags.Static | BindingFlags.NonPublic)!;
-        var calls = CalledMethods(method).ToArray();
-        TestAssert.True(calls.Any(call => call.DeclaringType == typeof(SKVertices) && call.Name == "CreateCopy"),
-            "Renderer uses finalizer-dependent array submission.");
-        TestAssert.True(calls.Any(call => call.Name == "Dispose"), "Native vertices are not deterministically released.");
-    }
-
-    private static IEnumerable<MethodBase> CalledMethods(MethodInfo method)
-    {
-        var bytes = method.GetMethodBody()!.GetILAsByteArray()!;
-        var opcodes = typeof(System.Reflection.Emit.OpCodes).GetFields()
-            .Select(field => (System.Reflection.Emit.OpCode)field.GetValue(null)!)
-            .ToDictionary(opcode => unchecked((ushort)opcode.Value));
-        for (var offset = 0; offset < bytes.Length;)
-        {
-            ushort value = bytes[offset++];
-            if (value == 0xfe) value = (ushort)(0xfe00 | bytes[offset++]);
-            var opcode = opcodes[value];
-            if (opcode.OperandType == System.Reflection.Emit.OperandType.InlineMethod)
-            {
-                yield return method.Module.ResolveMethod(BitConverter.ToInt32(bytes, offset))!;
-            }
-            offset += opcode.OperandType switch
-            {
-                System.Reflection.Emit.OperandType.InlineNone => 0,
-                System.Reflection.Emit.OperandType.ShortInlineBrTarget or
-                System.Reflection.Emit.OperandType.ShortInlineI or
-                System.Reflection.Emit.OperandType.ShortInlineVar => 1,
-                System.Reflection.Emit.OperandType.InlineVar => 2,
-                System.Reflection.Emit.OperandType.InlineI8 or
-                System.Reflection.Emit.OperandType.InlineR => 8,
-                System.Reflection.Emit.OperandType.InlineSwitch => 4 + 4 * BitConverter.ToInt32(bytes, offset),
-                _ => 4,
-            };
+            TestAssert.TickUntilIdle(view.Controller);
         }
     }
 

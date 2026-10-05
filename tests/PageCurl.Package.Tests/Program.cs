@@ -1,6 +1,8 @@
 using System.Numerics;
 using PageCurl.Core;
 using PageCurl.Maui;
+using Microsoft.Maui.Hosting;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 
 // This consumer is copied outside the repo before restore. It must resolve
 // Core transitively from the MAUI package, without any ProjectReference.
@@ -21,6 +23,8 @@ Console.WriteLine($"PASS package consumer: {typeof(PageTurnView).Assembly.GetNam
 // public consumer surface without requiring a native window in this check.
 internal static class ConsumerApi
 {
+    public static MauiAppBuilder RegisterHandlers(MauiAppBuilder builder) => builder.UseSkiaSharp();
+
     public static Task UseContent(PageCurlView view, CancellationToken token)
     {
         view.LockedAnchor = PageAnchor.TopLeft;

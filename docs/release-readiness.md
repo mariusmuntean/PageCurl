@@ -4,10 +4,17 @@ The core behavior and public MAUI surface are implemented. This repository has
 local build, simulator, and deterministic test evidence, but it does not yet
 establish production readiness on representative hardware.
 
+The hosted [Verify workflow](https://github.com/mariusmuntean/PageCurl/actions/runs/37283932941)
+now passes clean Android, iOS simulator and Mac Catalyst builds, neutral package
+consumption and native Mac Catalyst assertions. The showcase also has recorded
+computer-control journeys. These support public discussion of the implementation
+and demonstrated behavior; avoid claims of universal device performance or
+completed screen-reader certification.
+
 Before a public or flagship-reader release:
 
-1. Build and package Android and iOS in clean CI with pinned .NET, MAUI, and
-   SkiaSharp versions.
+1. Retain clean hosted builds with pinned .NET, MAUI and SkiaSharp; extend
+   the current unsigned build evidence to distributable Android/iOS packages.
 2. Run the core suite and platform smoke paths on supported OS versions.
 3. Profile drag and settling on low-end Android and current physical iOS
    hardware. Check frame pacing, allocations, texture lifetime, memory growth,

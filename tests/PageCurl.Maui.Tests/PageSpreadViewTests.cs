@@ -10,7 +10,7 @@ internal static class PageSpreadViewTests
 {
     public static async Task RunAllAsync()
     {
-        await Cancellation_releases_the_spread_activation_pointer();
+        await Activation_release_and_cancel_finish_only_the_owned_pointer();
         await Cancelled_queued_request_cannot_bypass_a_running_capture();
         await Deferred_refresh_is_awaitable_and_cancellable();
         await Teardown_and_cancellation_do_not_publish_suspended_captures();
@@ -79,15 +79,56 @@ internal static class PageSpreadViewTests
         }
     }
 
-    private static async Task Cancellation_releases_the_spread_activation_pointer()
+    private static async Task Activation_release_and_cancel_finish_only_the_owned_pointer()
     {
-        var spread = await CreateReadySpreadAsync(new CountingSnapshotter());
-        BeginSettlingTurn(spread, PageTurnDirection.Forward);
-        var pointer = typeof(PageSpreadView).GetField("_activePointerId", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        pointer.SetValue(spread, 42L);
-        spread.Overlay.CancelInteraction();
-        TestAssert.True(pointer.GetValue(spread) is null, "Cancelled spread retained its gesture pointer.");
-        TestAssert.True(spread.CanTurnForward);
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        foreach (var action in new[] { SkiaSharp.Views.Maui.SKTouchAction.Released, SkiaSharp.Views.Maui.SKTouchAction.Cancelled })
+        {
+            var spread = await CreateReadySpreadAsync(new CountingSnapshotter());
+            try
+            {
+                spread.ReduceMotion = true;
+                var frame = (Grid)spread.Children[0];
+                frame.HorizontalOptions = LayoutOptions.Fill;
+                frame.VerticalOptions = LayoutOptions.Fill;
+                ((IView)frame).Arrange(new Rect(0, 0, 800, 500));
+                var zone = frame.Children.OfType<SkiaSharp.Views.Maui.Controls.SKCanvasView>()
+                    .Single(view => Equals(view.BindingContext, direction));
+                // Neutral controls have no native layout handler; give the edge its real hit area.
+                zone.HorizontalOptions = LayoutOptions.Fill;
+                ((IView)zone).Arrange(new Rect(direction == PageTurnDirection.Forward ? 748 : 0, 0, 52, 500));
+                var handler = typeof(PageSpreadView).GetMethod("OnActivationTouch", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                var completions = 0;
+                spread.PageTurnCompleted += (_, args) =>
+                {
+                    TestAssert.Equal(action == SkiaSharp.Views.Maui.SKTouchAction.Released, args.Committed);
+                    completions++;
+                };
+                void Send(long id, SkiaSharp.Views.Maui.SKTouchAction kind, float x, bool handled)
+                {
+                    var touch = new SkiaSharp.Views.Maui.SKTouchEventArgs(id, kind, new SKPoint(x, 250),
+                        kind != SkiaSharp.Views.Maui.SKTouchAction.Released);
+                    handler.Invoke(spread, [zone, touch]);
+                    TestAssert.True(handled == touch.Handled, $"{direction} {kind}: handled={touch.Handled}, frame={frame.Bounds}, zone={zone.Bounds}");
+                }
+                Send(7, SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                    direction == PageTurnDirection.Forward ? 51 : 1, true);
+                Send(7, SkiaSharp.Views.Maui.SKTouchAction.Moved,
+                    direction == PageTurnDirection.Forward ? -450 : 450, true);
+                Send(99, action, 0, false);
+                TestAssert.Equal(PageTurnState.Dragging, spread.Overlay.Controller.Snapshot.State);
+                Send(7, action, 0, true);
+                TestAssert.Equal(PageTurnState.Idle, spread.Overlay.Controller.Snapshot.State);
+                TestAssert.Equal(1, completions);
+                Send(7, action, 0, false);
+                TestAssert.Equal(1, completions);
+                TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+            }
+            finally
+            {
+                InvokeHandlerChanged(spread);
+            }
+        }
     }
 
     private static async Task Cancelled_queued_request_cannot_bypass_a_running_capture()
@@ -120,7 +161,7 @@ internal static class PageSpreadViewTests
         await TestAssert.ThrowsAsync<OperationCanceledException>(() => refresh);
         TestAssert.Equal(4, snapshotter.CaptureCount);
         var next = spread.RefreshSnapshotAsync();
-        while (spread.Overlay.Controller.Tick(0.1)) { }
+        TestAssert.TickUntilIdle(spread.Overlay.Controller);
         await next;
         TestAssert.Equal(8, snapshotter.CaptureCount);
         TestAssert.True(spread.CanTurnForward);
@@ -162,7 +203,7 @@ internal static class PageSpreadViewTests
             {
                 TestAssert.True(front.Handle != IntPtr.Zero);
                 spread.Overlay.Controller.Cancel();
-                while (spread.Overlay.Controller.Tick(0.1)) { }
+                TestAssert.TickUntilIdle(spread.Overlay.Controller);
                 TestAssert.Null(spread.Overlay.FrontImage);
                 await DrainAsync(spread);
                 TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
@@ -191,7 +232,7 @@ internal static class PageSpreadViewTests
             TestAssert.Null(spread.Overlay.BackImage);
             TestAssert.Equal(mode, spread.Overlay.BacksideMode);
             pending.SetResult(MakeImage(4));
-            while (spread.Overlay.Controller.Tick(0.1)) { }
+            TestAssert.TickUntilIdle(spread.Overlay.Controller);
             await refresh;
             if (direction == PageTurnDirection.Forward) spread.NextLeftContent = new Grid();
             else spread.PreviousRightContent = new Grid();
@@ -199,7 +240,7 @@ internal static class PageSpreadViewTests
             BeginSettlingTurn(spread, direction);
             TestAssert.NotNull(spread.Overlay.BackImage);
             TestAssert.Equal(PageBacksideMode.CustomContent, spread.Overlay.BacksideMode);
-            while (spread.Overlay.Controller.Tick(0.1)) { }
+            TestAssert.TickUntilIdle(spread.Overlay.Controller);
         }
     }
 
@@ -244,7 +285,7 @@ internal static class PageSpreadViewTests
             {
                 BeginSettlingTurn(spread, PageTurnDirection.Forward);
                 TestAssert.Equal(22, spread.Overlay.FrontImage!.Width);
-                while (spread.Overlay.Controller.Tick(0.1)) { }
+                TestAssert.TickUntilIdle(spread.Overlay.Controller);
             }
         }
     }
@@ -282,7 +323,7 @@ internal static class PageSpreadViewTests
             TestAssert.True(back.Handle != IntPtr.Zero, "The active back snapshot was disposed.");
             TestAssert.True(under.Handle != IntPtr.Zero, "The active destination snapshot was disposed.");
             TestAssert.Same(front, spread.Overlay.FrontImage!);
-            while (spread.Overlay.Controller.Tick(0.1)) { }
+            TestAssert.TickUntilIdle(spread.Overlay.Controller);
             await refresh;
             TestAssert.Null(spread.Overlay.FrontImage);
             TestAssert.Equal(IntPtr.Zero, front.Handle);
@@ -418,9 +459,7 @@ internal static class PageSpreadViewTests
         TestAssert.False(pendingRefresh.IsCompleted);
         TestAssert.Equal(4, snapshotter.CaptureCount);
 
-        while (spread.Overlay.Controller.Tick(0.1))
-        {
-        }
+        TestAssert.TickUntilIdle(spread.Overlay.Controller);
 
         await pendingRefresh;
         // Explicit refresh preserves in-place changes across an active turn.
@@ -507,9 +546,7 @@ internal static class PageSpreadViewTests
         TestAssert.Equal(10, spread.Overlay.BackImage!.Width);
         TestAssert.Equal(PageBacksideMode.CustomContent, spread.Overlay.BacksideMode);
 
-        while (spread.Overlay.Controller.Tick(0.1))
-        {
-        }
+        TestAssert.TickUntilIdle(spread.Overlay.Controller);
 
         TestAssert.Null(spread.Overlay.BackImage);
         TestAssert.Equal(spread.BacksideMode, spread.Overlay.BacksideMode);
@@ -538,9 +575,7 @@ internal static class PageSpreadViewTests
         TestAssert.Equal(7, spread.Overlay.PreviousPageImage!.Width);
         TestAssert.Equal(9, spread.Overlay.BackImage!.Width);
 
-        while (spread.Overlay.Controller.Tick(0.1))
-        {
-        }
+        TestAssert.TickUntilIdle(spread.Overlay.Controller);
 
         TestAssert.Null(spread.Overlay.BackImage);
     }
