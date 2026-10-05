@@ -42,7 +42,7 @@ jobs:
       - name: Select Xcode 27.0
         run: sudo xcode-select --switch /Applications/Xcode_27.0.app/Contents/Developer
       - name: Select Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
