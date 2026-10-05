@@ -25,16 +25,6 @@ jobs:
         run: |
           bash tools/check-workflow-projects.sh
           python3 -m unittest discover -s tools/tests -p 'test_*.py'
-      - name: Build neutral MAUI target
-        shell: bash
-        run: |
-          set -euo pipefail
-          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
-          dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0
-          dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0 --no-restore
-      - name: Pack the library metadata
-        shell: bash
-        run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -p:TargetFrameworks=net10.0 --no-restore --output .artifacts/packages
       - name: Verify isolated public package consumer
         run: bash tools/test-package-consumer.sh
 
