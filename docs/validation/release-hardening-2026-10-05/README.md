@@ -53,3 +53,9 @@ because its implicit `win-x64` runtime pack was not restored. The workflow now
 uses explicit `win-x64` for demo restore/build and the separate Core restore.
 The isolated SDK installed the pinned Windows workload in 25 seconds, compared
 with roughly seven minutes when upgrading workloads inherited from the image.
+
+Specifying only the runtime did not close `NETSDK1112`. A small SDK-only probe
+reproduced the same error when restore was framework-dependent and build was
+self-contained. Restoring and building with matching self-contained settings
+passed with zero warnings/errors. Windows restore and build now explicitly use
+Release, `win-x64` and `SelfContained=true` for the unpackaged demo.

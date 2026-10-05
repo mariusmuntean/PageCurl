@@ -100,12 +100,12 @@ jobs:
       - name: Restore Windows projects and neutral Core
         shell: pwsh
         run: |
-          dotnet restore src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None -p:RuntimeIdentifier=win-x64
+          dotnet restore -p:Configuration=Release src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None -p:RuntimeIdentifier=win-x64 -p:SelfContained=true
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0 -p:RuntimeIdentifier=win-x64
+          dotnet restore -p:Configuration=Release src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0 -p:RuntimeIdentifier=win-x64 -p:SelfContained=true
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build Windows demo
-        run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None -p:RuntimeIdentifier=win-x64 --no-restore -m:1 -nr:false
+        run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None -p:RuntimeIdentifier=win-x64 -p:SelfContained=true --no-restore -m:1 -nr:false
       - name: Pack Windows library
         run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -p:TargetFrameworks=net10.0-windows10.0.19041.0 --no-restore --output .artifacts/packages -m:1 -nr:false
       - name: Check Windows package assets
