@@ -66,3 +66,8 @@ library without a runtime suffix. The Windows library now declares
 `IsRidAgnostic=false` so its consuming application's runtime identifier flows
 through project references. A neutral Release library build still passed with
 zero warnings/errors; native resource indexing requires the hosted Windows check.
+
+The [completed Windows job](https://github.com/mariusmuntean/PageCurl/actions/runs/37342825899/job/111873916945)
+passed the Release demo build and resource indexing with zero warnings/errors.
+The library pack and assembly/XML/transitive dependency checks also passed.
+This establishes build and package evidence, not Windows runtime certification.

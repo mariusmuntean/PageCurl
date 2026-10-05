@@ -8,7 +8,7 @@ PageCurl uses .NET 10, MAUI 10 and SkiaSharp.Views.Maui.Controls 4.150.1.
 | Android | API 24 | Hosted Release build; recorded emulator launch |
 | iOS | iOS 17 | Hosted simulator build; recorded simulator launch |
 | Mac Catalyst | macOS 14 / Catalyst 17 | Hosted build and native rendering/lifecycle assertions; recorded pointer interaction |
-| Windows | Windows 10.0.17763 | CI build gate added; runtime validation still required |
+| Windows | Windows 10.0.17763 | Hosted Release demo build and native package checks; runtime validation still required |
 
 Minimum OS values come from the projects. A compile target such as
 `net10.0-windows10.0.19041.0` is not the minimum runtime OS version.
@@ -22,5 +22,5 @@ background/foreground transitions, reduced motion and video poster behavior.
 
 Validate your app's signing, archives and store package independently. This
 library's unsigned CI builds and neutral package consumer do not certify store
-submission or hardware performance. Windows has a build gate, but no recorded
+submission or hardware performance. Windows has passed its build gate, but has no recorded
 Windows UI or snapshot-pixel certification yet.
