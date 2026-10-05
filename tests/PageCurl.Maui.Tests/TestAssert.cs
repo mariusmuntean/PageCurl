@@ -19,11 +19,29 @@ internal static class TestAssert
     public static void NotNull(object? value, string? message = null) =>
         True(value is not null, message ?? "Expected a non-null value.");
 
+    public static void Null(object? value, string? message = null) =>
+        True(value is null, message ?? "Expected null.");
+
     public static void Equal<T>(T expected, T actual)
     {
         if (!EqualityComparer<T>.Default.Equals(expected, actual))
         {
             throw new InvalidOperationException($"Expected {expected}, but was {actual}.");
         }
+    }
+
+    public static async Task ThrowsAsync<TException>(Func<Task> action)
+        where TException : Exception
+    {
+        try
+        {
+            await action();
+        }
+        catch (TException)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException($"Expected {typeof(TException).Name}.");
     }
 }

@@ -1,0 +1,6 @@
+pixel bytes: ff ff ff ff
+mode=0 width=200 bpp=16 bpc=8 rowBytes=416 bitmapInfo=1 colorSpace=kCGColorSpaceGenericGrayGamma2_2
+pixel bytes: ff 00 00 ff
+mode=1 width=200 bpp=32 bpc=8 rowBytes=800 bitmapInfo=1 colorSpace=kCGColorSpaceSRGB
+pixel bytes: 5f 3c 42 b3
+mode=2 width=200 bpp=64 bpc=16 rowBytes=1600 bitmapInfo=4353 colorSpace=kCGColorSpaceExtendedSRGB

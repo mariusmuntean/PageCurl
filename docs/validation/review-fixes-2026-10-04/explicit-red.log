@@ -1,0 +1,9 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+PASS PageCurlViewTests
+FAIL: Expected 8, but was 4.
+System.InvalidOperationException: Expected 8, but was 4.
+   at PageCurl.Maui.Tests.TestAssert.Equal[T](T expected, T actual) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 29
+   at PageCurl.Maui.Tests.PageSpreadViewTests.Explicit_refresh_recaptures_in_place_changes() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 37
+   at PageCurl.Maui.Tests.PageSpreadViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 13
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 15

@@ -1,0 +1,9 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Expected condition to be false.
+System.InvalidOperationException: Expected condition to be false.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 9
+   at PageCurl.Maui.Tests.TestAssert.False(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 14
+   at PageCurl.Maui.Tests.PageCurlViewTests.Touch_dispatch_has_no_filesystem_calls() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 38
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 16
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 13

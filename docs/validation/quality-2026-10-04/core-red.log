@@ -1,0 +1,6 @@
+FAIL: Expected 0,4, but was 0,8 (precision 3).
+System.InvalidOperationException: Expected 0,4, but was 0,8 (precision 3).
+   at PageCurl.Core.Tests.TestAssert.Equal[T](T expected, T actual, Int32 precision) in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/TestAssert.cs:line 30
+   at PageCurl.Core.Tests.PageTurnControllerTests.Spread_drag_crosses_the_hinge_and_releases_to_the_nearest_endpoint() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 69
+   at PageCurl.Core.Tests.PageTurnControllerTests.RunAll() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 19
+   at PageCurl.Core.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/Program.cs:line 27

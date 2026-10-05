@@ -1,0 +1,8 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Renderer uses finalizer-dependent array submission.
+System.InvalidOperationException: Renderer uses finalizer-dependent array submission.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 9
+   at PageCurl.Maui.Tests.PageCurlViewTests.Mesh_submission_owns_its_native_copy() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 119
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 22
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 13

@@ -1,0 +1,6 @@
+FAIL: Expected Right, but was Top.
+System.InvalidOperationException: Expected Right, but was Top.
+   at PageCurl.Core.Tests.TestAssert.Equal[T](T expected, T actual, Int32 precision) in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/TestAssert.cs:line 38
+   at PageCurl.Core.Tests.PageTurnControllerTests.Spread_corner_grab_preserves_the_spine_axis() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 62
+   at PageCurl.Core.Tests.PageTurnControllerTests.RunAll() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 19
+   at PageCurl.Core.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/Program.cs:line 27

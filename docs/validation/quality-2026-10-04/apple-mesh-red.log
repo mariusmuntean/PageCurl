@@ -1,0 +1,30 @@
+PASS red 200x200 #fff90000
+PASS blue 200x200 #ff0000f9
+PASS white 200x200 #fff9f9f9
+PASS gray 200x200 #ff7d7d7d
+PASS half-red 200x200 #80f90000
+PASS Display-P3 red
+PASS all native snapshot tests
+FAIL custom backside texture is reversed
+RESOURCE_CREATE elapsed_ms=24.1 managed_bytes=50344
+PASS no unused PNG API
+PASS page 01 back is page 02
+PASS curl surface spans stage
+PASS scene switch cancels immediately
+PASS inactive completion ignored
+PASS spread ready after Single drag
+ZONE logical={X=746 Y=0 Width=52 Height=532} native={{746, 0}, {52, 532}} center={968, 518.5} hit=SKCanvasView enabled=True
+PASS spread outer edge receives input
+PASS Single immediate status
+PASS Single next available
+PASS Spread immediate status
+PASS Spread next available
+PASS Content immediate status
+PASS Content next available
+PASS Backside immediate status
+PASS Backside next available
+PASS all six spread slots detached
+PASS queued callback ignores disappearance
+PASS resources recreated after return
+PASS animated command starts
+PASS animated completion

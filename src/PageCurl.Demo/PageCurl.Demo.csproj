@@ -16,20 +16,18 @@
     <ApplicationTitle>Page Curl Demo</ApplicationTitle>
     <ApplicationId>de.marius.PageCurlDemo</ApplicationId>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
-    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
-    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
   </PropertyGroup>
 
-  <!-- The MacCatalyst build names the .app bundle after ApplicationTitle ("Page Curl Demo.app"),
-       but Rider's MacCatalyst runner launches "$(AssemblyName).app" and so can't find the app.
-       Pin the bundle folder name to the assembly name (matching iOS) so Rider can launch it.
-       The visible name is unaffected: it comes from CFBundleDisplayName (ApplicationTitle). -->
+  <!-- Rider launches the assembly-named bundle; ApplicationTitle still supplies the visible name. -->
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
     <_AppBundleName>$(AssemblyName)</_AppBundleName>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../PageCurl.Core/PageCurl.Core.csproj" />
     <ProjectReference Include="../PageCurl.Maui/PageCurl.Maui.csproj" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />

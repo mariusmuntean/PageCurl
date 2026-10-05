@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.301
+          global-json-file: global.json
       - name: Run platform-free tests
         run: dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
       - name: Build neutral MAUI target
@@ -30,14 +30,21 @@ jobs:
         run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -p:TargetFrameworks=net10.0 --no-restore --output .artifacts/packages
 
   mobile:
-    runs-on: macos-14
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.301
+          global-json-file: global.json
+      - name: Select Xcode 27.0
+        run: sudo xcode-select --switch /Applications/Xcode_27.0.app/Contents/Developer
+      - name: Select Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Install MAUI workloads
-        run: dotnet workload install maui-ios maui-android
+        run: dotnet workload install maui-ios maui-maccatalyst maui-android
       - name: Run platform-free tests
         run: dotnet run --project tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj -c Release
       - name: Build neutral MAUI target
@@ -47,19 +54,11 @@ jobs:
           dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0
           dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
           dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 --no-restore
-      - name: Build iOS demo
-        shell: bash
-        run: |
-          set -euo pipefail
-          dotnet restore src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-ios
-          dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0-ios
-          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
-          dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-ios --no-restore
+      - name: Run neutral MAUI tests
+        run: dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release
+      - name: Build iOS simulator demo
+        run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-ios -p:RuntimeIdentifier=iossimulator-arm64
       - name: Build Android demo
-        shell: bash
-        run: |
-          set -euo pipefail
-          dotnet restore src/PageCurl.Demo/PageCurl.Demo.csproj -p:TargetFrameworks=net10.0-android
-          dotnet restore src/PageCurl.Maui/PageCurl.Maui.csproj -p:TargetFrameworks=net10.0-android
-          dotnet restore src/PageCurl.Core/PageCurl.Core.csproj -p:TargetFrameworks=net10.0
-          dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android --no-restore
+        run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
+      - name: Build Mac Catalyst demo
+        run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64

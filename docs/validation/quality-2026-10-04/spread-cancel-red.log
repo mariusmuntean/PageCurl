@@ -1,0 +1,9 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+PASS PageCurlViewTests
+FAIL: Cancelled spread retained its gesture pointer.
+System.InvalidOperationException: Cancelled spread retained its gesture pointer.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 9
+   at PageCurl.Maui.Tests.PageSpreadViewTests.Cancellation_releases_the_spread_activation_pointer() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 41
+   at PageCurl.Maui.Tests.PageSpreadViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 13
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 15

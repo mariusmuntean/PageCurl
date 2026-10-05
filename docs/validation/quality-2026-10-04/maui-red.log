@@ -1,0 +1,11 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: BindableObject was not instantiated on a thread with a dispatcher nor does the current application have a dispatcher.
+System.InvalidOperationException: BindableObject was not instantiated on a thread with a dispatcher nor does the current application have a dispatcher.
+   at Microsoft.Maui.Controls.DispatcherExtensions.FindDispatcher(BindableObject bindableObject)
+   at Microsoft.Maui.Controls.BindableObject.get_Dispatcher()
+   at PageCurl.Maui.PageTurnView.StartAnimationLoop() in /Users/marius/Projects/PageCurl/src/PageCurl.Maui/PageTurnView.cs:line 679
+   at PageCurl.Maui.PageTurnView.CancelInteraction() in /Users/marius/Projects/PageCurl/src/PageCurl.Maui/PageTurnView.cs:line 395
+   at PageCurl.Maui.Tests.PageCurlViewTests.Cancellation_finishes_before_a_view_is_hidden() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 33
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 15
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 13

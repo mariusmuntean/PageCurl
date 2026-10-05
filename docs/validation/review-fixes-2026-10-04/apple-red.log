@@ -1,0 +1,22 @@
+FAIL System.InvalidOperationException: red: expected #ffff0000, got #00000000
+   at PageCurl.Apple.Tests.FixturePage.Require(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/FixturePage.cs:line 81
+   at PageCurl.Apple.Tests.FixturePage.Run(Object sender, EventArgs args) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/FixturePage.cs:line 52
+RESOURCE_CREATE elapsed_ms=339.4 managed_bytes=450616
+FAIL unused PNG encoding remains
+FAIL Single immediate status: Turning
+PASS Single next available
+FAIL Spread immediate status: Turning
+PASS Spread next available
+FAIL Content immediate status: Not available
+PASS Content next available
+FAIL Backside immediate status: Not available
+PASS Backside next available
+FAIL spread sheet backs retained
+PASS queued callback ignores disappearance
+FAIL demo System.Reflection.AmbiguousMatchException: Ambiguous match found for 'PageCurl.Demo.MainPage Void OnAppearing()'.
+   at System.RuntimeType.GetMethodImpl(String name, Int32 genericParamCount, BindingFlags bindingAttr, Binder binder, CallingConventions callConv, Type[] types, ParameterModifier[] modifiers)
+   at System.RuntimeType.GetMethodImpl(String name, BindingFlags bindingAttr, Binder binder, CallingConventions callConvention, Type[] types, ParameterModifier[] modifiers)
+   at System.Type.GetMethod(String name, BindingFlags bindingAttr)
+   at PageCurl.Apple.Tests.DemoRegressionTests.Invoke(MainPage page, String name, Object[] args) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/DemoRegressionTests.cs:line 66
+   at PageCurl.Apple.Tests.DemoRegressionTests.RunAsync(Window window, List`1 results) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/DemoRegressionTests.cs:line 51
+   at PageCurl.Apple.Tests.FixturePage.Run(Object sender, EventArgs args) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/FixturePage.cs:line 71

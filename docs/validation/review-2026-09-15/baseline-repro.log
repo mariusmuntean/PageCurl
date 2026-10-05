@@ -1,0 +1,5 @@
+GRAB: pointer=<150. 250>, pose=<150. 250>, progress=0,625
+IN_PLACE: captures before=4, after=8
+BASELINE: stale capture cancelled
+STALE: current content width=22, stored image width=22, ready=True
+DURING_TURN: prepared=True, state=Settling, front handle=0, overlay retains disposed image=True

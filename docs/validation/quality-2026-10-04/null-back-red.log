@@ -1,0 +1,9 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Capture failure cleared a back still used by the curl.
+System.InvalidOperationException: Capture failure cleared a back still used by the curl.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 9
+   at PageCurl.Maui.Tests.TestAssert.False(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 14
+   at PageCurl.Maui.Tests.PageCurlViewTests.Capture_failure_does_not_clear_the_active_sheet_back() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 42
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 12
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 13

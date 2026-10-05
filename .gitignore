@@ -9,6 +9,8 @@
 .dotnet-home/
 .artifacts/
 .artifacts/ios-smoke/
+tools/clickevent
+tools/ocr
 .superpowers/
 .worktrees/
 *.xcresult

@@ -51,15 +51,16 @@ public static class PageCurlGeometry
         // Continue along the release trajectory while settling. Animating only
         // the edge-normal coordinate makes a diagonal corner pull rotate toward
         // the adjacent edge just before it closes, producing a second snap.
+        var travelScale = options.TurnAcrossHinge ? 2f : 1f;
         var pointerProgress = Math.Clamp(
-            1f - (localPointer.X / localPageSize.X),
+            (localDragStart.X - localPointer.X) / MathF.Max(localDragStart.X * travelScale, Epsilon),
             0,
             1);
         var animatedPointer = pointerProgress > Epsilon
             ? localDragStart
                 + ((localPointer - localDragStart) * (clampedProgress / pointerProgress))
             : new Vector2(
-                localPageSize.X * (1f - clampedProgress),
+                localDragStart.X * (1f - (clampedProgress * travelScale)),
                 localDragStart.Y);
         var delta = animatedPointer - localDragStart;
         var distance = delta.Length();
@@ -74,7 +75,7 @@ public static class PageCurlGeometry
         var curlLength = MathF.PI * radius;
 
         var position = animatedPointer;
-        if (distance > curlLength)
+        if (!options.TurnAcrossHinge && distance > curlLength)
         {
             position -= curlDirection * ((distance - curlLength) * 0.5f);
         }
@@ -145,10 +146,39 @@ public static class PageCurlGeometry
         var requestedTravel = Vector2.Distance(grabSource, pose.Position);
         var hingeProjection = MaximumEdgeProjection(hingeEdge, pageSize, direction);
         var maximumArcLength = MathF.Max(0, grabProjection - hingeProjection);
-        radius = FitRadiusToTravel(maximumArcLength, requestedTravel, radius, minimumRadius);
+        var hingeRotation = 0f;
+        var tangentAngle = MathF.PI * .5f;
+        var facingSign = 1f;
+        float curlStart;
+        if (options.TurnAcrossHinge)
+        {
+            // Keep the entire spine in the unbent region. A rigid rotation
+            // about that spine provides the remaining travel, so an angled
+            // cylinder can follow the hand without stretching its attachment.
+            var sheetProjection = MathF.Max(0, direction.X * pageSize.X) + MathF.Max(0, direction.Y * pageSize.Y);
+            var bendLength = (sheetProjection - hingeProjection) * MathF.Sin(MathF.PI * pose.Progress);
+            curlStart = sheetProjection - MathF.Max(0, bendLength);
+            var bentGrab = CylinderPoint(grabProjection, curlStart, radius);
+            var grabWorld = direction * bentGrab.X + axis * Vector2.Dot(grabSource, axis);
+            var localGrab = ToFreeLocal(grabWorld, pageSize, freeEdge);
+            var target = ToFreeLocal(pose.Position, pageSize, freeEdge).X;
+            var reach = MathF.Sqrt(localGrab.X * localGrab.X + bentGrab.Y * bentGrab.Y);
+            hingeRotation = reach > Epsilon
+                ? Math.Clamp(MathF.Acos(Math.Clamp(target / reach, -1, 1)) - MathF.Atan2(bentGrab.Y, localGrab.X), 0, MathF.PI)
+                : MathF.PI * pose.Progress;
+            var outward = FromFreeLocalVector(Vector2.UnitX, freeEdge);
+            var normalPull = Vector2.Dot(direction, outward);
+            tangentAngle = MathF.Atan2(MathF.Cos(hingeRotation), normalPull * MathF.Sin(hingeRotation));
+            if (tangentAngle < 0) tangentAngle += MathF.PI;
+            facingSign = hingeRotation <= MathF.PI * .5f ? 1 : -1;
+        }
+        else
+        {
+            radius = FitRadiusToTravel(maximumArcLength, requestedTravel, radius, minimumRadius);
+            var arcLength = MathF.Min(SolveArcLength(requestedTravel, radius), maximumArcLength);
+            curlStart = grabProjection - arcLength;
+        }
         var curlLength = MathF.PI * radius;
-        var arcLength = MathF.Min(SolveArcLength(requestedTravel, radius), maximumArcLength);
-        var curlStart = grabProjection - arcLength;
         var columns = buffer.Columns;
         var rows = buffer.Rows;
 
@@ -166,7 +196,7 @@ public static class PageCurlGeometry
                 var transformedProjection = sourceProjection;
                 var depth = 0f;
                 var shade = 1f;
-                var facing = curlStart + (MathF.PI * radius * 0.5f) - sourceProjection;
+                var facing = facingSign * (curlStart + radius * tangentAngle - sourceProjection);
 
                 if (distanceIntoCurl >= curlLength)
                 {
@@ -217,7 +247,8 @@ public static class PageCurlGeometry
                     axis,
                     curlStart,
                     radius,
-                    pageSize);
+                    pageSize,
+                    tangentAngle);
                 AddClippedTriangle(
                     buffer,
                     ref gridVertexCount,
@@ -229,10 +260,30 @@ public static class PageCurlGeometry
                     axis,
                     curlStart,
                     radius,
-                    pageSize);
+                    pageSize,
+                    tangentAngle);
             }
         }
 
+        if (options.TurnAcrossHinge)
+        {
+            var cosine = MathF.Cos(hingeRotation);
+            var sine = MathF.Sin(hingeRotation);
+            for (var i = 0; i < gridVertexCount; i++)
+            {
+                var vertex = buffer.Grid[i];
+                var local = ToFreeLocal(vertex.Position, pageSize, freeEdge);
+                var rotated = new Vector2(local.X * cosine - vertex.Depth * sine, local.Y);
+                buffer.Grid[i] = new(FromFreeLocal(rotated, pageSize, freeEdge), vertex.TextureCoordinate,
+                    vertex.Shade, local.X * sine + vertex.Depth * cosine, vertex.Facing);
+            }
+            // Depth order is evaluated after the rigid hinge rotation.
+            for (var i = 0; i < orderCount; i++)
+            {
+                ref var order = ref buffer.Orders[i];
+                order.Depth = (buffer.Grid[order.A].Depth + buffer.Grid[order.B].Depth + buffer.Grid[order.C].Depth) / 3;
+            }
+        }
         WriteOrderedTriangles(buffer, orderCount);
     }
 
@@ -403,6 +454,16 @@ public static class PageCurlGeometry
         return new(
             (vector.X * cosine) - (vector.Y * sine),
             (vector.X * sine) + (vector.Y * cosine));
+    }
+
+    private static Vector2 CylinderPoint(float projection, float start, float radius)
+    {
+        var length = projection - start;
+        if (length <= 0) return new(projection, 0);
+        if (length >= MathF.PI * radius)
+            return new(start - (length - MathF.PI * radius), 2 * radius);
+        var angle = length / radius;
+        return new(start + radius * MathF.Sin(angle), radius * (1 - MathF.Cos(angle)));
     }
 
     private static float SolveArcLength(float screenTravel, float radius)
@@ -590,7 +651,8 @@ public static class PageCurlGeometry
         Vector2 axis,
         float curlStart,
         float radius,
-        Vector2 pageSize)
+        Vector2 pageSize,
+        float tangentAngle)
     {
         AddClippedSide(
             buffer,
@@ -604,7 +666,8 @@ public static class PageCurlGeometry
             axis,
             curlStart,
             radius,
-            pageSize);
+            pageSize,
+            tangentAngle);
         AddClippedSide(
             buffer,
             ref gridVertexCount,
@@ -617,7 +680,8 @@ public static class PageCurlGeometry
             axis,
             curlStart,
             radius,
-            pageSize);
+            pageSize,
+            tangentAngle);
     }
 
     private static void AddClippedSide(
@@ -632,7 +696,8 @@ public static class PageCurlGeometry
         Vector2 axis,
         float curlStart,
         float radius,
-        Vector2 pageSize)
+        Vector2 pageSize,
+        float tangentAngle)
     {
         Span<int> input = stackalloc int[3] { a, b, c };
         Span<int> output = stackalloc int[4];
@@ -658,7 +723,8 @@ public static class PageCurlGeometry
                         axis,
                         curlStart,
                         radius,
-                        pageSize));
+                        pageSize,
+                        tangentAngle));
             }
 
             if (currentInside)
@@ -707,7 +773,8 @@ public static class PageCurlGeometry
         Vector2 axis,
         float curlStart,
         float radius,
-        Vector2 pageSize)
+        Vector2 pageSize,
+        float tangentAngle)
     {
         var first = buffer.Grid[firstIndex];
         var second = buffer.Grid[secondIndex];
@@ -725,13 +792,13 @@ public static class PageCurlGeometry
         var texture = Vector2.Lerp(first.TextureCoordinate, second.TextureCoordinate, amount);
         var source = new Vector2(texture.X * pageSize.X, texture.Y * pageSize.Y);
         var axisProjection = Vector2.Dot(source, axis);
-        var tangentProjection = curlStart + radius;
-        var tangentShade = ComputeCylinderShade(MathF.PI * 0.5f);
+        var tangent = CylinderPoint(curlStart + radius * tangentAngle, curlStart, radius);
+        var tangentShade = ComputeCylinderShade(tangentAngle);
         var intersection = new PageMeshBuffer.GridVertex(
-            (direction * tangentProjection) + (axis * axisProjection),
+            (direction * tangent.X) + (axis * axisProjection),
             texture,
             tangentShade,
-            radius,
+            tangent.Y,
             0);
         buffer.Grid[gridVertexCount] = intersection;
         return gridVertexCount++;

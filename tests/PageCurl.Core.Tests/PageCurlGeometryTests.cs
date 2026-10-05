@@ -16,6 +16,9 @@ internal static class PageCurlGeometryTests
 
     public static void RunAll()
     {
+        Full_sheet_turn_preserves_material_lengths_on_every_edge();
+        Full_sheet_turn_responds_to_diagonal_pull_without_moving_the_spine();
+        Clipped_mesh_storage_handles_narrow_and_diagonal_grids();
         Mid_curl_produces_finite_front_and_back_mesh_regions();
         Mesh_texture_coordinates_and_shading_are_valid();
         Inactive_pose_generates_a_flat_front_page();
@@ -34,6 +37,112 @@ internal static class PageCurlGeometryTests
         Cylinder_backside_triangles_have_smooth_light_transitions();
         Cylinder_backside_retains_readable_ambient_light();
         Every_pinned_corner_builds_a_developable_cone();
+    }
+
+    private static void Clipped_mesh_storage_handles_narrow_and_diagonal_grids()
+    {
+        foreach (var (columns, rows) in new[] { (2, 1), (2, 64), (64, 1), (16, 16), (64, 64) })
+        foreach (var fullTurn in new[] { false, true })
+        {
+            var options = new PageCurlOptions { MeshColumns = columns, MeshRows = rows, TurnAcrossHinge = fullTurn };
+            var buffer = new PageMeshBuffer(options);
+            foreach (var edge in PhysicalEdges)
+            foreach (var progress in new[] { .01f, .25f, .5f, .75f, .99f, 1f })
+            foreach (var offset in new[] { -400f, -25f, 0f, 25f, 400f })
+            {
+                var grab = PageAnchorExtensions.FromEdge(edge).GetPosition(PageSize);
+                var hinge = edge switch
+                {
+                    PageEdge.Right => PageEdge.Left, PageEdge.Left => PageEdge.Right,
+                    PageEdge.Top => PageEdge.Bottom, _ => PageEdge.Top,
+                };
+                var pin = PageAnchorExtensions.FromEdge(hinge).GetPosition(PageSize);
+                var tangent = edge is PageEdge.Right or PageEdge.Left ? Vector2.UnitY : Vector2.UnitX;
+                var pointer = Vector2.Lerp(grab, fullTurn ? 2 * pin - grab : pin, progress) + tangent * offset;
+                var pose = PageCurlGeometry.ComputePose(PageSize, grab, pointer, hinge, edge,
+                    PageTurnDirection.Forward, progress, options);
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+                TestAssert.InRange(buffer.FrontVertexCount, 0, buffer.FrontVertices.Length);
+                TestAssert.InRange(buffer.BackVertexCount, 0, buffer.BackVertices.Length);
+            }
+        }
+    }
+
+    private static void Full_sheet_turn_responds_to_diagonal_pull_without_moving_the_spine()
+    {
+        var options = new PageCurlOptions { TurnAcrossHinge = true, MeshColumns = 64, MeshRows = 64 };
+        var buffer = new PageMeshBuffer(options);
+        foreach (var free in PhysicalEdges)
+        {
+            var hinge = free switch
+            {
+                PageEdge.Right => PageEdge.Left, PageEdge.Left => PageEdge.Right,
+                PageEdge.Top => PageEdge.Bottom, _ => PageEdge.Top,
+            };
+            var grab = PageAnchorExtensions.FromEdge(free).GetPosition(PageSize);
+            var pin = PageAnchorExtensions.FromEdge(hinge).GetPosition(PageSize);
+            var tangent = free is PageEdge.Right or PageEdge.Left ? Vector2.UnitY : Vector2.UnitX;
+            var straight = Vector2.Lerp(grab, 2 * pin - grab, .45f);
+            var pose = PageCurlGeometry.ComputePose(PageSize, grab, straight, hinge, free,
+                PageTurnDirection.Forward, .45f, options);
+            PageCurlGeometry.Build(buffer, PageSize, pose, options);
+            var straightTip = FindVertexAtTexture(buffer, grab / PageSize);
+            foreach (var offset in new[] { -25f, 25f })
+            {
+                pose = PageCurlGeometry.ComputePose(PageSize, grab, straight + tangent * offset, hinge, free,
+                    PageTurnDirection.Forward, .45f, options);
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+                var tip = FindVertexAtTexture(buffer, grab / PageSize);
+                TestAssert.True(Vector2.Dot(tip.Position - straightTip.Position, tangent) * offset > 1,
+                    $"{free}: diagonal movement did not move the grabbed edge along the spine.");
+                foreach (var fraction in new[] { 0f, .25f, .5f, .75f, 1f })
+                {
+                    var hingePoint = pin + tangent * ((fraction - .5f) * (free is PageEdge.Right or PageEdge.Left ? PageSize.Y : PageSize.X));
+                    var vertex = FindVertexAtTexture(buffer, hingePoint / PageSize);
+                    TestAssert.True(Vector2.Distance(hingePoint, vertex.Position) < .001f);
+                    TestAssert.InRange(Math.Abs(vertex.Depth), 0, .001f);
+                }
+                AssertRestLengthWithin(buffer, new(.5f, .5f), new(.5f + 1f / 64, .5f), PageSize.X / 64, .01f, "diagonal horizontal");
+                AssertRestLengthWithin(buffer, new(.5f, .5f), new(.5f, .5f + 1f / 64), PageSize.Y / 64, .01f, "diagonal vertical");
+            }
+        }
+    }
+
+    private static void Full_sheet_turn_preserves_material_lengths_on_every_edge()
+    {
+        var options = new PageCurlOptions { TurnAcrossHinge = true, MeshColumns = 32, MeshRows = 32 };
+        var buffer = new PageMeshBuffer(options);
+        foreach (var free in PhysicalEdges)
+        {
+            var hinge = free switch
+            {
+                PageEdge.Right => PageEdge.Left, PageEdge.Left => PageEdge.Right,
+                PageEdge.Top => PageEdge.Bottom, _ => PageEdge.Top,
+            };
+            var grab = PageAnchorExtensions.FromEdge(free).GetPosition(PageSize);
+            var pin = PageAnchorExtensions.FromEdge(hinge).GetPosition(PageSize);
+            foreach (var progress in new[] { 0.01f, 0.25f, 0.49f, 0.5f, 0.51f, 0.75f, 0.99f, 1f })
+            {
+                var pointer = Vector2.Lerp(grab, (2 * pin) - grab, progress);
+                var pose = PageCurlGeometry.ComputePose(PageSize, grab, pointer, hinge, free,
+                    PageTurnDirection.Forward, progress, options);
+                PageCurlGeometry.Build(buffer, PageSize, pose, options);
+                foreach (var fraction in new[] { 0f, 0.25f, 0.5f, 0.75f })
+                {
+                    AssertRestLengthWithin(buffer, new(fraction, 0.5f), new(fraction + 1f / 32, 0.5f),
+                        PageSize.X / 32, 0.01f, $"{free} horizontal {progress}");
+                    AssertRestLengthWithin(buffer, new(0.5f, fraction), new(0.5f, fraction + 1f / 32),
+                        PageSize.Y / 32, 0.01f, $"{free} vertical {progress}");
+                }
+                if (progress == 1)
+                {
+                    TestAssert.Equal(0, buffer.FrontVertexCount);
+                    var tip = FindVertexAtTexture(buffer, grab / PageSize);
+                    TestAssert.True(Vector2.Distance(pointer, tip.Position) < 0.01f);
+                    TestAssert.InRange(Math.Abs(tip.Depth), 0, 0.01f);
+                }
+            }
+        }
     }
 
     private static void Mid_curl_produces_finite_front_and_back_mesh_regions()

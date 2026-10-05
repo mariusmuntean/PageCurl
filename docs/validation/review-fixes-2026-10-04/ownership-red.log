@@ -1,0 +1,8 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Owned release/cancel escaped input dispatch.
+System.InvalidOperationException: Owned release/cancel escaped input dispatch.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 9
+   at PageCurl.Maui.Tests.PageCurlViewTests.Owned_release_and_cancel_remain_handled() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 57
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 17
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 13

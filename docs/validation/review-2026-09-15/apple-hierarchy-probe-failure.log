@@ -1,0 +1,33 @@
+*** Terminating app due to uncaught exception 'NSInternalInconsistencyException', reason: 'NSApplication has not been created yet. Consider using -[UINSApplicationDelegate runBlockWhenSharedDelegateBecomesAvailable:] to avoid premature instantiation.'
+*** First throw call stack:
+(
+	0   CoreFoundation                      0x0000000187bef1f0 __exceptionPreprocess + 176
+	1   libobjc.A.dylib                     0x000000018766a91c objc_exception_throw + 88
+	2   Foundation                          0x000000018947f010 -[NSCalendarDate initWithCoder:] + 0
+	3   UIKitMacHelper                      0x00000001a5fb0d6c -[UINSApplicationDelegate init] + 1332
+	4   UIKitMacHelper                      0x00000001a5fb07c4 __41+[UINSApplicationDelegate sharedDelegate]_block_invoke + 52
+	5   libdispatch.dylib                   0x00000001879214b0 _dispatch_client_callout + 16
+	6   libdispatch.dylib                   0x000000018790a630 _dispatch_once_callout + 32
+	7   UIKitMacHelper                      0x00000001a5fb06c0 +[UINSApplicationDelegate sharedDelegate] + 324
+	8   UIKitCore                           0x00000001c0b75c18 -[UIScene setTitle:] + 196
+	9   UIKitCore                           0x00000001c0b75180 -[UIScene initWithSession:connectionOptions:] + 1140
+	10  UIKitCore                           0x00000001c0b749a8 -[UIWindowScene initWithSession:connectionOptions:] + 92
+	11  UIKitCore                           0x00000001c151d8b4 -[_UIScreenBasedWindowScene initWithScreen:session:lookupKey:] + 288
+	12  UIKitCore                           0x00000001c0b7b1b0 +[_UIScreenBasedWindowScene _unassociatedWindowSceneForScreen:create:] + 412
+	13  UIKitCore                           0x00000001c1f7c334 _moveViewToTemporaryWindow + 388
+	14  UIKitCore                           0x00000001c1f7bd38 _UIRenderViewImageAfterCommit + 164
+	15  UIKitCore                           0x00000001c0d74230 -[UIView drawViewHierarchyInRect:afterScreenUpdates:] + 396
+	16  apple-pixels                        0x0000000100de8e68 __main_block_invoke + 764
+	17  UIKitCore                           0x00000001c0b95094 -[UIGraphicsRenderer runDrawingActions:completionActions:format:error:] + 320
+	18  UIKitCore                           0x00000001c0b94f24 -[UIGraphicsRenderer runDrawingActions:completionActions:error:] + 92
+	19  UIKitCore                           0x00000001c0b94e50 -[UIGraphicsImageRenderer imageWithActions:] + 184
+	20  apple-pixels                        0x0000000100de8984 main + 196
+	21  dyld                                0x00000001876f84e4 start + 6992
+)
+libc++abi: terminating due to uncaught exception of type NSException
+pixel bytes: ff ff ff ff
+mode=0 width=200 bpp=16 bpc=8 rowBytes=416 bitmapInfo=1 colorSpace=kCGColorSpaceGenericGrayGamma2_2
+pixel bytes: ff 00 00 ff
+mode=1 width=200 bpp=32 bpc=8 rowBytes=800 bitmapInfo=1 colorSpace=kCGColorSpaceSRGB
+pixel bytes: 5f 3c 42 b3
+mode=2 width=200 bpp=64 bpc=16 rowBytes=1600 bitmapInfo=4353 colorSpace=kCGColorSpaceExtendedSRGB

@@ -1,0 +1,8 @@
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Expected 0, but was 1.
+System.InvalidOperationException: Expected 0, but was 1.
+   at PageCurl.Maui.Tests.TestAssert.Equal[T](T expected, T actual) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 29
+   at PageCurl.Maui.Tests.PageCurlViewTests.Superseded_capture_does_not_report_a_stale_failure() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 43
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 12
+   at PageCurl.Maui.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 13

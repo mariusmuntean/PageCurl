@@ -16,9 +16,22 @@ internal static class PageTurnPerformanceTests
 
     public static void RunAll()
     {
+        Spread_geometry_reuses_storage_without_managed_allocations();
         Geometry_build_reuses_storage_without_managed_allocations();
         Corner_cone_build_reuses_storage_without_managed_allocations();
         Controller_drag_and_settle_reuses_storage_without_managed_allocations();
+    }
+
+    private static void Spread_geometry_reuses_storage_without_managed_allocations()
+    {
+        var options = new PageCurlOptions { TurnAcrossHinge = true };
+        var buffer = new PageMeshBuffer(options);
+        var pose = PageCurlGeometry.ComputePose(PageSize, new(PageSize.X, PageSize.Y / 2),
+            new(-PageSize.X * 0.6f, PageSize.Y / 2), PageTurnDirection.Forward, 0.8f, options);
+        for (var i = 0; i < 100; i++) PageCurlGeometry.Build(buffer, PageSize, pose, options);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 1000; i++) PageCurlGeometry.Build(buffer, PageSize, pose, options);
+        TestAssert.Equal(0L, GC.GetAllocatedBytesForCurrentThread() - before);
     }
 
     private static void Geometry_build_reuses_storage_without_managed_allocations()

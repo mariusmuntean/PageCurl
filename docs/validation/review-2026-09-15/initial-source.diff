@@ -1,0 +1,786 @@
+diff --git a/src/PageCurl.Core/PageTurnController.cs b/src/PageCurl.Core/PageTurnController.cs
+index c95b0b3..6ccf12c 100644
+--- a/src/PageCurl.Core/PageTurnController.cs
++++ b/src/PageCurl.Core/PageTurnController.cs
+@@ -79,9 +79,7 @@ public sealed class PageTurnController
+         _lockedAnchor = PageAnchorExtensions.FromEdge(_hingeEdge);
+         _edgeSelectionPending = false;
+         _initialPointerPosition = clampedPointer;
+-        _dragStartPosition = new(
+-            _direction == PageTurnDirection.Forward ? pageSize.X : 0,
+-            clampedPointer.Y);
++        _dragStartPosition = clampedPointer;
+         _pointerPosition = clampedPointer;
+         _progress = 0;
+         _targetProgress = 0;
+@@ -170,9 +168,7 @@ public sealed class PageTurnController
+             }
+ 
+             SelectEdges(_freeEdge);
+-            _dragStartPosition = lockedAnchor.IsCorner()
+-                ? clampedPointer
+-                : ProjectToEdge(clampedPointer, pageSize, _freeEdge);
++            _dragStartPosition = clampedPointer;
+         }
+ 
+         _state = PageTurnState.Dragging;
+@@ -208,13 +204,11 @@ public sealed class PageTurnController
+ 
+         _progress = _freeEdge == PageEdge.Auto
+             ? 0
+-            : _lockedAnchor.IsCorner()
+-                ? CalculateProgressFromGrab(
+-                    _pointerPosition,
+-                    _initialPointerPosition,
+-                    _pageSize,
+-                    _freeEdge)
+-                : CalculateProgress(_pointerPosition, _pageSize, _freeEdge);
++            : CalculateProgressFromGrab(
++                _pointerPosition,
++                _initialPointerPosition,
++                _pageSize,
++                _freeEdge);
+         _progress = Math.Clamp(_progress, 0, 1);
+         _gesturePointerProgress = _progress;
+         _targetProgress = _progress;
+@@ -627,15 +621,6 @@ public sealed class PageTurnController
+         _ => pointer,
+     };
+ 
+-    private static float CalculateProgress(Vector2 pointer, Vector2 pageSize, PageEdge freeEdge) => freeEdge switch
+-    {
+-        PageEdge.Top => pointer.Y / pageSize.Y,
+-        PageEdge.Right => (pageSize.X - pointer.X) / pageSize.X,
+-        PageEdge.Bottom => (pageSize.Y - pointer.Y) / pageSize.Y,
+-        PageEdge.Left => pointer.X / pageSize.X,
+-        _ => 0,
+-    };
+-
+     private static float CalculateProgressFromGrab(
+         Vector2 pointer,
+         Vector2 grab,
+diff --git a/src/PageCurl.Demo/MainPage.xaml.cs b/src/PageCurl.Demo/MainPage.xaml.cs
+index 8342959..f6b261c 100644
+--- a/src/PageCurl.Demo/MainPage.xaml.cs
++++ b/src/PageCurl.Demo/MainPage.xaml.cs
+@@ -307,7 +307,10 @@ public partial class MainPage : ContentPage
+ 
+     private void OnSnapshotFailed(object? sender, PageSnapshotFailedEventArgs e)
+     {
+-        if (e.Exception.Message.Contains("laid out", StringComparison.OrdinalIgnoreCase))
++        // Handler and layout misses are ordering transients: the content was
++        // not attached or measured yet when the refresh raced ahead of it.
++        if (e.Exception.Message.Contains("laid out", StringComparison.OrdinalIgnoreCase)
++            || e.Exception.Message.Contains("handler", StringComparison.OrdinalIgnoreCase))
+         {
+             if (!_snapshotRetryQueued)
+             {
+@@ -483,8 +486,16 @@ public partial class MainPage : ContentPage
+         SpreadPageView.PreviousLeftContent = _spreadNavigation.CanTurnBackward
+             ? CreatePageView(Math.Max(left - 2, 0))
+             : null;
++        // The sheet's back faces carry the adjacent pages the turn lands on,
++        // so each turn reads like flipping one sheet of a physical book.
++        SpreadPageView.PreviousRightContent = _spreadNavigation.CanTurnBackward
++            ? CreatePageView(Math.Max(left - 1, 0))
++            : null;
++        SpreadPageView.NextLeftContent = _spreadNavigation.CanTurnForward
++            ? CreatePageView(left + 2)
++            : null;
+         SpreadPageView.NextRightContent = _spreadNavigation.CanTurnForward
+-            ? CreatePageView(Math.Min((right ?? left) + 2, _pageSet!.Pages.Count - 1))
++            ? CreatePageView(Math.Min(left + 3, _pageSet!.Pages.Count - 1))
+             : null;
+     }
+ 
+diff --git a/src/PageCurl.Maui/PageContentSnapshotter.Apple.cs b/src/PageCurl.Maui/PageContentSnapshotter.Apple.cs
+index 4ef45f9..f024e43 100644
+--- a/src/PageCurl.Maui/PageContentSnapshotter.Apple.cs
++++ b/src/PageCurl.Maui/PageContentSnapshotter.Apple.cs
+@@ -20,15 +20,24 @@ public sealed class PageContentSnapshotter : IPageContentSnapshotter
+             throw new InvalidOperationException("The content must be laid out before capture.");
+         }
+ 
++        // Copy pixels directly instead of round-tripping through a PNG:
++        // capturing the same content repeatedly stays cheap and avoids
++        // large transient encode and decode buffers.
+         using var renderer = new UIGraphicsImageRenderer(nativeView.Bounds.Size);
+         using var nativeImage = renderer.CreateImage(_ =>
+             nativeView.DrawViewHierarchy(nativeView.Bounds, true));
+         cancellationToken.ThrowIfCancellationRequested();
+-        using var encoded = nativeImage.AsPNG()
+-            ?? throw new InvalidOperationException("Apple could not encode the content snapshot.");
+-        using var stream = encoded.AsStream();
+-        var image = SKImage.FromEncodedData(stream)
+-            ?? throw new InvalidOperationException("SkiaSharp could not decode the content snapshot.");
++        var cgImage = nativeImage.CGImage
++            ?? throw new InvalidOperationException("Apple could not rasterize the content snapshot.");
++        using var data = cgImage.DataProvider?.CopyData()
++            ?? throw new InvalidOperationException("Apple could not copy the content snapshot.");
++        var info = new SKImageInfo(
++            (int)cgImage.Width,
++            (int)cgImage.Height,
++            SKColorType.Bgra8888,
++            SKAlphaType.Premul);
++        var image = SKImage.FromPixelCopy(info, data.Bytes, (int)cgImage.BytesPerRow)
++            ?? throw new InvalidOperationException("SkiaSharp could not copy the content snapshot.");
+         return Task.FromResult(image);
+     }
+ }
+diff --git a/src/PageCurl.Maui/PageCurlView.cs b/src/PageCurl.Maui/PageCurlView.cs
+index fc49032..99acd23 100644
+--- a/src/PageCurl.Maui/PageCurlView.cs
++++ b/src/PageCurl.Maui/PageCurlView.cs
+@@ -232,6 +232,7 @@ public sealed class PageCurlView : Grid
+         await CaptureContentAsync(FrontContent, capture, isBackside: false);
+         capture.Token.ThrowIfCancellationRequested();
+         await CaptureContentAsync(BackContent, capture, isBackside: true);
++        capture.Token.ThrowIfCancellationRequested();
+     }
+ 
+     public void CancelInteraction()
+@@ -249,6 +250,7 @@ public sealed class PageCurlView : Grid
+             _handlerDisconnected = true;
+             _activePointerId = null;
+             Renderer.CancelInteraction();
++            ShowLiveContent();
+             Renderer.FrontImage = null;
+             Renderer.BackImage = null;
+             _snapshots.Dispose();
+@@ -478,7 +480,12 @@ public sealed class PageCurlView : Grid
+         try
+         {
+             var image = await _snapshotter.CaptureAsync(content, capture.Token);
+-            capture.Token.ThrowIfCancellationRequested();
++            if (capture.Token.IsCancellationRequested)
++            {
++                image.Dispose();
++                capture.Token.ThrowIfCancellationRequested();
++            }
++
+             var replaced = isBackside
+                 ? _snapshots.TryReplaceBack(capture.Generation, image)
+                 : _snapshots.TryReplaceFront(capture.Generation, image);
+@@ -498,6 +505,7 @@ public sealed class PageCurlView : Grid
+         }
+         catch (OperationCanceledException) when (capture.Token.IsCancellationRequested)
+         {
++            throw;
+         }
+         catch (Exception exception)
+         {
+diff --git a/src/PageCurl.Maui/PageSpreadView.cs b/src/PageCurl.Maui/PageSpreadView.cs
+index 844240f..71f86b8 100644
+--- a/src/PageCurl.Maui/PageSpreadView.cs
++++ b/src/PageCurl.Maui/PageSpreadView.cs
+@@ -12,16 +12,24 @@ namespace PageCurl.Maui;
+ public sealed class PageSpreadView : Grid
+ {
+     private const double ActivationWidth = 52;
++    private const int SlotCount = 6;
++
+     private readonly IPageContentSnapshotter _snapshotter;
+     private readonly Grid _spreadFrame;
+     private readonly Grid _leftHost;
+     private readonly Grid _rightHost;
+     private readonly Grid _previousLeftHost;
+     private readonly Grid _nextRightHost;
++    private readonly Grid _previousRightHost;
++    private readonly Grid _nextLeftHost;
+     private readonly BoxView _gutter;
++    private readonly bool[] _snapshotDirty = new bool[SlotCount];
+     private PageSnapshotState<SKImage> _currentSnapshots = new();
+     private PageSnapshotState<SKImage> _destinationSnapshots = new();
++    private PageSnapshotState<SKImage> _sheetBackSnapshots = new();
++    private Task _refreshChain = Task.CompletedTask;
+     private bool _turnInProgress;
++    private bool _snapshotRefreshPending;
+     private bool _handlerDisconnected;
+     private long? _activePointerId;
+ 
+@@ -73,6 +81,20 @@ public sealed class PageSpreadView : Grid
+         default(View),
+         propertyChanged: OnNextRightContentChanged);
+ 
++    public static readonly BindableProperty PreviousRightContentProperty = BindableProperty.Create(
++        nameof(PreviousRightContent),
++        typeof(View),
++        typeof(PageSpreadView),
++        default(View),
++        propertyChanged: OnPreviousRightContentChanged);
++
++    public static readonly BindableProperty NextLeftContentProperty = BindableProperty.Create(
++        nameof(NextLeftContent),
++        typeof(View),
++        typeof(PageSpreadView),
++        default(View),
++        propertyChanged: OnNextLeftContentChanged);
++
+     public static readonly BindableProperty PageAspectRatioProperty = BindableProperty.Create(
+         nameof(PageAspectRatio),
+         typeof(float),
+@@ -178,11 +200,15 @@ public sealed class PageSpreadView : Grid
+         _rightHost = new Grid();
+         _previousLeftHost = new Grid { Opacity = 0, InputTransparent = true };
+         _nextRightHost = new Grid { Opacity = 0, InputTransparent = true };
++        _previousRightHost = new Grid { Opacity = 0, InputTransparent = true };
++        _nextLeftHost = new Grid { Opacity = 0, InputTransparent = true };
+         var leftCell = new Grid { IsClippedToBounds = true };
+         leftCell.Children.Add(_previousLeftHost);
++        leftCell.Children.Add(_nextLeftHost);
+         leftCell.Children.Add(_leftHost);
+         var rightCell = new Grid { IsClippedToBounds = true };
+         rightCell.Children.Add(_nextRightHost);
++        rightCell.Children.Add(_previousRightHost);
+         rightCell.Children.Add(_rightHost);
+         _spreadFrame.Add(leftCell, 0, 0);
+         _spreadFrame.Add(rightCell, 1, 0);
+@@ -221,6 +247,7 @@ public sealed class PageSpreadView : Grid
+             PageChangeThresholdCrossed?.Invoke(this, args);
+         Loaded += OnLoaded;
+         SizeChanged += OnSizeChanged;
++        MarkAllSnapshotsDirty();
+         ApplyPresentation();
+         UpdateNavigationAvailability();
+     }
+@@ -249,6 +276,20 @@ public sealed class PageSpreadView : Grid
+         set => SetValue(NextRightContentProperty, value);
+     }
+ 
++    /// <summary>Content shown on the back of the sheet during a forward turn.</summary>
++    public View? NextLeftContent
++    {
++        get => (View?)GetValue(NextLeftContentProperty);
++        set => SetValue(NextLeftContentProperty, value);
++    }
++
++    /// <summary>Content shown on the back of the sheet during a backward turn.</summary>
++    public View? PreviousRightContent
++    {
++        get => (View?)GetValue(PreviousRightContentProperty);
++        set => SetValue(PreviousRightContentProperty, value);
++    }
++
+     public float PageAspectRatio
+     {
+         get => (float)GetValue(PageAspectRatioProperty);
+@@ -325,30 +366,22 @@ public sealed class PageSpreadView : Grid
+ 
+     public bool TryTurnBackward() => TryTurn(PageTurnDirection.Backward);
+ 
+-    public async Task RefreshSnapshotAsync(CancellationToken cancellationToken = default)
++    public Task RefreshSnapshotAsync(CancellationToken cancellationToken = default)
+     {
+         if (_turnInProgress)
+         {
+-            return;
++            _snapshotRefreshPending = true;
++            return Task.CompletedTask;
+         }
+ 
+-        var currentCapture = _currentSnapshots.BeginCapture(cancellationToken);
+-        await CaptureAsync(LeftContent, _currentSnapshots, currentCapture, isBackSlot: false);
+-        currentCapture.Token.ThrowIfCancellationRequested();
+-        await CaptureAsync(RightContent, _currentSnapshots, currentCapture, isBackSlot: true);
+-        var destinationCapture = _destinationSnapshots.BeginCapture(cancellationToken);
+-        await CaptureAsync(
+-            PreviousLeftContent,
+-            _destinationSnapshots,
+-            destinationCapture,
+-            isBackSlot: false);
+-        destinationCapture.Token.ThrowIfCancellationRequested();
+-        await CaptureAsync(
+-            NextRightContent,
+-            _destinationSnapshots,
+-            destinationCapture,
+-            isBackSlot: true);
+-        UpdateNavigationAvailability();
++        _snapshotRefreshPending = false;
++        // Serialize every refresh behind the running one. Requests coalesce
++        // through the per-slot dirty flags, so a queued request that finds
++        // everything current completes without capturing anything.
++        var previous = _refreshChain;
++        var current = RefreshAfterAsync(previous, cancellationToken);
++        _refreshChain = current;
++        return current;
+     }
+ 
+     protected override void OnHandlerChanged()
+@@ -358,10 +391,15 @@ public sealed class PageSpreadView : Grid
+         {
+             _handlerDisconnected = true;
+             _activePointerId = null;
++            _snapshotRefreshPending = false;
++            _refreshChain = Task.CompletedTask;
+             Overlay.CancelInteraction();
+-            ClearOverlayImages();
++            RestoreStaticPages();
+             _currentSnapshots.Dispose();
+             _destinationSnapshots.Dispose();
++            _sheetBackSnapshots.Dispose();
++            MarkAllSnapshotsDirty();
++            UpdateNavigationAvailability();
+             return;
+         }
+ 
+@@ -369,12 +407,104 @@ public sealed class PageSpreadView : Grid
+         {
+             _currentSnapshots = new PageSnapshotState<SKImage>();
+             _destinationSnapshots = new PageSnapshotState<SKImage>();
++            _sheetBackSnapshots = new PageSnapshotState<SKImage>();
+         }
+ 
+         _handlerDisconnected = false;
++        MarkAllSnapshotsDirty();
+         QueueSnapshotRefresh();
+     }
+ 
++    private async Task RefreshAfterAsync(Task previous, CancellationToken cancellationToken)
++    {
++        // A cancelled predecessor must not cancel the requests queued
++        // behind it.
++        try
++        {
++            await previous;
++        }
++        catch (OperationCanceledException)
++        {
++        }
++
++        if (_turnInProgress)
++        {
++            _snapshotRefreshPending = true;
++            return;
++        }
++
++        if (_handlerDisconnected)
++        {
++            return;
++        }
++
++        for (var slot = 0; slot < SlotCount; slot++)
++        {
++            if (!_snapshotDirty[slot])
++            {
++                continue;
++            }
++
++            var typedSlot = (SnapshotSlot)slot;
++            var state = GetSlotState(typedSlot);
++            var capture = state.BeginCapture(cancellationToken);
++            var stored = await CaptureSlotAsync(
++                GetSlotContent(typedSlot),
++                state,
++                capture,
++                IsSlotBack(typedSlot));
++            capture.Token.ThrowIfCancellationRequested();
++            _snapshotDirty[slot] = !stored;
++            UpdateNavigationAvailability();
++        }
++    }
++
++    private async Task<bool> CaptureSlotAsync(
++        View? content,
++        PageSnapshotState<SKImage> state,
++        PageSnapshotCapture capture,
++        bool isBackSlot)
++    {
++        if (content is null)
++        {
++            if (isBackSlot)
++            {
++                state.ClearBack();
++            }
++            else
++            {
++                state.ClearFront();
++            }
++
++            return true;
++        }
++
++        try
++        {
++            var image = await _snapshotter.CaptureAsync(content, capture.Token);
++            if (capture.Token.IsCancellationRequested)
++            {
++                image.Dispose();
++                capture.Token.ThrowIfCancellationRequested();
++            }
++
++            return isBackSlot
++                ? state.TryReplaceBack(capture.Generation, image)
++                : state.TryReplaceFront(capture.Generation, image);
++        }
++        catch (OperationCanceledException) when (capture.Token.IsCancellationRequested)
++        {
++            throw;
++        }
++        catch (Exception exception)
++        {
++            SnapshotFailed?.Invoke(
++                this,
++                new PageSnapshotFailedEventArgs(content, isBackside: false, exception));
++            return false;
++        }
++    }
++
+     private static void OnLeftContentChanged(
+         BindableObject bindable,
+         object? oldValue,
+@@ -382,7 +512,8 @@ public sealed class PageSpreadView : Grid
+         ((PageSpreadView)bindable).ReplaceContent(
+             ((PageSpreadView)bindable)._leftHost,
+             oldValue as View,
+-            newValue as View);
++            newValue as View,
++            SnapshotSlot.Left);
+ 
+     private static void OnRightContentChanged(
+         BindableObject bindable,
+@@ -391,7 +522,8 @@ public sealed class PageSpreadView : Grid
+         ((PageSpreadView)bindable).ReplaceContent(
+             ((PageSpreadView)bindable)._rightHost,
+             oldValue as View,
+-            newValue as View);
++            newValue as View,
++            SnapshotSlot.Right);
+ 
+     private static void OnPreviousLeftContentChanged(
+         BindableObject bindable,
+@@ -400,7 +532,8 @@ public sealed class PageSpreadView : Grid
+         ((PageSpreadView)bindable).ReplaceContent(
+             ((PageSpreadView)bindable)._previousLeftHost,
+             oldValue as View,
+-            newValue as View);
++            newValue as View,
++            SnapshotSlot.PreviousLeft);
+ 
+     private static void OnNextRightContentChanged(
+         BindableObject bindable,
+@@ -409,7 +542,28 @@ public sealed class PageSpreadView : Grid
+         ((PageSpreadView)bindable).ReplaceContent(
+             ((PageSpreadView)bindable)._nextRightHost,
+             oldValue as View,
+-            newValue as View);
++            newValue as View,
++            SnapshotSlot.NextRight);
++
++    private static void OnPreviousRightContentChanged(
++        BindableObject bindable,
++        object? oldValue,
++        object? newValue) =>
++        ((PageSpreadView)bindable).ReplaceContent(
++            ((PageSpreadView)bindable)._previousRightHost,
++            oldValue as View,
++            newValue as View,
++            SnapshotSlot.PreviousRight);
++
++    private static void OnNextLeftContentChanged(
++        BindableObject bindable,
++        object? oldValue,
++        object? newValue) =>
++        ((PageSpreadView)bindable).ReplaceContent(
++            ((PageSpreadView)bindable)._nextLeftHost,
++            oldValue as View,
++            newValue as View,
++            SnapshotSlot.NextLeft);
+ 
+     private static void OnPresentationChanged(
+         BindableObject bindable,
+@@ -421,7 +575,11 @@ public sealed class PageSpreadView : Grid
+         view.UpdateSpreadFrame();
+     }
+ 
+-    private void ReplaceContent(Grid host, View? oldContent, View? newContent)
++    private void ReplaceContent(
++        Grid host,
++        View? oldContent,
++        View? newContent,
++        SnapshotSlot slot)
+     {
+         if (oldContent is not null)
+         {
+@@ -433,10 +591,35 @@ public sealed class PageSpreadView : Grid
+             host.Children.Add(newContent);
+         }
+ 
++        _snapshotDirty[(int)slot] = true;
+         UpdateNavigationAvailability();
+         QueueSnapshotRefresh();
+     }
+ 
++    private View? GetSlotContent(SnapshotSlot slot) => slot switch
++    {
++        SnapshotSlot.Left => LeftContent,
++        SnapshotSlot.Right => RightContent,
++        SnapshotSlot.PreviousLeft => PreviousLeftContent,
++        SnapshotSlot.NextRight => NextRightContent,
++        SnapshotSlot.PreviousRight => PreviousRightContent,
++        SnapshotSlot.NextLeft => NextLeftContent,
++        _ => null,
++    };
++
++    private PageSnapshotState<SKImage> GetSlotState(SnapshotSlot slot) => slot switch
++    {
++        SnapshotSlot.Left or SnapshotSlot.Right => _currentSnapshots,
++        SnapshotSlot.PreviousLeft or SnapshotSlot.NextRight => _destinationSnapshots,
++        _ => _sheetBackSnapshots,
++    };
++
++    private static bool IsSlotBack(SnapshotSlot slot) => slot switch
++    {
++        SnapshotSlot.Right or SnapshotSlot.NextRight or SnapshotSlot.NextLeft => true,
++        _ => false,
++    };
++
+     private void AddActivationZone(PageTurnDirection direction)
+     {
+         var zone = new SKCanvasView
+@@ -549,6 +732,12 @@ public sealed class PageSpreadView : Grid
+             return false;
+         }
+ 
++        // The sheet's back face is the adjacent page it lands on, so the
++        // turn reads like a physical book instead of a mirrored photocopy.
++        var backFace = direction == PageTurnDirection.Forward
++            ? _sheetBackSnapshots.Back
++            : _sheetBackSnapshots.Front;
++
+         _turnInProgress = true;
+         UpdateNavigationAvailability();
+         Overlay.PageHorizontalPlacement = direction == PageTurnDirection.Forward
+@@ -558,6 +747,10 @@ public sealed class PageSpreadView : Grid
+             ? PageAnchor.Left
+             : PageAnchor.Right;
+         Overlay.FrontImage = front;
++        Overlay.BackImage = backFace;
++        Overlay.BacksideMode = backFace is null
++            ? BacksideMode
++            : PageBacksideMode.CustomContent;
+         Overlay.UnderPageImage = direction == PageTurnDirection.Forward ? destination : null;
+         Overlay.PreviousPageImage = direction == PageTurnDirection.Backward ? destination : null;
+         Overlay.Opacity = 1;
+@@ -575,55 +768,15 @@ public sealed class PageSpreadView : Grid
+         return true;
+     }
+ 
+-    private async Task CaptureAsync(
+-        View? content,
+-        PageSnapshotState<SKImage> state,
+-        PageSnapshotCapture capture,
+-        bool isBackSlot)
+-    {
+-        if (content is null)
+-        {
+-            if (isBackSlot)
+-            {
+-                state.ClearBack();
+-            }
+-            else
+-            {
+-                state.ClearFront();
+-            }
+-
+-            return;
+-        }
+-
+-        try
+-        {
+-            var image = await _snapshotter.CaptureAsync(content, capture.Token);
+-            capture.Token.ThrowIfCancellationRequested();
+-            if (isBackSlot)
+-            {
+-                state.TryReplaceBack(capture.Generation, image);
+-            }
+-            else
+-            {
+-                state.TryReplaceFront(capture.Generation, image);
+-            }
+-        }
+-        catch (OperationCanceledException) when (capture.Token.IsCancellationRequested)
+-        {
+-        }
+-        catch (Exception exception)
+-        {
+-            SnapshotFailed?.Invoke(
+-                this,
+-                new PageSnapshotFailedEventArgs(content, isBackside: false, exception));
+-        }
+-    }
+-
+     private void OnOverlayCompleted(object? sender, PageTurnCompletedEventArgs e)
+     {
+         _turnInProgress = false;
+         RestoreStaticPages();
+         PageTurnCompleted?.Invoke(this, e);
++        if (_snapshotRefreshPending)
++        {
++            ResumePendingSnapshotRefresh();
++        }
+     }
+ 
+     private void RestoreStaticPages()
+@@ -644,6 +797,7 @@ public sealed class PageSpreadView : Grid
+         Overlay.BackImage = null;
+         Overlay.UnderPageImage = null;
+         Overlay.PreviousPageImage = null;
++        Overlay.BacksideMode = BacksideMode;
+     }
+ 
+     private void ApplyPresentation()
+@@ -652,7 +806,11 @@ public sealed class PageSpreadView : Grid
+         Overlay.PageChangeThreshold = PageChangeThreshold;
+         Overlay.FlickEnabled = FlickEnabled;
+         Overlay.FlickVelocityThreshold = FlickVelocityThreshold;
+-        Overlay.BacksideMode = BacksideMode;
++        if (!_turnInProgress)
++        {
++            Overlay.BacksideMode = BacksideMode;
++        }
++
+         Overlay.BacksideColor = BacksideColor;
+         Overlay.BacksideDimFactor = BacksideDimFactor;
+         Overlay.ReduceMotion = ReduceMotion;
+@@ -662,21 +820,31 @@ public sealed class PageSpreadView : Grid
+ 
+     private void UpdateNavigationAvailability()
+     {
+-        SetValue(
+-            CanTurnForwardPropertyKey,
+-            !_turnInProgress
+-                && RightContent is not null
+-                && NextRightContent is not null
+-                && _currentSnapshots.Back is not null
+-                && _destinationSnapshots.Back is not null);
+-        SetValue(
+-            CanTurnBackwardPropertyKey,
+-            !_turnInProgress
+-                && LeftContent is not null
+-                && PreviousLeftContent is not null
+-                && _currentSnapshots.Front is not null
+-                && _destinationSnapshots.Front is not null);
+-    }
++        SetValue(CanTurnForwardPropertyKey, IsForwardReady());
++        SetValue(CanTurnBackwardPropertyKey, IsBackwardReady());
++    }
++
++    private bool IsForwardReady() =>
++        !_turnInProgress
++        && !_snapshotDirty[(int)SnapshotSlot.Right]
++        && !_snapshotDirty[(int)SnapshotSlot.NextRight]
++        && (NextLeftContent is null || !_snapshotDirty[(int)SnapshotSlot.NextLeft])
++        && RightContent is not null
++        && NextRightContent is not null
++        && _currentSnapshots.Back is not null
++        && _destinationSnapshots.Back is not null
++        && (NextLeftContent is null || _sheetBackSnapshots.Back is not null);
++
++    private bool IsBackwardReady() =>
++        !_turnInProgress
++        && !_snapshotDirty[(int)SnapshotSlot.Left]
++        && !_snapshotDirty[(int)SnapshotSlot.PreviousLeft]
++        && (PreviousRightContent is null || !_snapshotDirty[(int)SnapshotSlot.PreviousRight])
++        && LeftContent is not null
++        && PreviousLeftContent is not null
++        && _currentSnapshots.Front is not null
++        && _destinationSnapshots.Front is not null
++        && (PreviousRightContent is null || _sheetBackSnapshots.Front is not null);
+ 
+     private void UpdateSpreadFrame()
+     {
+@@ -724,18 +892,42 @@ public sealed class PageSpreadView : Grid
+     private void OnLoaded(object? sender, EventArgs e)
+     {
+         UpdateSpreadFrame();
++        MarkAllSnapshotsDirty();
+         QueueSnapshotRefresh();
+     }
+ 
+     private void OnSizeChanged(object? sender, EventArgs e)
+     {
+         UpdateSpreadFrame();
++        MarkAllSnapshotsDirty();
+         QueueSnapshotRefresh();
+     }
+ 
+     private async void QueueSnapshotRefresh()
+     {
+-        if (_handlerDisconnected || Handler is null || _turnInProgress)
++        if (_turnInProgress)
++        {
++            _snapshotRefreshPending = true;
++            return;
++        }
++
++        if (_handlerDisconnected || Handler is null)
++        {
++            return;
++        }
++
++        try
++        {
++            await RefreshSnapshotAsync();
++        }
++        catch (OperationCanceledException)
++        {
++        }
++    }
++
++    private async void ResumePendingSnapshotRefresh()
++    {
++        if (_handlerDisconnected)
+         {
+             return;
+         }
+@@ -748,4 +940,22 @@ public sealed class PageSpreadView : Grid
+         {
+         }
+     }
++
++    private void MarkAllSnapshotsDirty()
++    {
++        for (var slot = 0; slot < SlotCount; slot++)
++        {
++            _snapshotDirty[slot] = true;
++        }
++    }
++
++    private enum SnapshotSlot
++    {
++        Left,
++        Right,
++        PreviousLeft,
++        NextRight,
++        PreviousRight,
++        NextLeft,
++    }
+ }
+diff --git a/src/PageCurl.Maui/PageTurnView.cs b/src/PageCurl.Maui/PageTurnView.cs
+index 7cf0dd7..169b55d 100644
+--- a/src/PageCurl.Maui/PageTurnView.cs
++++ b/src/PageCurl.Maui/PageTurnView.cs
+@@ -608,6 +608,7 @@ public sealed class PageTurnView : SKGLView
+ 
+     private void OnTouch(object? sender, SKTouchEventArgs e)
+     {
++        System.IO.File.AppendAllText("/tmp/touch-trace.log", $"[touch] {e.ActionType} id={e.Id} at {e.Location} handled={e.Handled}\n");
+         if (_handlerDisconnected)
+         {
+             return;
+@@ -653,7 +654,6 @@ public sealed class PageTurnView : SKGLView
+                 if (_pointerCapture.Release(e.Id))
+                 {
+                     Controller.EndDrag(animate: !ReduceMotion);
+-                    e.Handled = true;
+                     StartAnimationLoop();
+                     InvalidateSurface();
+                 }
+@@ -663,7 +663,6 @@ public sealed class PageTurnView : SKGLView
+                 if (_pointerCapture.Release(e.Id))
+                 {
+                     Controller.Cancel();
+-                    e.Handled = true;
+                     StartAnimationLoop();
+                     InvalidateSurface();
+                 }

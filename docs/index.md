@@ -7,6 +7,7 @@ details:
 - [Architecture](architecture.md): project boundaries and frame flow.
 - [Interaction and rendering](interaction-and-rendering.md): gestures, page
   geometry, shading, and performance choices.
+- [Renderer comparison](renderer-comparison.md): Simple3D suitability and current choice.
 - [Runtime contracts](runtime-contracts.md): image ownership, threading, and
   lifecycle rules.
 - [Testing](testing.md): automated coverage and visual checks.

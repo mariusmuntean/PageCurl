@@ -26,7 +26,7 @@ From the repository root:
 
 The optional first argument is an iPhone simulator UDID. Set
 `IOS_SMOKE_OUTPUT` to choose a durable output directory. The script uses the
-user-local SDK at `/Users/marius/.dotnet`, builds the explicit
+user-local SDK at `$HOME/.dotnet` when available, builds the explicit
 `net10.0-ios` simulator target, reads the bundle identifier from the demo
 project, installs `de.marius.PageCurlDemo`, launches
 it, verifies the compact foreground accessibility surface, rejects decorative
@@ -35,15 +35,29 @@ and visits the Spread, Content, and Backside scenes when `idb` and `jq` are
 available. It switches Content through Image, View, and Video, updates the live
 counter, records spread/backside drags, and extracts active-curl frames with
 `ffmpeg`.
-The script cleans generated native artifacts before the build, verifies the
-demo is still foregrounded through the accessibility tree when `idb` is
-available, and waits 10 seconds after that check so the first Skia surface has
-completed its simulator compositor warm-up.
+The script performs a normal incremental build, verifies the foreground
+accessibility tree when `idb` is available, and allows the first Skia surface
+to finish simulator compositor warm-up. Its exit trap stops the test app and
+recording, removes temporary movies and new idb helpers, and shuts down newly
+booted simulators. Existing simulator sessions keep their boot state and
+original appearance.
 
 ## Latest simulator run
 
-Validation date: 2026-08-08. Output:
-`.artifacts/ios-smoke/20260808-showcase-feedback/`.
+The [2026-10-04 Rider and interaction run](rider-and-interaction-2026-10-04/README.md)
+built and launched the Release app on iPhone 17e / iOS 27 with the supported
+Xcode 27 workload. Light/dark captures passed; automated gestures failed
+because idb requires the removed SimulatorKit framework. No Xcode override
+was used. The older completed feature-scene run below remains historical
+evidence rather than a pass for the current implementation.
+
+## Previous feature-scene run
+
+Validation date: 2026-09-15. Output:
+`.artifacts/ios-smoke/20260915T135939Z/`. Device: iPhone 17e (iOS 26.5,
+booted simulator). This run exercised the grab-relative drag model, the
+book-model spread back faces, the coalesced spread snapshot refreshes, and
+the direct pixel-copy Apple snapshotter.
 
 | Evidence | Result | Location/notes |
 | --- | --- | --- |
@@ -52,7 +66,7 @@ Validation date: 2026-08-08. Output:
 | Install and launch | Pass | Bundle `de.marius.PageCurlDemo`; foreground accessibility check passed |
 | Light appearance | Pass | `light.png`; generated page art and compact controls visible |
 | Dark appearance | Pass | `dark.png`; page surface recovered after simulator compositor warm-up |
-| Portrait frame | Pass | iPhone 17 Pro simulator |
+| Portrait frame | Pass | iPhone 17e simulator (iOS 26.5) |
 | Accessibility surface | Pass | Four scene buttons, Previous/Next, Options, all anchor settings, threshold slider, flick, haptics, and reduced motion exposed; decorative curl hints absent |
 | Compact options sheet | Pass | `options.png`; anchor picker, percentage threshold, flick, ratio, haptics, reduced motion, and Close visible |
 | Showcase scenes | Pass | `spread.png`, `content-image.png`, `content-view.png`, `content-video.png`, and `backside.png` captured after accessibility-driven scene changes |
@@ -61,10 +75,11 @@ Validation date: 2026-08-08. Output:
 | Bundled image | Pass | The JPEG is present in the app bundle and visible by default in `content-image.png` |
 | Bundled video | Pass | The local MP4 is present in the app bundle; `content-video.png` and `content-video-later.png` show different Big Buck Bunny frames |
 | Aspect-preserving page | Pass | Portrait source page remains undistorted in the fitted content rectangle |
-| MacCatalyst build | Pass | Debug `net10.0-maccatalyst`; 0 warnings, 0 errors; bundled JPEG and MP4 included and native video initialized with the same poster underneath |
-| MacCatalyst video playback | Follow-up | Current visual playback check was blocked by the locked Mac session; the earlier responsive-window review did not exercise this new clip |
+| Spread capture performance | Pass | Direct pixel-copy snapshotter; alternating turns keep resident memory flat on Mac Catalyst (see `maccatalyst-interaction.md`) |
 | Programmatic page navigation | Follow-up | Controls are exposed and boundary states render correctly; this smoke does not yet wait through and assert a completed animated turn |
 | Rotation, large page, gestures, and device performance | Follow-up | Manual/device gates remain below |
+
+Previous run (2026-08-08, iPhone 17 Pro): `.artifacts/ios-smoke/20260808-showcase-feedback/`.
 
 ## Latest physical-device deployment
 

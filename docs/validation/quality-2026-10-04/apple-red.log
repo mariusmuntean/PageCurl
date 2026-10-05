@@ -1,0 +1,27 @@
+PASS red 200x200 #fff90000
+PASS blue 200x200 #ff0000f9
+PASS white 200x200 #fff9f9f9
+PASS gray 200x200 #ff7d7d7d
+PASS half-red 200x200 #80f90000
+PASS Display-P3 red
+PASS all native snapshot tests
+RESOURCE_CREATE elapsed_ms=36.1 managed_bytes=53368
+PASS no unused PNG API
+FAIL page 01 back is unrelated content
+PASS curl surface spans stage
+PASS scene switch cancels immediately
+FAIL inactive completion advances spread
+PASS spread ready after Single drag
+PASS Single immediate status
+PASS Single next available
+PASS Spread immediate status
+PASS Spread next available
+PASS Content immediate status
+PASS Content next available
+PASS Backside immediate status
+PASS Backside next available
+PASS all six spread slots detached
+PASS queued callback ignores disappearance
+PASS resources recreated after return
+PASS animated command starts
+PASS animated completion

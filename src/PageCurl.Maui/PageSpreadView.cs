@@ -12,16 +12,28 @@ namespace PageCurl.Maui;
 public sealed class PageSpreadView : Grid
 {
     private const double ActivationWidth = 52;
+    private const int SlotCount = 6;
+
     private readonly IPageContentSnapshotter _snapshotter;
     private readonly Grid _spreadFrame;
     private readonly Grid _leftHost;
     private readonly Grid _rightHost;
     private readonly Grid _previousLeftHost;
     private readonly Grid _nextRightHost;
+    private readonly Grid _previousRightHost;
+    private readonly Grid _nextLeftHost;
     private readonly BoxView _gutter;
+    private readonly bool[] _snapshotDirty = new bool[SlotCount];
+    private readonly long[] _snapshotRevision = new long[SlotCount];
+    private TaskCompletionSource? _turnFinished;
+    private int _lifecycleRevision;
     private PageSnapshotState<SKImage> _currentSnapshots = new();
     private PageSnapshotState<SKImage> _destinationSnapshots = new();
+    private PageSnapshotState<SKImage> _sheetBackSnapshots = new();
+    private Task _refreshChain = Task.CompletedTask;
     private bool _turnInProgress;
+    private bool _snapshotRefreshPending;
+    private bool _refreshQueued;
     private bool _handlerDisconnected;
     private long? _activePointerId;
 
@@ -45,33 +57,23 @@ public sealed class PageSpreadView : Grid
     public static readonly BindableProperty CanTurnBackwardProperty =
         CanTurnBackwardPropertyKey.BindableProperty;
 
-    public static readonly BindableProperty LeftContentProperty = BindableProperty.Create(
-        nameof(LeftContent),
-        typeof(View),
-        typeof(PageSpreadView),
-        default(View),
-        propertyChanged: OnLeftContentChanged);
+    public static readonly BindableProperty LeftContentProperty = ContentProperty(
+        nameof(LeftContent), SnapshotSlot.Left);
 
-    public static readonly BindableProperty RightContentProperty = BindableProperty.Create(
-        nameof(RightContent),
-        typeof(View),
-        typeof(PageSpreadView),
-        default(View),
-        propertyChanged: OnRightContentChanged);
+    public static readonly BindableProperty RightContentProperty = ContentProperty(
+        nameof(RightContent), SnapshotSlot.Right);
 
-    public static readonly BindableProperty PreviousLeftContentProperty = BindableProperty.Create(
-        nameof(PreviousLeftContent),
-        typeof(View),
-        typeof(PageSpreadView),
-        default(View),
-        propertyChanged: OnPreviousLeftContentChanged);
+    public static readonly BindableProperty PreviousLeftContentProperty = ContentProperty(
+        nameof(PreviousLeftContent), SnapshotSlot.PreviousLeft);
 
-    public static readonly BindableProperty NextRightContentProperty = BindableProperty.Create(
-        nameof(NextRightContent),
-        typeof(View),
-        typeof(PageSpreadView),
-        default(View),
-        propertyChanged: OnNextRightContentChanged);
+    public static readonly BindableProperty NextRightContentProperty = ContentProperty(
+        nameof(NextRightContent), SnapshotSlot.NextRight);
+
+    public static readonly BindableProperty PreviousRightContentProperty = ContentProperty(
+        nameof(PreviousRightContent), SnapshotSlot.PreviousRight);
+
+    public static readonly BindableProperty NextLeftContentProperty = ContentProperty(
+        nameof(NextLeftContent), SnapshotSlot.NextLeft);
 
     public static readonly BindableProperty PageAspectRatioProperty = BindableProperty.Create(
         nameof(PageAspectRatio),
@@ -178,11 +180,15 @@ public sealed class PageSpreadView : Grid
         _rightHost = new Grid();
         _previousLeftHost = new Grid { Opacity = 0, InputTransparent = true };
         _nextRightHost = new Grid { Opacity = 0, InputTransparent = true };
+        _previousRightHost = new Grid { Opacity = 0, InputTransparent = true };
+        _nextLeftHost = new Grid { Opacity = 0, InputTransparent = true };
         var leftCell = new Grid { IsClippedToBounds = true };
         leftCell.Children.Add(_previousLeftHost);
+        leftCell.Children.Add(_nextLeftHost);
         leftCell.Children.Add(_leftHost);
         var rightCell = new Grid { IsClippedToBounds = true };
         rightCell.Children.Add(_nextRightHost);
+        rightCell.Children.Add(_previousRightHost);
         rightCell.Children.Add(_rightHost);
         _spreadFrame.Add(leftCell, 0, 0);
         _spreadFrame.Add(rightCell, 1, 0);
@@ -203,7 +209,7 @@ public sealed class PageSpreadView : Grid
         Grid.SetColumnSpan(_gutter, 2);
         _spreadFrame.Children.Add(_gutter);
 
-        Overlay = new PageTurnView
+        Overlay = new PageTurnView(new PageCurlOptions { TurnAcrossHinge = true })
         {
             Opacity = 0,
             InputTransparent = true,
@@ -221,6 +227,7 @@ public sealed class PageSpreadView : Grid
             PageChangeThresholdCrossed?.Invoke(this, args);
         Loaded += OnLoaded;
         SizeChanged += OnSizeChanged;
+        MarkAllSnapshotsDirty();
         ApplyPresentation();
         UpdateNavigationAvailability();
     }
@@ -247,6 +254,20 @@ public sealed class PageSpreadView : Grid
     {
         get => (View?)GetValue(NextRightContentProperty);
         set => SetValue(NextRightContentProperty, value);
+    }
+
+    /// <summary>Content shown on the back of the sheet during a forward turn.</summary>
+    public View? NextLeftContent
+    {
+        get => (View?)GetValue(NextLeftContentProperty);
+        set => SetValue(NextLeftContentProperty, value);
+    }
+
+    /// <summary>Content shown on the back of the sheet during a backward turn.</summary>
+    public View? PreviousRightContent
+    {
+        get => (View?)GetValue(PreviousRightContentProperty);
+        set => SetValue(PreviousRightContentProperty, value);
     }
 
     public float PageAspectRatio
@@ -321,47 +342,57 @@ public sealed class PageSpreadView : Grid
 
     public event EventHandler<PageChangeThresholdCrossedEventArgs>? PageChangeThresholdCrossed;
 
+    /// <summary>Immediately releases the gesture and restores both stationary pages.</summary>
+    public void CancelInteraction()
+    {
+        _activePointerId = null;
+        Overlay.CancelInteraction();
+        RestoreStaticPages();
+    }
+
     public bool TryTurnForward() => TryTurn(PageTurnDirection.Forward);
 
     public bool TryTurnBackward() => TryTurn(PageTurnDirection.Backward);
 
-    public async Task RefreshSnapshotAsync(CancellationToken cancellationToken = default)
+    public Task RefreshSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        if (_turnInProgress)
-        {
-            return;
-        }
-
-        var currentCapture = _currentSnapshots.BeginCapture(cancellationToken);
-        await CaptureAsync(LeftContent, _currentSnapshots, currentCapture, isBackSlot: false);
-        currentCapture.Token.ThrowIfCancellationRequested();
-        await CaptureAsync(RightContent, _currentSnapshots, currentCapture, isBackSlot: true);
-        var destinationCapture = _destinationSnapshots.BeginCapture(cancellationToken);
-        await CaptureAsync(
-            PreviousLeftContent,
-            _destinationSnapshots,
-            destinationCapture,
-            isBackSlot: false);
-        destinationCapture.Token.ThrowIfCancellationRequested();
-        await CaptureAsync(
-            NextRightContent,
-            _destinationSnapshots,
-            destinationCapture,
-            isBackSlot: true);
+        cancellationToken.ThrowIfCancellationRequested();
+        MarkAllSnapshotsDirty();
         UpdateNavigationAvailability();
+        return DrainSnapshotRefreshAsync(cancellationToken);
+    }
+
+    private Task DrainSnapshotRefreshAsync(CancellationToken cancellationToken = default)
+    {
+        _snapshotRefreshPending = false;
+        // Serialize every refresh behind the running one. Requests coalesce
+        // through the per-slot dirty flags, so a queued request that finds
+        // everything current completes without capturing anything.
+        var previous = _refreshChain;
+        var current = RefreshAfterAsync(previous, cancellationToken, _lifecycleRevision);
+        _refreshChain = current;
+        // The caller may stop waiting immediately, but the internal chain
+        // still owns its predecessor barrier until the running capture ends.
+        return current.WaitAsync(cancellationToken);
     }
 
     protected override void OnHandlerChanged()
     {
         base.OnHandlerChanged();
+        _lifecycleRevision++;
         if (Handler is null)
         {
             _handlerDisconnected = true;
             _activePointerId = null;
+            _snapshotRefreshPending = false;
+            _refreshChain = Task.CompletedTask;
             Overlay.CancelInteraction();
-            ClearOverlayImages();
+            RestoreStaticPages();
             _currentSnapshots.Dispose();
             _destinationSnapshots.Dispose();
+            _sheetBackSnapshots.Dispose();
+            MarkAllSnapshotsDirty();
+            UpdateNavigationAvailability();
             return;
         }
 
@@ -369,47 +400,163 @@ public sealed class PageSpreadView : Grid
         {
             _currentSnapshots = new PageSnapshotState<SKImage>();
             _destinationSnapshots = new PageSnapshotState<SKImage>();
+            _sheetBackSnapshots = new PageSnapshotState<SKImage>();
         }
 
         _handlerDisconnected = false;
+        MarkAllSnapshotsDirty();
         QueueSnapshotRefresh();
     }
 
-    private static void OnLeftContentChanged(
-        BindableObject bindable,
-        object? oldValue,
-        object? newValue) =>
-        ((PageSpreadView)bindable).ReplaceContent(
-            ((PageSpreadView)bindable)._leftHost,
-            oldValue as View,
-            newValue as View);
+    private async Task RefreshAfterAsync(Task previous, CancellationToken cancellationToken, int lifecycleRevision)
+    {
+        // A cancelled predecessor must not cancel the requests queued
+        // behind it.
+        try
+        {
+            await previous;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+        }
 
-    private static void OnRightContentChanged(
-        BindableObject bindable,
-        object? oldValue,
-        object? newValue) =>
-        ((PageSpreadView)bindable).ReplaceContent(
-            ((PageSpreadView)bindable)._rightHost,
-            oldValue as View,
-            newValue as View);
+        await WaitForTurnAsync(cancellationToken, lifecycleRevision);
+        if (_handlerDisconnected || lifecycleRevision != _lifecycleRevision)
+        {
+            return;
+        }
 
-    private static void OnPreviousLeftContentChanged(
-        BindableObject bindable,
-        object? oldValue,
-        object? newValue) =>
-        ((PageSpreadView)bindable).ReplaceContent(
-            ((PageSpreadView)bindable)._previousLeftHost,
-            oldValue as View,
-            newValue as View);
+        for (var slot = 0; slot < SlotCount; slot++)
+        {
+            await WaitForTurnAsync(cancellationToken, lifecycleRevision);
+            if (_handlerDisconnected || lifecycleRevision != _lifecycleRevision) return;
+            if (!_snapshotDirty[slot])
+            {
+                continue;
+            }
 
-    private static void OnNextRightContentChanged(
-        BindableObject bindable,
-        object? oldValue,
-        object? newValue) =>
-        ((PageSpreadView)bindable).ReplaceContent(
-            ((PageSpreadView)bindable)._nextRightHost,
-            oldValue as View,
-            newValue as View);
+            var revision = _snapshotRevision[slot];
+            var typedSlot = (SnapshotSlot)slot;
+            var state = GetSlotState(typedSlot);
+            var capture = state.BeginCapture(cancellationToken);
+            var stored = await CaptureSlotAsync(
+                GetSlotContent(typedSlot),
+                state,
+                capture,
+                IsSlotBack(typedSlot),
+                typedSlot,
+                revision);
+            capture.Token.ThrowIfCancellationRequested();
+            if (_snapshotRevision[slot] == revision)
+            {
+                _snapshotDirty[slot] = !stored;
+            }
+            UpdateNavigationAvailability();
+            // UIKit capture must run on the UI thread. Give input and layout
+            // a dispatch opportunity between pages instead of rasterizing
+            // the entire spread in one uninterrupted event-loop turn.
+            await Task.Yield();
+            // A turn or a newer invalidation can arrive during capture. Retry
+            // this slot after the turn, keeping this request awaitable.
+            if (_turnInProgress || _snapshotRevision[slot] != revision) slot--;
+        }
+    }
+
+    private async Task WaitForTurnAsync(CancellationToken cancellationToken, int lifecycleRevision)
+    {
+        while (_turnInProgress && lifecycleRevision == _lifecycleRevision)
+        {
+            await _turnFinished!.Task.WaitAsync(cancellationToken);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private async Task<bool> CaptureSlotAsync(
+        View? content,
+        PageSnapshotState<SKImage> state,
+        PageSnapshotCapture capture,
+        bool isBackSlot,
+        SnapshotSlot slot,
+        long revision)
+    {
+        if (content is null)
+        {
+            if (isBackSlot)
+            {
+                state.ClearBack();
+            }
+            else
+            {
+                state.ClearFront();
+            }
+
+            return true;
+        }
+
+        try
+        {
+            var image = await _snapshotter.CaptureAsync(content, capture.Token);
+            if (capture.Token.IsCancellationRequested)
+            {
+                image.Dispose();
+                capture.Token.ThrowIfCancellationRequested();
+            }
+
+            if (_turnInProgress || !IsCurrentCapture(slot, revision, state))
+            {
+                image.Dispose();
+                if (_turnInProgress) _snapshotRefreshPending = true;
+                return false;
+            }
+
+            return isBackSlot
+                ? state.TryReplaceBack(capture.Generation, image)
+                : state.TryReplaceFront(capture.Generation, image);
+        }
+        catch (OperationCanceledException) when (capture.Token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            if (IsCurrentCapture(slot, revision, state))
+            {
+                SnapshotFailed?.Invoke(
+                    this,
+                    new PageSnapshotFailedEventArgs(content, isBackside: false, exception));
+            }
+            return false;
+        }
+    }
+
+    private bool IsCurrentCapture(SnapshotSlot slot, long revision, PageSnapshotState<SKImage> state) =>
+        !_handlerDisconnected
+        && _snapshotRevision[(int)slot] == revision
+        && ReferenceEquals(GetSlotState(slot), state);
+
+    private static BindableProperty ContentProperty(string name, SnapshotSlot slot) =>
+        BindableProperty.Create(
+            name,
+            typeof(View),
+            typeof(PageSpreadView),
+            default(View),
+            propertyChanged: (bindable, oldValue, newValue) =>
+            {
+                var view = (PageSpreadView)bindable;
+                view.ReplaceContent(
+                    view.GetSlotHost(slot), oldValue as View, newValue as View, slot);
+            });
+
+    private Grid GetSlotHost(SnapshotSlot slot) => slot switch
+    {
+        SnapshotSlot.Left => _leftHost,
+        SnapshotSlot.Right => _rightHost,
+        SnapshotSlot.PreviousLeft => _previousLeftHost,
+        SnapshotSlot.NextRight => _nextRightHost,
+        SnapshotSlot.PreviousRight => _previousRightHost,
+        SnapshotSlot.NextLeft => _nextLeftHost,
+        _ => throw new ArgumentOutOfRangeException(nameof(slot)),
+    };
 
     private static void OnPresentationChanged(
         BindableObject bindable,
@@ -421,21 +568,72 @@ public sealed class PageSpreadView : Grid
         view.UpdateSpreadFrame();
     }
 
-    private void ReplaceContent(Grid host, View? oldContent, View? newContent)
+    private void ReplaceContent(
+        Grid host,
+        View? oldContent,
+        View? newContent,
+        SnapshotSlot slot)
     {
         if (oldContent is not null)
         {
+            oldContent.Loaded -= OnContentLayoutChanged;
+            oldContent.SizeChanged -= OnContentLayoutChanged;
             host.Children.Remove(oldContent);
         }
 
         if (newContent is not null)
         {
+            newContent.Loaded += OnContentLayoutChanged;
+            newContent.SizeChanged += OnContentLayoutChanged;
             host.Children.Add(newContent);
         }
 
+        _snapshotRevision[(int)slot]++;
+        _snapshotDirty[(int)slot] = true;
         UpdateNavigationAvailability();
         QueueSnapshotRefresh();
     }
+
+    private void OnContentLayoutChanged(object? sender, EventArgs e)
+    {
+        for (var slot = 0; slot < SlotCount; slot++)
+        {
+            if (!ReferenceEquals(GetSlotContent((SnapshotSlot)slot), sender)) continue;
+            _snapshotRevision[slot]++;
+            _snapshotDirty[slot] = true;
+        }
+        QueueSnapshotRefresh();
+    }
+
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+        if (propertyName == IsVisibleProperty.PropertyName && IsVisible) QueueSnapshotRefresh();
+    }
+
+    private View? GetSlotContent(SnapshotSlot slot) => slot switch
+    {
+        SnapshotSlot.Left => LeftContent,
+        SnapshotSlot.Right => RightContent,
+        SnapshotSlot.PreviousLeft => PreviousLeftContent,
+        SnapshotSlot.NextRight => NextRightContent,
+        SnapshotSlot.PreviousRight => PreviousRightContent,
+        SnapshotSlot.NextLeft => NextLeftContent,
+        _ => null,
+    };
+
+    private PageSnapshotState<SKImage> GetSlotState(SnapshotSlot slot) => slot switch
+    {
+        SnapshotSlot.Left or SnapshotSlot.Right => _currentSnapshots,
+        SnapshotSlot.PreviousLeft or SnapshotSlot.NextRight => _destinationSnapshots,
+        _ => _sheetBackSnapshots,
+    };
+
+    private static bool IsSlotBack(SnapshotSlot slot) => slot switch
+    {
+        SnapshotSlot.Right or SnapshotSlot.NextRight or SnapshotSlot.NextLeft => true,
+        _ => false,
+    };
 
     private void AddActivationZone(PageTurnDirection direction)
     {
@@ -493,19 +691,11 @@ public sealed class PageSpreadView : Grid
 
                 break;
             case SKTouchAction.Released:
-                if (_activePointerId == e.Id)
-                {
-                    _activePointerId = null;
-                    Overlay.EndInteraction(cancelled: false);
-                    e.Handled = true;
-                }
-
-                break;
             case SKTouchAction.Cancelled:
                 if (_activePointerId == e.Id)
                 {
                     _activePointerId = null;
-                    Overlay.EndInteraction(cancelled: true);
+                    Overlay.EndInteraction(cancelled: e.ActionType == SKTouchAction.Cancelled);
                     e.Handled = true;
                 }
 
@@ -549,6 +739,13 @@ public sealed class PageSpreadView : Grid
             return false;
         }
 
+        // The sheet's back face is the adjacent page it lands on, so the
+        // turn reads like a physical book instead of a mirrored photocopy.
+        var backFace = direction == PageTurnDirection.Forward
+            ? (NextLeftContent is null ? null : _sheetBackSnapshots.Back)
+            : (PreviousRightContent is null ? null : _sheetBackSnapshots.Front);
+
+        _turnFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _turnInProgress = true;
         UpdateNavigationAvailability();
         Overlay.PageHorizontalPlacement = direction == PageTurnDirection.Forward
@@ -558,6 +755,10 @@ public sealed class PageSpreadView : Grid
             ? PageAnchor.Left
             : PageAnchor.Right;
         Overlay.FrontImage = front;
+        Overlay.BackImage = backFace;
+        Overlay.BacksideMode = backFace is null
+            ? BacksideMode
+            : PageBacksideMode.CustomContent;
         Overlay.UnderPageImage = direction == PageTurnDirection.Forward ? destination : null;
         Overlay.PreviousPageImage = direction == PageTurnDirection.Backward ? destination : null;
         Overlay.Opacity = 1;
@@ -575,59 +776,20 @@ public sealed class PageSpreadView : Grid
         return true;
     }
 
-    private async Task CaptureAsync(
-        View? content,
-        PageSnapshotState<SKImage> state,
-        PageSnapshotCapture capture,
-        bool isBackSlot)
-    {
-        if (content is null)
-        {
-            if (isBackSlot)
-            {
-                state.ClearBack();
-            }
-            else
-            {
-                state.ClearFront();
-            }
-
-            return;
-        }
-
-        try
-        {
-            var image = await _snapshotter.CaptureAsync(content, capture.Token);
-            capture.Token.ThrowIfCancellationRequested();
-            if (isBackSlot)
-            {
-                state.TryReplaceBack(capture.Generation, image);
-            }
-            else
-            {
-                state.TryReplaceFront(capture.Generation, image);
-            }
-        }
-        catch (OperationCanceledException) when (capture.Token.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            SnapshotFailed?.Invoke(
-                this,
-                new PageSnapshotFailedEventArgs(content, isBackside: false, exception));
-        }
-    }
-
     private void OnOverlayCompleted(object? sender, PageTurnCompletedEventArgs e)
     {
         _turnInProgress = false;
         RestoreStaticPages();
         PageTurnCompleted?.Invoke(this, e);
+        if (_snapshotRefreshPending)
+        {
+            ResumePendingSnapshotRefresh();
+        }
     }
 
     private void RestoreStaticPages()
     {
+        _activePointerId = null;
         Overlay.Opacity = 0;
         _leftHost.IsVisible = true;
         _rightHost.IsVisible = true;
@@ -635,6 +797,9 @@ public sealed class PageSpreadView : Grid
         _nextRightHost.Opacity = 0;
         ClearOverlayImages();
         _turnInProgress = false;
+        var finished = _turnFinished;
+        _turnFinished = null;
+        finished?.TrySetResult();
         UpdateNavigationAvailability();
     }
 
@@ -644,6 +809,7 @@ public sealed class PageSpreadView : Grid
         Overlay.BackImage = null;
         Overlay.UnderPageImage = null;
         Overlay.PreviousPageImage = null;
+        Overlay.BacksideMode = BacksideMode;
     }
 
     private void ApplyPresentation()
@@ -652,7 +818,11 @@ public sealed class PageSpreadView : Grid
         Overlay.PageChangeThreshold = PageChangeThreshold;
         Overlay.FlickEnabled = FlickEnabled;
         Overlay.FlickVelocityThreshold = FlickVelocityThreshold;
-        Overlay.BacksideMode = BacksideMode;
+        if (!_turnInProgress)
+        {
+            Overlay.BacksideMode = BacksideMode;
+        }
+
         Overlay.BacksideColor = BacksideColor;
         Overlay.BacksideDimFactor = BacksideDimFactor;
         Overlay.ReduceMotion = ReduceMotion;
@@ -662,20 +832,31 @@ public sealed class PageSpreadView : Grid
 
     private void UpdateNavigationAvailability()
     {
-        SetValue(
-            CanTurnForwardPropertyKey,
-            !_turnInProgress
-                && RightContent is not null
-                && NextRightContent is not null
-                && _currentSnapshots.Back is not null
-                && _destinationSnapshots.Back is not null);
-        SetValue(
-            CanTurnBackwardPropertyKey,
-            !_turnInProgress
-                && LeftContent is not null
-                && PreviousLeftContent is not null
-                && _currentSnapshots.Front is not null
-                && _destinationSnapshots.Front is not null);
+        SetValue(CanTurnForwardPropertyKey, IsForwardReady());
+        SetValue(CanTurnBackwardPropertyKey, IsBackwardReady());
+    }
+
+    private bool IsForwardReady() =>
+        IsTurnReady(SnapshotSlot.Right, SnapshotSlot.NextRight, SnapshotSlot.NextLeft);
+
+    private bool IsBackwardReady() =>
+        IsTurnReady(SnapshotSlot.Left, SnapshotSlot.PreviousLeft, SnapshotSlot.PreviousRight);
+
+    private bool IsTurnReady(SnapshotSlot front, SnapshotSlot destination, SnapshotSlot back) =>
+        !_turnInProgress
+        && IsSlotReady(front)
+        && IsSlotReady(destination)
+        && (GetSlotContent(back) is null || IsSlotReady(back));
+
+    private bool IsSlotReady(SnapshotSlot slot)
+    {
+        if (_snapshotDirty[(int)slot] || GetSlotContent(slot) is null)
+        {
+            return false;
+        }
+
+        var state = GetSlotState(slot);
+        return (IsSlotBack(slot) ? state.Back : state.Front) is not null;
     }
 
     private void UpdateSpreadFrame()
@@ -724,28 +905,89 @@ public sealed class PageSpreadView : Grid
     private void OnLoaded(object? sender, EventArgs e)
     {
         UpdateSpreadFrame();
+        MarkAllSnapshotsDirty();
         QueueSnapshotRefresh();
     }
 
     private void OnSizeChanged(object? sender, EventArgs e)
     {
         UpdateSpreadFrame();
+        MarkAllSnapshotsDirty();
         QueueSnapshotRefresh();
     }
 
     private async void QueueSnapshotRefresh()
     {
-        if (_handlerDisconnected || Handler is null || _turnInProgress)
+        if (_turnInProgress)
+        {
+            _snapshotRefreshPending = true;
+            return;
+        }
+
+        if (_handlerDisconnected || Handler is null || !IsVisible || _refreshQueued)
+        {
+            return;
+        }
+
+        _refreshQueued = true;
+        var lifecycleRevision = _lifecycleRevision;
+        await Task.Yield();
+        _refreshQueued = false;
+        if (_handlerDisconnected || Handler is null || !IsVisible) return;
+        if (lifecycleRevision != _lifecycleRevision)
+        {
+            QueueSnapshotRefresh();
+            return;
+        }
+        // Capture after children are attached and arranged. Their layout
+        // events will retry readiness, without timers or exception parsing.
+        for (var slot = 0; slot < SlotCount; slot++)
+        {
+            var content = GetSlotContent((SnapshotSlot)slot);
+            if (content is not null && (content.Handler is null || content.Width <= 0 || content.Height <= 0)) return;
+        }
+
+        try
+        {
+            await DrainSnapshotRefreshAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async void ResumePendingSnapshotRefresh()
+    {
+        if (_handlerDisconnected || !IsVisible)
         {
             return;
         }
 
         try
         {
-            await RefreshSnapshotAsync();
+            await DrainSnapshotRefreshAsync();
         }
         catch (OperationCanceledException)
         {
         }
+    }
+
+    private void MarkAllSnapshotsDirty()
+    {
+        for (var slot = 0; slot < SlotCount; slot++)
+        {
+            _snapshotRevision[slot]++;
+            _snapshotDirty[slot] = true;
+        }
+    }
+
+    private enum SnapshotSlot
+    {
+        Left,
+        Right,
+        PreviousLeft,
+        NextRight,
+        PreviousRight,
+        NextLeft,
     }
 }

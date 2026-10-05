@@ -1,0 +1,22 @@
+PASS red 200x200 #ffff0000
+PASS blue 200x200 #ff0000ff
+PASS white 200x200 #ffffffff
+PASS gray 200x200 #ff808080
+PASS half-red 200x200 #80ff0000
+PASS Display-P3 red
+PASS all native snapshot tests
+RESOURCE_CREATE elapsed_ms=43.0 managed_bytes=53368
+PASS no unused PNG API
+PASS Single immediate status
+PASS Single next available
+PASS Spread immediate status
+PASS Spread next available
+PASS Content immediate status
+PASS Content next available
+PASS Backside immediate status
+PASS Backside next available
+PASS all six spread slots detached
+PASS queued callback ignores disappearance
+PASS resources recreated after return
+PASS animated command starts
+PASS animated completion

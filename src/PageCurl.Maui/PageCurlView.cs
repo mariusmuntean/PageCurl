@@ -22,6 +22,9 @@ public sealed class PageCurlView : Grid
     private PageSnapshotState<SKImage> _snapshots = new();
     private bool _handlerDisconnected;
     private long? _activePointerId;
+    private TaskCompletionSource? _interactionFinished;
+    private bool _refreshQueued;
+    private long _contentRevision;
 
     public static readonly BindableProperty FrontContentProperty = BindableProperty.Create(
         nameof(FrontContent),
@@ -112,14 +115,15 @@ public sealed class PageCurlView : Grid
             IsVisible = false,
             Opacity = 0,
             InputTransparent = true,
-            ContentScale = PageContentScale.Fill,
+            ContentScale = PageContentScale.AspectFit,
+            SurfaceColor = Colors.Transparent,
         };
         _activationLayer = CreateActivationLayer();
         _pageFrame.Children.Add(_backHost);
         _pageFrame.Children.Add(_frontHost);
-        _pageFrame.Children.Add(Renderer);
         _pageFrame.Children.Add(_activationLayer);
         Children.Add(_pageFrame);
+        Children.Add(Renderer);
 
         Renderer.PageTurnCompleted += OnRendererPageTurnCompleted;
         Renderer.PageChangeThresholdCrossed += OnRendererThresholdCrossed;
@@ -217,7 +221,12 @@ public sealed class PageCurlView : Grid
     public bool TryTurn(PageTurnDirection direction)
     {
         ShowRenderer();
-        if (Renderer.TryTurn(direction))
+        // The renderer is hidden while flat and may never have been measured.
+        // Use the already fitted live frame for the first command as well.
+        var pageSize = new Vector2(
+            (float)(_pageFrame.Width > 0 ? _pageFrame.Width : _pageFrame.WidthRequest),
+            (float)(_pageFrame.Height > 0 ? _pageFrame.Height : _pageFrame.HeightRequest));
+        if (Renderer.TryTurn(direction, pageSize))
         {
             return true;
         }
@@ -228,10 +237,15 @@ public sealed class PageCurlView : Grid
 
     public async Task RefreshSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        var capture = _snapshots.BeginCapture(cancellationToken);
-        await CaptureContentAsync(FrontContent, capture, isBackside: false);
+        await WaitForInteractionAsync(cancellationToken);
+        if (_handlerDisconnected) return;
+        var snapshots = _snapshots;
+        var revision = _contentRevision;
+        var capture = snapshots.BeginCapture(cancellationToken);
+        await CaptureContentAsync(FrontContent, snapshots, revision, capture, isBackside: false);
         capture.Token.ThrowIfCancellationRequested();
-        await CaptureContentAsync(BackContent, capture, isBackside: true);
+        await CaptureContentAsync(BackContent, snapshots, revision, capture, isBackside: true);
+        capture.Token.ThrowIfCancellationRequested();
     }
 
     public void CancelInteraction()
@@ -249,6 +263,7 @@ public sealed class PageCurlView : Grid
             _handlerDisconnected = true;
             _activePointerId = null;
             Renderer.CancelInteraction();
+            ShowLiveContent();
             Renderer.FrontImage = null;
             Renderer.BackImage = null;
             _snapshots.Dispose();
@@ -283,7 +298,8 @@ public sealed class PageCurlView : Grid
         object? newValue)
     {
         var view = (PageCurlView)bindable;
-        ReplaceHostedView(view._frontHost, oldValue as View, newValue as View);
+        view._contentRevision++;
+        view.ReplaceHostedView(view._frontHost, oldValue as View, newValue as View);
         view.UpdatePageFrame();
         view.QueueSnapshotRefresh();
     }
@@ -294,7 +310,8 @@ public sealed class PageCurlView : Grid
         object? newValue)
     {
         var view = (PageCurlView)bindable;
-        ReplaceHostedView(view._backHost, oldValue as View, newValue as View);
+        view._contentRevision++;
+        view.ReplaceHostedView(view._backHost, oldValue as View, newValue as View);
         view.QueueSnapshotRefresh();
     }
 
@@ -308,17 +325,33 @@ public sealed class PageCurlView : Grid
         view.UpdatePageFrame();
     }
 
-    private static void ReplaceHostedView(Grid host, View? oldView, View? newView)
+    private void ReplaceHostedView(Grid host, View? oldView, View? newView)
     {
         if (oldView is not null)
         {
+            oldView.Loaded -= OnContentLayoutChanged;
+            oldView.SizeChanged -= OnContentLayoutChanged;
             host.Children.Remove(oldView);
         }
 
         if (newView is not null)
         {
+            newView.Loaded += OnContentLayoutChanged;
+            newView.SizeChanged += OnContentLayoutChanged;
             host.Children.Add(newView);
         }
+    }
+
+    private void OnContentLayoutChanged(object? sender, EventArgs e)
+    {
+        _contentRevision++;
+        QueueSnapshotRefresh();
+    }
+
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+        if (propertyName == IsVisibleProperty.PropertyName && IsVisible) QueueSnapshotRefresh();
     }
 
     private Grid CreateActivationLayer()
@@ -404,19 +437,11 @@ public sealed class PageCurlView : Grid
 
                 break;
             case SKTouchAction.Released:
-                if (_activePointerId == e.Id)
-                {
-                    _activePointerId = null;
-                    Renderer.EndInteraction(cancelled: false);
-                    e.Handled = true;
-                }
-
-                break;
             case SKTouchAction.Cancelled:
                 if (_activePointerId == e.Id)
                 {
                     _activePointerId = null;
-                    Renderer.EndInteraction(cancelled: true);
+                    Renderer.EndInteraction(cancelled: e.ActionType == SKTouchAction.Cancelled);
                     e.Handled = true;
                 }
 
@@ -456,9 +481,13 @@ public sealed class PageCurlView : Grid
 
     private async Task CaptureContentAsync(
         View? content,
+        PageSnapshotState<SKImage> snapshots,
+        long revision,
         PageSnapshotCapture capture,
         bool isBackside)
     {
+        await WaitForInteractionAsync(capture.Token);
+        if (!IsCurrentCapture(snapshots, revision)) return;
         if (content is null)
         {
             if (isBackside)
@@ -478,10 +507,29 @@ public sealed class PageCurlView : Grid
         try
         {
             var image = await _snapshotter.CaptureAsync(content, capture.Token);
-            capture.Token.ThrowIfCancellationRequested();
+            if (capture.Token.IsCancellationRequested)
+            {
+                image.Dispose();
+                capture.Token.ThrowIfCancellationRequested();
+            }
+
+            try
+            {
+                await WaitForInteractionAsync(capture.Token);
+            }
+            catch
+            {
+                image.Dispose();
+                throw;
+            }
+            if (!IsCurrentCapture(snapshots, revision))
+            {
+                image.Dispose();
+                return;
+            }
             var replaced = isBackside
-                ? _snapshots.TryReplaceBack(capture.Generation, image)
-                : _snapshots.TryReplaceFront(capture.Generation, image);
+                ? snapshots.TryReplaceBack(capture.Generation, image)
+                : snapshots.TryReplaceFront(capture.Generation, image);
             if (!replaced)
             {
                 return;
@@ -498,12 +546,12 @@ public sealed class PageCurlView : Grid
         }
         catch (OperationCanceledException) when (capture.Token.IsCancellationRequested)
         {
+            throw;
         }
         catch (Exception exception)
         {
-            SnapshotFailed?.Invoke(
-                this,
-                new PageSnapshotFailedEventArgs(content, isBackside, exception));
+            if (!capture.Token.IsCancellationRequested && IsCurrentCapture(snapshots, revision))
+                SnapshotFailed?.Invoke(this, new PageSnapshotFailedEventArgs(content, isBackside, exception));
         }
     }
 
@@ -537,6 +585,7 @@ public sealed class PageCurlView : Grid
         var page = PageAspectLayout.Fit(viewport, PageAspectRatio, intrinsic);
         _pageFrame.WidthRequest = page.Size.X;
         _pageFrame.HeightRequest = page.Size.Y;
+        Renderer.PageAspectRatio = page.Size.X / page.Size.Y;
     }
 
     private void ShowRenderer()
@@ -556,6 +605,9 @@ public sealed class PageCurlView : Grid
     private void OnRendererPageTurnCompleted(object? sender, PageTurnCompletedEventArgs e)
     {
         ShowLiveContent();
+        var finished = _interactionFinished;
+        _interactionFinished = null;
+        finished?.TrySetResult();
         PageTurnCompleted?.Invoke(this, e);
     }
 
@@ -572,17 +624,32 @@ public sealed class PageCurlView : Grid
 
     private void OnSizeChanged(object? sender, EventArgs e)
     {
+        _contentRevision++;
         UpdatePageFrame();
         QueueSnapshotRefresh();
     }
 
+    private bool IsCurrentCapture(PageSnapshotState<SKImage> snapshots, long revision) =>
+        !_handlerDisconnected && ReferenceEquals(snapshots, _snapshots) && revision == _contentRevision;
+
+    private async Task WaitForInteractionAsync(CancellationToken cancellationToken)
+    {
+        while (Renderer.Controller.Snapshot.State != PageTurnState.Idle)
+        {
+            _interactionFinished ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            await _interactionFinished.Task.WaitAsync(cancellationToken);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
     private async void QueueSnapshotRefresh()
     {
-        if (_handlerDisconnected || Handler is null)
-        {
-            return;
-        }
-
+        if (_handlerDisconnected || Handler is null || !IsVisible || _refreshQueued) return;
+        _refreshQueued = true;
+        await Task.Yield();
+        _refreshQueued = false;
+        if (_handlerDisconnected || Handler is null || !IsVisible) return;
+        if (!IsContentReady(FrontContent) || !IsContentReady(BackContent)) return;
         try
         {
             await RefreshSnapshotAsync();
@@ -591,6 +658,9 @@ public sealed class PageCurlView : Grid
         {
         }
     }
+
+    private static bool IsContentReady(View? content) => content is null
+        || (content.Handler is not null && content.Width > 0 && content.Height > 0);
 
     private Vector2 ToPagePointer(
         SKCanvasView zone,

@@ -1,0 +1,23 @@
+ M .gitignore
+ M README.md
+ M docs/compatibility.md
+ M docs/interaction-and-rendering.md
+ M docs/requirements-status.md
+ M docs/runtime-contracts.md
+ M docs/testing.md
+ M docs/validation/ios-release-readiness.md
+ M src/PageCurl.Core/PageTurnController.cs
+ M src/PageCurl.Demo/MainPage.xaml.cs
+ M src/PageCurl.Maui/PageContentSnapshotter.Apple.cs
+ M src/PageCurl.Maui/PageCurlView.cs
+ M src/PageCurl.Maui/PageSpreadView.cs
+ M src/PageCurl.Maui/PageTurnView.cs
+ M tests/PageCurl.Core.Tests/PageTurnControllerTests.cs
+ M tests/PageCurl.Maui.Tests/PageCurlViewTests.cs
+ M tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs
+ M tests/PageCurl.Maui.Tests/TestAssert.cs
+?? docs/validation/maccatalyst-interaction.md
+?? docs/validation/review-2026-09-15/
+?? tools/build-helpers.sh
+?? tools/maccatalyst-smoke.sh
+?? tools/src/

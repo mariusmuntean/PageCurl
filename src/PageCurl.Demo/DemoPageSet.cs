@@ -4,13 +4,11 @@ namespace PageCurl.Demo;
 
 public sealed class DemoPageSet : IDisposable
 {
-    private readonly IReadOnlyList<byte[]> _encodedPages;
     private bool _disposed;
 
-    private DemoPageSet(IReadOnlyList<SKImage> pages, IReadOnlyList<byte[]> encodedPages)
+    private DemoPageSet(IReadOnlyList<SKImage> pages)
     {
         Pages = pages;
-        _encodedPages = encodedPages;
     }
 
     public IReadOnlyList<SKImage> Pages { get; }
@@ -30,18 +28,15 @@ public sealed class DemoPageSet : IDisposable
         };
 
         var pages = new List<SKImage>(definitions.Length);
-        var encoded = new List<byte[]>(definitions.Length);
         try
         {
             foreach (var definition in definitions)
             {
                 var page = CreatePage(definition);
                 pages.Add(page);
-                using var data = page.Encode(SKEncodedImageFormat.Png, 92);
-                encoded.Add(data.ToArray());
             }
 
-            return new DemoPageSet(pages, encoded);
+            return new DemoPageSet(pages);
         }
         catch
         {
@@ -52,13 +47,6 @@ public sealed class DemoPageSet : IDisposable
 
             throw;
         }
-    }
-
-    public ImageSource GetImageSource(int pageIndex)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        var bytes = _encodedPages[pageIndex];
-        return ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
     }
 
     public void Dispose()

@@ -1,0 +1,6 @@
+FAIL: Left: expected <150. 250>, got <180. 250>
+System.InvalidOperationException: Left: expected <150. 250>, got <180. 250>
+   at PageCurl.Core.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/TestAssert.cs:line 9
+   at PageCurl.Core.Tests.PageTurnControllerTests.Interior_grabs_track_the_pointer_on_every_free_edge() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 76
+   at PageCurl.Core.Tests.PageTurnControllerTests.RunAll() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 26
+   at PageCurl.Core.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/Program.cs:line 27

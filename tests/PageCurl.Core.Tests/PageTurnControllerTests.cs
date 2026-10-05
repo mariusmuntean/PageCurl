@@ -16,12 +16,17 @@ internal static class PageTurnControllerTests
 
     public static void RunAll()
     {
+        Spread_corner_grab_preserves_the_spine_axis();
+        Spread_drag_crosses_the_hinge_and_releases_to_the_nearest_endpoint();
         BeginDrag_chooses_edge_and_clamps_drag_start_to_page();
         BeginDrag_supports_all_page_corners();
         Locked_edge_and_endpoints_do_not_start_a_drag();
         Unlocked_edges_still_start_a_drag();
         UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection.Forward);
         UpdateDrag_maps_finger_position_to_normalized_progress(PageTurnDirection.Backward);
+        Mid_page_grab_starts_flat_and_curls_only_while_dragging();
+        Interior_grabs_track_the_pointer_on_every_free_edge();
+        Pose_coordinates_scale_to_the_render_page();
         Release_before_threshold_settles_back_and_reports_cancelled_turn();
         Release_after_threshold_settles_forward_and_reports_committed_turn();
         Release_without_animation_completes_immediately();
@@ -47,6 +52,144 @@ internal static class PageTurnControllerTests
         Disabled_flick_does_not_override_the_page_change_threshold();
         Custom_flick_velocity_threshold_controls_release_intent();
         Threshold_event_fires_once_on_entry_and_once_on_exit();
+        Reused_controller_starts_each_turn_without_previous_release_intent();
+    }
+
+    private static void Reused_controller_starts_each_turn_without_previous_release_intent()
+    {
+        var controller = new PageTurnController();
+        var completions = new List<PageTurnCompletedEventArgs>();
+        var thresholds = new List<PageChangeThresholdCrossedEventArgs>();
+        controller.PageTurnCompleted += (_, args) => completions.Add(args);
+        controller.PageChangeThresholdCrossed += (_, args) => thresholds.Add(args);
+
+        // Leave both a threshold crossing and a strong forward velocity behind.
+        TestAssert.True(controller.BeginDrag(new(100, 100), PageSize));
+        controller.UpdateDrag(new(90, 100), 1);
+        controller.UpdateDrag(new(10, 100), 1.016);
+        controller.EndDrag(animate: false);
+        TestAssert.True(completions[0].Committed);
+
+        TestAssert.True(controller.BeginDrag(new(0, 100), PageSize, PageAnchor.Right));
+        TestAssert.Equal(0f, controller.Snapshot.Progress);
+        TestAssert.Equal(0f, controller.Snapshot.TargetProgress);
+        controller.UpdateDrag(new(60, 100));
+        TestAssert.Equal(2, thresholds.Count);
+        TestAssert.Equal(PageTurnDirection.Backward, thresholds[1].Direction);
+        controller.UpdateDrag(new(10, 100));
+        controller.EndDrag(animate: false);
+        TestAssert.False(completions[1].Committed);
+        TestAssert.Equal(PageTurnDirection.Backward, completions[1].Direction);
+
+        TestAssert.True(controller.BeginProgrammaticTurn(PageSize, PageTurnDirection.Forward, animate: false));
+        TestAssert.True(completions[2].Committed);
+        TestAssert.True(controller.BeginDrag(new(100, 100), PageSize));
+        controller.EndDrag(animate: false);
+        TestAssert.False(completions[3].Committed);
+        controller.EndDrag(animate: false);
+        TestAssert.Equal(4, completions.Count);
+    }
+
+    private static void Spread_corner_grab_preserves_the_spine_axis()
+    {
+        var controller = new PageTurnController(new PageCurlOptions { TurnAcrossHinge = true });
+        TestAssert.True(controller.BeginDrag(new(400, 0), new(400, 500), PageAnchor.Left));
+        controller.UpdateDrag(new(-300, 40));
+        TestAssert.Equal(PageEdge.Right, controller.Snapshot.FreeEdge);
+        TestAssert.Equal(0.875f, controller.Snapshot.Progress);
+    }
+
+    private static void Spread_drag_crosses_the_hinge_and_releases_to_the_nearest_endpoint()
+    {
+        var size = new Vector2(400, 500);
+        foreach (var forward in new[] { true, false })
+        {
+            foreach (var fraction in new[] { 0.4f, 0.6f, 1f })
+            {
+                var options = new PageCurlOptions { TurnAcrossHinge = true, FlickEnabled = false };
+                var controller = new PageTurnController(options);
+                var grab = new Vector2(forward ? 400 : 0, 250);
+                var pointer = grab + new Vector2((forward ? -800 : 800) * fraction, 0);
+                TestAssert.True(controller.BeginDrag(grab, size, forward ? PageAnchor.Left : PageAnchor.Right));
+                controller.UpdateDrag(pointer);
+                TestAssert.Equal(fraction, controller.Snapshot.Progress, 3);
+                TestAssert.Equal(pointer, controller.Snapshot.PointerPosition);
+                TestAssert.True(Vector2.Distance(pointer, controller.GetCurlPose(size).Position) < 0.02f);
+                var mesh = new PageMeshBuffer(options);
+                PageCurlGeometry.Build(mesh, size, controller.GetCurlPose(size), options);
+                var vertices = mesh.FrontVertices.Take(mesh.FrontVertexCount)
+                    .Concat(mesh.BackVertices.Take(mesh.BackVertexCount)).ToArray();
+                var uv = grab / size;
+                var tip = vertices.First(v => Vector2.Distance(v.TextureCoordinate, uv) < 0.001f);
+                TestAssert.True(Vector2.Distance(pointer, tip.Position) < 0.05f,
+                    $"Sheet blocked at {tip.Position}, pointer {pointer}");
+                foreach (var vertex in vertices.Where(v => Math.Abs(v.TextureCoordinate.X - (forward ? 0 : 1)) < 0.001f))
+                    TestAssert.True(Vector2.Distance(vertex.Position, vertex.TextureCoordinate * size) < 0.05f, "Spine moved.");
+                if (fraction == 1) TestAssert.Equal(0, mesh.FrontVertexCount);
+                PageTurnCompletedEventArgs? completion = null;
+                controller.PageTurnCompleted += (_, e) => completion = e;
+                controller.EndDrag();
+                for (var i = 0; i < 150 && controller.Tick(1d / 60); i++) { }
+                TestAssert.NotNull(completion);
+                TestAssert.Equal(fraction >= 0.5f, completion!.Committed);
+            }
+        }
+    }
+
+    private static void Pose_coordinates_scale_to_the_render_page()
+    {
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        {
+            var controller = new PageTurnController();
+            var size = new Vector2(300, 400);
+            TestAssert.True(controller.BeginProgrammaticTurn(size, direction));
+            controller.Tick(0.05);
+            var pose = controller.GetCurlPose(size);
+            var scaled = controller.GetCurlPose(size * 2);
+            TestAssert.True(Vector2.Distance(pose.DragStart * 2, scaled.DragStart) < 0.01f,
+                "Render scaling did not move the material grab to the free edge.");
+            TestAssert.True(Vector2.Distance(pose.Position * 2, scaled.Position) < 0.01f);
+            TestAssert.True(Math.Abs(pose.Radius * 2 - scaled.Radius) < 0.01f);
+            TestAssert.Equal(pose.Progress, scaled.Progress);
+        }
+    }
+
+    private static void Interior_grabs_track_the_pointer_on_every_free_edge()
+    {
+        var size = new Vector2(400, 500);
+        var grab = new Vector2(200, 250);
+        var cases = new[]
+        {
+            (Grab: grab, Anchor: PageAnchor.Left, Pointer: new Vector2(150, 250)),
+            (Grab: grab, Anchor: PageAnchor.Right, Pointer: new Vector2(250, 250)),
+            (Grab: new Vector2(200, 375), Anchor: PageAnchor.Top, Pointer: new Vector2(200, 325)),
+            (Grab: new Vector2(200, 125), Anchor: PageAnchor.Bottom, Pointer: new Vector2(200, 175)),
+        };
+        foreach (var item in cases)
+        {
+            var options = new PageCurlOptions { FlickEnabled = false };
+            var controller = new PageTurnController(options);
+            TestAssert.True(controller.BeginDrag(item.Grab, size, item.Anchor));
+            controller.UpdateDrag(item.Grab);
+            TestAssert.True(Vector2.Distance(item.Grab, controller.GetCurlPose(size).Position) < 0.01f);
+            foreach (var pointer in new[] { item.Pointer, item.Pointer + new Vector2(5, 5) })
+            {
+                controller.UpdateDrag(pointer);
+                var pose = controller.GetCurlPose(size);
+                TestAssert.True(Vector2.Distance(pointer, pose.Position) < 0.01f,
+                    $"{item.Anchor}: expected {pointer}, got {pose.Position}");
+                var mesh = new PageMeshBuffer(options);
+                PageCurlGeometry.Build(mesh, size, pose, options);
+                var vertex = mesh.FrontVertices.Take(mesh.FrontVertexCount)
+                    .Concat(mesh.BackVertices.Take(mesh.BackVertexCount))
+                    .First(v => Vector2.Distance(v.TextureCoordinate, item.Grab / size) < 0.0001f);
+                TestAssert.True(Vector2.Distance(pointer, vertex.Position) < 0.02f,
+                    $"{item.Anchor}: material grab expected {pointer}, got {vertex.Position}");
+            }
+            controller.EndDrag();
+            while (controller.Tick(0.1)) { }
+            TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
+        }
     }
 
     private static void BeginDrag_chooses_edge_and_clamps_drag_start_to_page()
@@ -58,12 +201,12 @@ internal static class PageTurnControllerTests
         var snapshot = controller.Snapshot;
         TestAssert.Equal(PageTurnState.Dragging, snapshot.State);
         TestAssert.Equal(PageTurnDirection.Forward, snapshot.Direction);
-        TestAssert.Equal(new Vector2(100, 0), snapshot.DragStartPosition);
+        TestAssert.Equal(new Vector2(90, 0), snapshot.DragStartPosition);
 
         TestAssert.True(controller.BeginDrag(new Vector2(10, 240), PageSize));
         snapshot = controller.Snapshot;
         TestAssert.Equal(PageTurnDirection.Backward, snapshot.Direction);
-        TestAssert.Equal(new Vector2(0, 200), snapshot.DragStartPosition);
+        TestAssert.Equal(new Vector2(10, 200), snapshot.DragStartPosition);
     }
 
     private static void BeginDrag_supports_all_page_corners()
@@ -130,8 +273,30 @@ internal static class PageTurnControllerTests
         TestAssert.True(controller.BeginDrag(start, PageSize));
         controller.UpdateDrag(new Vector2(50, 100), 0.1);
 
-        TestAssert.Equal(0.5f, controller.Snapshot.Progress, 3);
+        // Progress is measured from the grab point, so the same finger
+        // position yields the travel fraction the finger actually covered.
+        var expected = direction == PageTurnDirection.Forward
+            ? (90f - 50f) / 90f
+            : (50f - 10f) / (PageSize.X - 10f);
+        TestAssert.Equal(expected, controller.Snapshot.Progress, 3);
         TestAssert.Equal(new Vector2(50, 100), controller.Snapshot.PointerPosition);
+    }
+
+    private static void Mid_page_grab_starts_flat_and_curls_only_while_dragging()
+    {
+        var controller = new PageTurnController();
+        var grab = new Vector2(PageSize.X * 0.5f, PageSize.Y * 0.5f);
+
+        TestAssert.True(controller.BeginDrag(grab, PageSize));
+        TestAssert.Equal(grab, controller.Snapshot.DragStartPosition);
+        TestAssert.Equal(0f, controller.Snapshot.Progress, 3);
+        // A zero-progress pose is inactive, so the page renders flat at the
+        // grab instead of arriving half curled.
+        TestAssert.False(controller.GetCurlPose(PageSize).IsActive);
+
+        controller.UpdateDrag(grab + new Vector2(-PageSize.X * 0.1f, 0), 0.1);
+        TestAssert.Equal(0.2f, controller.Snapshot.Progress, 3);
+        TestAssert.True(controller.GetCurlPose(PageSize).IsActive);
     }
 
     private static void Release_before_threshold_settles_back_and_reports_cancelled_turn()
@@ -327,8 +492,8 @@ internal static class PageTurnControllerTests
     {
         var controller = new PageTurnController();
         controller.BeginDrag(new Vector2(90, 100), PageSize);
-        controller.UpdateDrag(new Vector2(42, 100), 1.000);
-        controller.UpdateDrag(new Vector2(49, 100), 1.016);
+        controller.UpdateDrag(new Vector2(30, 100), 1.000);
+        controller.UpdateDrag(new Vector2(36, 100), 1.016);
         controller.EndDrag();
 
         TestAssert.True(controller.Snapshot.Progress > 0.5f);
@@ -352,8 +517,8 @@ internal static class PageTurnControllerTests
         controller.BeginDrag(new Vector2(90, 100), PageSize);
         controller.UpdateDrag(new Vector2(40, 100), 1.000);
         controller.UpdateDrag(new Vector2(42, 100), 1.016);
-        controller.UpdateDrag(new Vector2(49, 100), 1.008);
-        controller.UpdateDrag(new Vector2(50, 100), 1.032);
+        controller.UpdateDrag(new Vector2(44, 100), 1.008);
+        controller.UpdateDrag(new Vector2(45, 100), 1.032);
         controller.EndDrag();
 
         TestAssert.Equal(1f, controller.Snapshot.TargetProgress);
@@ -423,7 +588,7 @@ internal static class PageTurnControllerTests
         controller.UpdateDrag(new Vector2(63, 100), 1.000);
 
         TestAssert.Equal(new Vector2(63, 100), controller.Snapshot.PointerPosition);
-        TestAssert.Equal(0.37f, controller.Snapshot.Progress, 3);
+        TestAssert.Equal((90f - 63f) / 90f, controller.Snapshot.Progress, 3);
     }
 
     private static void Pinned_corners_reject_only_the_pinned_point()

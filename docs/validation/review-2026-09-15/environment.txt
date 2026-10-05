@@ -1,0 +1,69 @@
+.NET SDK:
+ Version:           10.0.301
+ Commit:            96856fd726
+ Workload version:  10.0.302
+ MSBuild version:   18.6.4+96856fd72
+
+Runtime Environment:
+ OS Name:     Mac OS X
+ OS Version:  26.6
+ OS Platform: Darwin
+ RID:         osx-arm64
+ Base Path:   /Users/marius/.dotnet/sdk/10.0.301/
+
+.NET workloads installed:
+ [maui-maccatalyst]
+   Installation Source: SDK 10.0.300
+   Manifest Version:    10.0.20/10.0.100
+   Manifest Path:       /Users/marius/.dotnet/sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.20/WorkloadManifest.json
+   Install Type:        FileBased
+
+ [maui-ios]
+   Installation Source: SDK 10.0.300
+   Manifest Version:    10.0.20/10.0.100
+   Manifest Path:       /Users/marius/.dotnet/sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.20/WorkloadManifest.json
+   Install Type:        FileBased
+
+ [maui-android]
+   Installation Source: SDK 10.0.300
+   Manifest Version:    10.0.20/10.0.100
+   Manifest Path:       /Users/marius/.dotnet/sdk-manifests/10.0.100/microsoft.net.sdk.maui/10.0.20/WorkloadManifest.json
+   Install Type:        FileBased
+
+Configured to use workload sets when installing new manifests.
+
+Host:
+  Version:      10.0.12
+  Architecture: arm64
+  Commit:       95017c711e
+
+.NET SDKs installed:
+  10.0.101 [/Users/marius/.dotnet/sdk]
+  10.0.103 [/Users/marius/.dotnet/sdk]
+  10.0.112 [/Users/marius/.dotnet/sdk]
+  10.0.301 [/Users/marius/.dotnet/sdk]
+
+.NET runtimes installed:
+  Microsoft.AspNetCore.App 10.0.1 [/Users/marius/.dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 10.0.3 [/Users/marius/.dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 10.0.9 [/Users/marius/.dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.AspNetCore.App 10.0.12 [/Users/marius/.dotnet/shared/Microsoft.AspNetCore.App]
+  Microsoft.NETCore.App 10.0.1 [/Users/marius/.dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 10.0.3 [/Users/marius/.dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 10.0.9 [/Users/marius/.dotnet/shared/Microsoft.NETCore.App]
+  Microsoft.NETCore.App 10.0.12 [/Users/marius/.dotnet/shared/Microsoft.NETCore.App]
+
+Other architectures found:
+  None
+
+Environment variables:
+  Not set
+
+global.json file:
+  /Users/marius/Projects/PageCurl/global.json
+
+Learn more:
+  https://aka.ms/dotnet/info
+
+Download .NET:
+  https://aka.ms/dotnet/download

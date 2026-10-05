@@ -1,0 +1,6 @@
+FAIL: Render scaling did not move the material grab to the free edge.
+System.InvalidOperationException: Render scaling did not move the material grab to the free edge.
+   at PageCurl.Core.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/TestAssert.cs:line 9
+   at PageCurl.Core.Tests.PageTurnControllerTests.Pose_coordinates_scale_to_the_render_page() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 65
+   at PageCurl.Core.Tests.PageTurnControllerTests.RunAll() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageTurnControllerTests.cs:line 27
+   at PageCurl.Core.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/Program.cs:line 27

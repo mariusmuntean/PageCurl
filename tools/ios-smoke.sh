@@ -2,9 +2,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DOTNET_ROOT="${DOTNET_ROOT:-/Users/marius/.dotnet}"
-export DOTNET_ROOT
-export PATH="$DOTNET_ROOT:$PATH"
+if [[ -z "${DOTNET_ROOT:-}" && -x "$HOME/.dotnet/dotnet" ]]; then
+    export DOTNET_ROOT="$HOME/.dotnet"
+fi
+if [[ -n "${DOTNET_ROOT:-}" ]]; then export PATH="$DOTNET_ROOT:$PATH"; fi
 
 DEVICE="${1:-}"
 if [[ -z "$DEVICE" ]]; then
@@ -26,6 +27,29 @@ if [[ -z "$BUNDLE_ID" ]]; then
     exit 1
 fi
 mkdir -p "$OUTPUT"
+WAS_BOOTED="$(xcrun simctl list devices --json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(any(v["udid"] == sys.argv[1] and v["state"] == "Booted" for vs in d["devices"].values() for v in vs))' "$DEVICE")"
+ORIGINAL_APPEARANCE=""
+BOOT_REQUESTED=false
+APP_STARTED=false
+RECORDER_PID=""
+TEMP_RECORDING=""
+ORIGINAL_COMPANIONS="$(pgrep -f "idb_companion --udid $DEVICE" || true)"
+cleanup() {
+    if [[ -n "$RECORDER_PID" ]]; then kill -INT "$RECORDER_PID" >/dev/null 2>&1 || true; wait "$RECORDER_PID" || true; fi
+    if [[ -n "$TEMP_RECORDING" ]]; then rm -f "$TEMP_RECORDING"; fi
+    if [[ "$APP_STARTED" == true ]]; then xcrun simctl terminate "$DEVICE" "$BUNDLE_ID" >/dev/null 2>&1 || true; fi
+    if [[ "$WAS_BOOTED" == "True" ]]; then
+        if [[ -n "$ORIGINAL_APPEARANCE" ]]; then xcrun simctl ui "$DEVICE" appearance "$ORIGINAL_APPEARANCE" >/dev/null 2>&1 || true; fi
+    elif [[ "$BOOT_REQUESTED" == true ]]; then
+        xcrun simctl shutdown "$DEVICE" >/dev/null 2>&1 || true
+    fi
+    for companion in $(pgrep -f "idb_companion --udid $DEVICE" || true); do
+        if ! printf '%s\n' "$ORIGINAL_COMPANIONS" | rg -qx "$companion"; then
+            kill "$companion" >/dev/null 2>&1 || true
+        fi
+    done
+}
+trap cleanup EXIT
 
 assert_demo_foreground() {
     if ! command -v idb >/dev/null 2>&1; then
@@ -104,15 +128,20 @@ capture_mid_swipe() {
     end_y="$(awk -v y="$y" -v height="$height" 'BEGIN { printf "%d", y + height * 0.42 }')"
 
     recording="$OUTPUT/${output_name%.png}.mov"
+    TEMP_RECORDING="$recording"
     xcrun simctl io "$DEVICE" recordVideo --force "$recording" >/dev/null 2>&1 &
     recorder_pid=$!
+    RECORDER_PID="$recorder_pid"
     sleep 1
     idb ui swipe --udid "$DEVICE" --duration 4 \
         "$start_x" "$start_y" "$end_x" "$end_y" >/dev/null
     sleep 1
     kill -INT "$recorder_pid"
     wait "$recorder_pid" || true
+    RECORDER_PID=""
     ffmpeg -hide_banner -loglevel error -y -ss "$frame_time" -i "$recording" -frames:v 1 "$OUTPUT/$output_name"
+    rm -f "$recording"
+    TEMP_RECORDING=""
 }
 
 capture_feature_scenes() {
@@ -173,13 +202,7 @@ capture_feature_scenes() {
 }
 
 echo "Building the iOS simulator demo..."
-rm -rf "$ROOT/src/PageCurl.Core/bin" "$ROOT/src/PageCurl.Core/obj" \
-    "$ROOT/src/PageCurl.Maui/bin" "$ROOT/src/PageCurl.Maui/obj" \
-    "$ROOT/src/PageCurl.Demo/bin" "$ROOT/src/PageCurl.Demo/obj"
-dotnet restore "$ROOT/src/PageCurl.Demo/PageCurl.Demo.csproj" -p:TargetFrameworks=net10.0-ios
-dotnet restore "$ROOT/src/PageCurl.Maui/PageCurl.Maui.csproj" -p:TargetFrameworks=net10.0-ios
-dotnet restore "$ROOT/src/PageCurl.Core/PageCurl.Core.csproj" -p:TargetFrameworks=net10.0
-dotnet build "$ROOT/src/PageCurl.Demo/PageCurl.Demo.csproj" -c Release -f net10.0-ios --no-restore
+dotnet build "$ROOT/src/PageCurl.Demo/PageCurl.Demo.csproj" -c Release -f net10.0-ios -p:RuntimeIdentifier=iossimulator-arm64
 
 if [[ ! -d "$APP" ]]; then
     echo "Expected app bundle was not produced: $APP" >&2
@@ -187,12 +210,15 @@ if [[ ! -d "$APP" ]]; then
 fi
 
 echo "Booting simulator $DEVICE..."
+BOOT_REQUESTED=true
 xcrun simctl boot "$DEVICE" >/dev/null 2>&1 || true
 perl -e 'alarm 120; exec @ARGV or die $!' xcrun simctl bootstatus "$DEVICE" -b
+ORIGINAL_APPEARANCE="$(xcrun simctl ui "$DEVICE" appearance 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
 xcrun simctl install "$DEVICE" "$APP"
 xcrun simctl ui "$DEVICE" appearance light
 sleep 2
 xcrun simctl terminate "$DEVICE" "$BUNDLE_ID" >/dev/null 2>&1 || true
+APP_STARTED=true
 xcrun simctl launch "$DEVICE" "$BUNDLE_ID"
 assert_demo_foreground
 # Let the first Skia surface finish its simulator compositor warm-up before capture.

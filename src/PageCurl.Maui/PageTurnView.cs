@@ -21,21 +21,21 @@ public sealed class PageTurnView : SKGLView
         typeof(SKImage),
         typeof(PageTurnView),
         default(SKImage),
-        propertyChanged: OnImageChanged);
+        propertyChanged: OnVisualPropertyChanged);
 
     public static readonly BindableProperty BackImageProperty = BindableProperty.Create(
         nameof(BackImage),
         typeof(SKImage),
         typeof(PageTurnView),
         default(SKImage),
-        propertyChanged: OnImageChanged);
+        propertyChanged: OnVisualPropertyChanged);
 
     public static readonly BindableProperty UnderPageImageProperty = BindableProperty.Create(
         nameof(UnderPageImage),
         typeof(SKImage),
         typeof(PageTurnView),
         default(SKImage),
-        propertyChanged: OnImageChanged);
+        propertyChanged: OnVisualPropertyChanged);
 
     public static readonly BindableProperty ReduceMotionProperty = BindableProperty.Create(
         nameof(ReduceMotion),
@@ -171,6 +171,8 @@ public sealed class PageTurnView : SKGLView
     private bool _handlerDisconnected;
     private bool _syncingAnchor;
     private int _surfaceGeneration;
+    private int _previousFrontVertexCount;
+    private int _previousBackVertexCount;
     private long _frameCount;
     private double _lastFrameMilliseconds;
     private double _totalFrameMilliseconds;
@@ -311,7 +313,7 @@ public sealed class PageTurnView : SKGLView
         typeof(SKImage),
         typeof(PageTurnView),
         default(SKImage),
-        propertyChanged: OnImageChanged);
+        propertyChanged: OnVisualPropertyChanged);
 
     public SKImage? PreviousPageImage
     {
@@ -364,17 +366,19 @@ public sealed class PageTurnView : SKGLView
 
     public bool TryTurn(PageTurnDirection direction)
     {
-        if (_handlerDisconnected)
-        {
-            return false;
-        }
-
         var pageSize = _contentViewport.Size;
         if (!IsValidPageSize(pageSize))
         {
             var canvasSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
             pageSize = GetContentViewport(canvasSize).Size;
         }
+
+        return TryTurn(direction, pageSize);
+    }
+
+    internal bool TryTurn(PageTurnDirection direction, Vector2 pageSize)
+    {
+        if (_handlerDisconnected) return false;
 
         if (!Controller.BeginProgrammaticTurn(pageSize, direction, animate: !ReduceMotion))
         {
@@ -389,8 +393,8 @@ public sealed class PageTurnView : SKGLView
     public void CancelInteraction()
     {
         _pointerCapture.Cancel();
-        Controller.Cancel();
-        StartAnimationLoop();
+        StopAnimationLoop();
+        Controller.Cancel(animate: false);
         InvalidateSurface();
     }
 
@@ -441,8 +445,8 @@ public sealed class PageTurnView : SKGLView
         {
             _handlerDisconnected = true;
             _pointerCapture.Cancel();
-            Controller.Cancel();
             StopAnimationLoop();
+            Controller.Cancel(animate: false);
             DetachViewHandlers();
             ReleaseGraphicsResources();
             return;
@@ -454,15 +458,6 @@ public sealed class PageTurnView : SKGLView
         StartAnimationLoop();
         InvalidateSurface();
         QueueSurfaceRecovery();
-    }
-
-    private static void OnImageChanged(BindableObject bindable, object? oldValue, object? newValue)
-    {
-        var view = (PageTurnView)bindable;
-        if (!view._handlerDisconnected)
-        {
-            view.InvalidateSurface();
-        }
     }
 
     private static void OnVisualPropertyChanged(BindableObject bindable, object? oldValue, object? newValue)
@@ -568,7 +563,9 @@ public sealed class PageTurnView : SKGLView
                 _frontPoints,
                 _frontTexturePoints,
                 _frontColors,
-                offset);
+                offset,
+                PageEdge.Auto,
+                ref _previousFrontVertexCount);
             var backsideImage = BacksideMode switch
             {
                 PageBacksideMode.MirroredFront => FrontImage,
@@ -589,7 +586,9 @@ public sealed class PageTurnView : SKGLView
                 _backPoints,
                 _backTexturePoints,
                 _backColors,
-                offset);
+                offset,
+                snapshot.FreeEdge,
+                ref _previousBackVertexCount);
         }
         finally
         {
@@ -641,31 +640,17 @@ public sealed class PageTurnView : SKGLView
             case SKTouchAction.Moved:
                 if (_pointerCapture.Owns(e.Id))
                 {
-                    Controller.UpdateDrag(
-                        ToPagePointer(e.Location),
-                        Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
+                    UpdateInteraction(ToPagePointer(e.Location));
                     e.Handled = true;
-                    InvalidateSurface();
                 }
 
                 break;
             case SKTouchAction.Released:
-                if (_pointerCapture.Release(e.Id))
-                {
-                    Controller.EndDrag(animate: !ReduceMotion);
-                    e.Handled = true;
-                    StartAnimationLoop();
-                    InvalidateSurface();
-                }
-
-                break;
             case SKTouchAction.Cancelled:
                 if (_pointerCapture.Release(e.Id))
                 {
-                    Controller.Cancel();
+                    EndInteraction(cancelled: e.ActionType == SKTouchAction.Cancelled);
                     e.Handled = true;
-                    StartAnimationLoop();
-                    InvalidateSurface();
                 }
 
                 break;
@@ -729,7 +714,9 @@ public sealed class PageTurnView : SKGLView
         SKPoint[] points,
         SKPoint[] texturePoints,
         SKColor[] colors,
-        SKPoint offset)
+        SKPoint offset,
+        PageEdge freeEdge,
+        ref int previousCount)
     {
         if (count < 3)
         {
@@ -744,9 +731,19 @@ public sealed class PageTurnView : SKGLView
         {
             var vertex = vertices[i];
             points[i] = new SKPoint(vertex.Position.X + offset.X, vertex.Position.Y + offset.Y);
+            var texture = vertex.TextureCoordinate;
+            if (backsideMode == PageBacksideMode.CustomContent)
+            {
+                texture = freeEdge switch
+                {
+                    PageEdge.Left or PageEdge.Right => new(1 - texture.X, texture.Y),
+                    PageEdge.Top or PageEdge.Bottom => new(texture.X, 1 - texture.Y),
+                    _ => texture,
+                };
+            }
             var sample = PageBacksideMapping.Map(
                 backsideMode,
-                vertex.TextureCoordinate,
+                texture,
                 vertex.Shade,
                 dimFactor);
             texturePoints[i] = new SKPoint(
@@ -758,24 +755,20 @@ public sealed class PageTurnView : SKGLView
                 : ShadeColor(solidColor, shade);
         }
 
-        // The SkiaSharp array overload uses the complete array length. Fill
-        // the unused tail with transparent degenerate vertices so the view can
-        // reuse fixed buffers without allocating on every frame.
-        for (var i = count; i < points.Length; i++)
+        // The public Skia API consumes whole arrays. Only the previously used
+        // tail needs clearing; untouched storage is already transparent.
+        for (var i = count; i < previousCount; i++)
         {
             points[i] = default;
             texturePoints[i] = default;
             colors[i] = SKColors.Transparent;
         }
 
-        canvas.DrawVertices(
-            SKVertexMode.Triangles,
-            points,
-            texturePoints,
-            colors,
-            SKBlendMode.Modulate,
-            null!,
-            paint);
+        previousCount = count;
+        // The array draw overload leaves the native vertex copy to finalization.
+        // Own that copy explicitly so large frames release it promptly.
+        using var mesh = SKVertices.CreateCopy(SKVertexMode.Triangles, points, texturePoints, colors);
+        canvas.DrawVertices(mesh, SKBlendMode.Modulate, paint);
         paint.Shader = null;
     }
 

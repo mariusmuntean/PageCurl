@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../src/PageCurl.Core/PageCurl.Core.csproj" />
     <ProjectReference Include="../../src/PageCurl.Maui/PageCurl.Maui.csproj" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
   </ItemGroup>

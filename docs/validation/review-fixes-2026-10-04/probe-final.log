@@ -1,0 +1,7 @@
+GRAB: pointer=<150. 250>, pose=<150. 250>, progress=0,25
+IN_PLACE: captures before=4, after=8
+STALE: current content width=22, stored image width=22, ready=True
+DURING_TURN: prepared=True, state=Settling, front handle=534175016912, overlay retains image=True
+REMOVED_BACK: prepared=True, content null=True, overlay back nonnull=False, mode=MirroredFront
+DEMO_STARTUP: elapsed_ms=21,3, allocated_bytes=32592, pages=8
+CORE_WARMED: iterations=1000, mean_ms=1,031, allocated_bytes=0

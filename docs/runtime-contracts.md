@@ -10,7 +10,8 @@
   `UnderPageImage` when `PreviousPageImage` is absent.
 - Commit the page model from `PageTurnCompleted`. Gesture and programmatic turns
   raise the same event once.
-- Call `CancelInteraction()` before removing or recycling the view. On teardown,
+- Call `CancelInteraction()` before removing or recycling the view. It immediately
+  rolls back and releases pointer ownership; it does not leave a hidden animation. On teardown,
   cancel interaction, clear image properties, unsubscribe events, and only then
   dispose recycled images.
 - Enable `PerformanceDiagnosticsEnabled` only while collecting evidence. The
@@ -25,6 +26,10 @@
 - Keep page content attached and laid out before capture. The wrapper captures
   after load and size changes; call `RefreshSnapshotAsync()` when a counter,
   image, animation, or video preview changes while idle.
+- Refresh waits for an active curl to finish, including a turn started during
+  capture. Waiting preserves cancellation; textures and null slots are not
+  replaced while the sheet is moving. Obsolete content revisions and cancelled
+  capture failures cannot publish images or error events.
 - A new capture cancels the previous generation. A late result is disposed and
   cannot replace the current frame. Front and back captures fail independently.
 - `SnapshotFailed` reports the content and exception. The wrapper keeps the
@@ -36,11 +41,27 @@
 
 ## Two-page spreads
 
-- `PageSpreadView` owns snapshots for current left/right content and the
-  previous-left/next-right destinations. It does not own the MAUI views.
-- Forward uses the right sheet and next-right destination. Backward uses the
-  left sheet and previous-left destination. Both paths raise one
-  `PageTurnCompleted` event.
+- `PageSpreadView` owns snapshots for current left/right content, the
+  previous-left/next-right under-page destinations, and the
+  previous-right/next-left sheet back faces. It does not own the MAUI views.
+- Forward uses the right sheet: the next-right page is revealed underneath
+  and the next-left page rides on the sheet's back. Backward mirrors that
+  with the left sheet, previous-left under page, and previous-right back
+  face. Omitted back-face content falls back to the configured
+  `BacksideMode`. Both paths raise one `PageTurnCompleted` event.
 - `CanTurnForward` and `CanTurnBackward` include content and snapshot readiness,
   and remain false while a sheet settles. Update the content model only after a
   committed completion.
+- Public `RefreshSnapshotAsync` invalidates every slot so changes inside an
+  existing content view are captured. Automatic property and layout refreshes
+  serialize behind the running capture and drain only dirty slots.
+- Each content/layout invalidation increments a slot revision. Obsolete results
+  are disposed without replacing current images or acknowledging newer content.
+  A current failed capture keeps the last good texture and its dirty state,
+  raises `SnapshotFailed`, and is retried by the next refresh request.
+- Refresh requests made during a turn wait for completion and retain their
+  cancellation token. Cancellation of one request does not cancel queued ones.
+  Capture publication and disposal pause while the overlay references images;
+  completion or teardown clears overlay assignments before disposing snapshots.
+- Removed optional sheet backs immediately use the configured fallback, even
+  while clearing their cached images is queued.

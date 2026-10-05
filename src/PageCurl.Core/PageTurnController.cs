@@ -78,18 +78,7 @@ public sealed class PageTurnController
         _lockedEdge = _hingeEdge;
         _lockedAnchor = PageAnchorExtensions.FromEdge(_hingeEdge);
         _edgeSelectionPending = false;
-        _initialPointerPosition = clampedPointer;
-        _dragStartPosition = new(
-            _direction == PageTurnDirection.Forward ? pageSize.X : 0,
-            clampedPointer.Y);
-        _pointerPosition = clampedPointer;
-        _progress = 0;
-        _targetProgress = 0;
-        _velocity = 0;
-        _gesturePointerProgress = 0;
-        ResetDragVelocity();
-        _completionRaised = false;
-        ResetCommitCandidate();
+        ResetTurn(clampedPointer);
         _state = PageTurnState.Dragging;
         return true;
     }
@@ -115,7 +104,8 @@ public sealed class PageTurnController
     /// </summary>
     public bool BeginDrag(Vector2 pointer, Vector2 pageSize, PageAnchor lockedAnchor)
     {
-        if (!IsValidPageSize(pageSize) || !IsFinite(pointer) || !IsValidAnchor(lockedAnchor))
+        if (!IsValidPageSize(pageSize) || !IsFinite(pointer) || !IsValidAnchor(lockedAnchor)
+            || (_options.TurnAcrossHinge && lockedAnchor.IsCorner()))
         {
             return false;
         }
@@ -142,37 +132,27 @@ public sealed class PageTurnController
         _direction = clampedPointer.X >= pageSize.X * 0.5f
             ? PageTurnDirection.Forward
             : PageTurnDirection.Backward;
-        _initialPointerPosition = clampedPointer;
-        _pointerPosition = clampedPointer;
-        _progress = 0;
-        _targetProgress = 0;
-        _velocity = 0;
-        _gesturePointerProgress = 0;
-        ResetDragVelocity();
-        _completionRaised = false;
-        ResetCommitCandidate();
+        ResetTurn(clampedPointer);
 
         _edgeSelectionPending = lockedAnchor == PageAnchor.Auto && IsCorner(clampedPointer, pageSize);
         if (_edgeSelectionPending)
         {
             _freeEdge = PageEdge.Auto;
             _hingeEdge = PageEdge.Auto;
-            _dragStartPosition = clampedPointer;
         }
         else
         {
             _freeEdge = lockedEdge == PageEdge.Auto
                 ? nearestEdge
-                : SelectNearestFreeEdge(clampedPointer, pageSize, lockedEdge);
+                : _options.TurnAcrossHinge
+                    ? Opposite(lockedEdge)
+                    : SelectNearestFreeEdge(clampedPointer, pageSize, lockedEdge);
             if (_freeEdge == PageEdge.Auto)
             {
                 return false;
             }
 
             SelectEdges(_freeEdge);
-            _dragStartPosition = lockedAnchor.IsCorner()
-                ? clampedPointer
-                : ProjectToEdge(clampedPointer, pageSize, _freeEdge);
         }
 
         _state = PageTurnState.Dragging;
@@ -186,7 +166,7 @@ public sealed class PageTurnController
             return;
         }
 
-        _pointerPosition = ClampToPage(pointer, _pageSize);
+        _pointerPosition = _options.TurnAcrossHinge ? pointer : ClampToPage(pointer, _pageSize);
         if (_edgeSelectionPending)
         {
             var selectedEdge = SelectCornerEdge(
@@ -208,13 +188,12 @@ public sealed class PageTurnController
 
         _progress = _freeEdge == PageEdge.Auto
             ? 0
-            : _lockedAnchor.IsCorner()
-                ? CalculateProgressFromGrab(
-                    _pointerPosition,
-                    _initialPointerPosition,
-                    _pageSize,
-                    _freeEdge)
-                : CalculateProgress(_pointerPosition, _pageSize, _freeEdge);
+            : CalculateProgressFromGrab(
+                _pointerPosition,
+                _initialPointerPosition,
+                _pageSize,
+                _freeEdge);
+        if (_options.TurnAcrossHinge) _progress *= 0.5f;
         _progress = Math.Clamp(_progress, 0, 1);
         _gesturePointerProgress = _progress;
         _targetProgress = _progress;
@@ -259,18 +238,9 @@ public sealed class PageTurnController
         _lockedEdge = _hingeEdge;
         _lockedAnchor = PageAnchorExtensions.FromEdge(_hingeEdge);
         _edgeSelectionPending = false;
-        _dragStartPosition = new(
+        ResetTurn(new Vector2(
             direction == PageTurnDirection.Forward ? pageSize.X : 0,
-            pageSize.Y * 0.5f);
-        _initialPointerPosition = _dragStartPosition;
-        _pointerPosition = _dragStartPosition;
-        _progress = 0;
-        _targetProgress = 1;
-        _velocity = 0;
-        _gesturePointerProgress = 0;
-        ResetDragVelocity();
-        _completionRaised = false;
-        ResetCommitCandidate();
+            pageSize.Y * 0.5f), targetProgress: 1);
 
         if (!animate)
         {
@@ -284,7 +254,7 @@ public sealed class PageTurnController
         return true;
     }
 
-    public void Cancel()
+    public void Cancel(bool animate = true)
     {
         if (_state == PageTurnState.Idle)
         {
@@ -294,7 +264,8 @@ public sealed class PageTurnController
         _targetProgress = 0;
         ResetDragVelocity();
         ResetCommitCandidate();
-        BeginSettling();
+        if (animate) BeginSettling();
+        else CompleteAtTarget();
     }
 
     /// <summary>Advances the settle animation. Returns true while it needs frames.</summary>
@@ -335,10 +306,15 @@ public sealed class PageTurnController
             return CurlPose.Inactive(_direction);
         }
 
+        // Input and output sizes can differ, for example under display scaling.
+        // Keep material coordinates proportional to the requested render size.
+        var scale = pageSize / _pageSize;
+        var dragStart = _dragStartPosition * scale;
+        var pointer = _pointerPosition * scale;
         var pose = PageCurlGeometry.ComputePose(
             pageSize,
-            _dragStartPosition,
-            _pointerPosition,
+            dragStart,
+            pointer,
             _hingeEdge,
             _freeEdge,
             _direction,
@@ -347,12 +323,12 @@ public sealed class PageTurnController
         if (_lockedAnchor.IsCorner())
         {
             var animatedPointer = _gesturePointerProgress > EdgeEpsilon
-                ? _dragStartPosition
-                    + ((_pointerPosition - _dragStartPosition)
+                ? dragStart
+                    + ((pointer - dragStart)
                         * (_progress / _gesturePointerProgress))
                 : Vector2.Lerp(
-                    _dragStartPosition,
-                    ProgressEndpoint(_dragStartPosition, pageSize, _freeEdge),
+                    dragStart,
+                    ProgressEndpoint(dragStart, pageSize, _freeEdge),
                     _progress);
             pose = pose with { Position = animatedPointer };
         }
@@ -361,6 +337,20 @@ public sealed class PageTurnController
         {
             LockedAnchor = _lockedAnchor,
         };
+    }
+
+    private void ResetTurn(Vector2 pointer, float targetProgress = 0)
+    {
+        _initialPointerPosition = pointer;
+        _dragStartPosition = pointer;
+        _pointerPosition = pointer;
+        _progress = 0;
+        _targetProgress = targetProgress;
+        _velocity = 0;
+        _gesturePointerProgress = 0;
+        ResetDragVelocity();
+        _completionRaised = false;
+        ResetCommitCandidate();
     }
 
     private void BeginSettling()
@@ -625,15 +615,6 @@ public sealed class PageTurnController
         PageEdge.Bottom => new(pointer.X, pageSize.Y),
         PageEdge.Left => new(0, pointer.Y),
         _ => pointer,
-    };
-
-    private static float CalculateProgress(Vector2 pointer, Vector2 pageSize, PageEdge freeEdge) => freeEdge switch
-    {
-        PageEdge.Top => pointer.Y / pageSize.Y,
-        PageEdge.Right => (pageSize.X - pointer.X) / pageSize.X,
-        PageEdge.Bottom => (pageSize.Y - pointer.Y) / pageSize.Y,
-        PageEdge.Left => pointer.X / pageSize.X,
-        _ => 0,
     };
 
     private static float CalculateProgressFromGrab(

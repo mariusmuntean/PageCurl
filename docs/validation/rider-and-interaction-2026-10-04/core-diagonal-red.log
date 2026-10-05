@@ -1,0 +1,7 @@
+PASS PageTurnControllerTests
+FAIL: Top: diagonal movement did not move the grabbed edge along the spine.
+System.InvalidOperationException: Top: diagonal movement did not move the grabbed edge along the spine.
+   at PageCurl.Core.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/TestAssert.cs:line 9
+   at PageCurl.Core.Tests.PageCurlGeometryTests.Full_sheet_turn_responds_to_diagonal_pull_without_moving_the_spine() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageCurlGeometryTests.cs:line 66
+   at PageCurl.Core.Tests.PageCurlGeometryTests.RunAll() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/PageCurlGeometryTests.cs:line 20
+   at PageCurl.Core.Tests.Program.Main() in /Users/marius/Projects/PageCurl/tests/PageCurl.Core.Tests/Program.cs:line 27

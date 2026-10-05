@@ -30,15 +30,16 @@ public partial class MainPage : ContentPage
     private readonly PageSpreadNavigationState _spreadNavigation = new(8);
     private readonly PageTurnHaptics _haptics = new();
     private DemoPageSet? _pageSet;
+    private int? _spreadContentIndex;
     private ImagePageView? _imagePage;
     private InteractivePageView? _interactivePage;
     private VideoPosterPageView? _videoPage;
-    private CustomBacksideView? _customBacksidePage;
     private ShowcaseScene _scene;
     private ShowcaseContentKind _contentKind = ShowcaseContentKind.Image;
     private PageBacksideMode _backsideMode = PageBacksideMode.CustomContent;
     private bool _isCompact;
-    private bool _snapshotRetryQueued;
+    private bool _pageActive;
+    private int _lifecycleRevision;
 
     public MainPage()
     {
@@ -57,6 +58,11 @@ public partial class MainPage : ContentPage
         HapticsSwitch.IsToggled = PageTurnHaptics.IsMobilePlatform;
         _haptics.Enabled = HapticsSwitch.IsToggled;
         SizeChanged += OnPageSizeChanged;
+        SpreadPageView.PropertyChanged += (_, e) =>
+        {
+            if (_scene == ShowcaseScene.Spread && e.PropertyName is nameof(PageSpreadView.CanTurnForward) or nameof(PageSpreadView.CanTurnBackward))
+                UpdateNavigationButtons();
+        };
         EnsureResources();
         SelectScene(ShowcaseScene.Single);
     }
@@ -64,6 +70,8 @@ public partial class MainPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        _pageActive = true;
+        _lifecycleRevision++;
         EnsureResources();
         UpdateResponsiveLayout(Width);
         UpdateActiveSceneContent();
@@ -71,13 +79,16 @@ public partial class MainPage : ContentPage
 
     protected override void OnDisappearing()
     {
+        _pageActive = false;
+        _lifecycleRevision++;
         CancelAllInteractions();
         ClearAllContent();
+        _spreadContentIndex = null;
+        if (_interactivePage is not null) _interactivePage.ContentChanged -= OnInteractiveContentChanged;
         _imagePage = null;
         _interactivePage = null;
         _videoPage?.Dispose();
         _videoPage = null;
-        _customBacksidePage = null;
         _pageSet?.Dispose();
         _pageSet = null;
         base.OnDisappearing();
@@ -133,7 +144,7 @@ public partial class MainPage : ContentPage
         {
             ShowcaseScene.Spread => "Forward and backward turns share one completion path.",
             ShowcaseScene.Content => "MAUI content remains interactive while the page is flat.",
-            ShowcaseScene.Backside => "Mirror, color, or supply another MAUI view.",
+            ShowcaseScene.Backside => "Page 01 has page 02 on its reverse. Compare page, mirror, and color modes.",
             _ => "The page follows the pointer without stretching.",
         };
 
@@ -153,6 +164,11 @@ public partial class MainPage : ContentPage
 
     private void RequestTurn(PageTurnDirection direction)
     {
+        StatusLabel.Text = "Turning";
+        PreviousButton.IsEnabled = false;
+        NextButton.IsEnabled = false;
+        MobilePreviousButton.IsEnabled = false;
+        MobileNextButton.IsEnabled = false;
         var started = _scene switch
         {
             ShowcaseScene.Single => SinglePageView.TryTurn(direction),
@@ -162,18 +178,16 @@ public partial class MainPage : ContentPage
             ShowcaseScene.Backside => BacksidePageView.TryTurn(direction),
             _ => false,
         };
-        StatusLabel.Text = started ? "Turning" : "Not available";
-        if (started)
+        if (!started)
         {
-            PreviousButton.IsEnabled = false;
-            NextButton.IsEnabled = false;
-            MobilePreviousButton.IsEnabled = false;
-            MobileNextButton.IsEnabled = false;
+            StatusLabel.Text = "Not available";
+            UpdateNavigationButtons();
         }
     }
 
     private void OnPageTurnCompleted(object? sender, PageTurnCompletedEventArgs args)
     {
+        if (!_pageActive || !IsActiveTurnSender(sender)) return;
         _haptics.OnCompleted(args);
         if (!args.Committed)
         {
@@ -191,9 +205,19 @@ public partial class MainPage : ContentPage
 
     private void OnThresholdCrossed(object? sender, PageChangeThresholdCrossedEventArgs args)
     {
+        if (!_pageActive || !IsActiveTurnSender(sender)) return;
         _haptics.OnThreshold(args);
         StatusLabel.Text = args.IsCommitCandidate ? "Release to turn" : "Release to return";
     }
+
+    private bool IsActiveTurnSender(object? sender) => _scene switch
+    {
+        ShowcaseScene.Single => ReferenceEquals(sender, SinglePageView.Controller) || ReferenceEquals(sender, SinglePageView),
+        ShowcaseScene.Spread => ReferenceEquals(sender, SpreadPageView),
+        ShowcaseScene.Content => ReferenceEquals(sender, ContentPageView),
+        ShowcaseScene.Backside => ReferenceEquals(sender, BacksidePageView),
+        _ => false,
+    };
 
     private void OnAnchorChanged(object? sender, EventArgs e)
     {
@@ -270,7 +294,6 @@ public partial class MainPage : ContentPage
             _videoPage?.SetActive(contentKind == ShowcaseContentKind.Video);
             UpdateContentScene();
             UpdateSelectionStyles();
-            QueueSnapshotRefresh();
         }
     }
 
@@ -282,7 +305,6 @@ public partial class MainPage : ContentPage
             _backsideMode = mode;
             BacksidePageView.BacksideMode = mode;
             UpdateSelectionStyles();
-            QueueSnapshotRefresh();
         }
     }
 
@@ -307,20 +329,7 @@ public partial class MainPage : ContentPage
 
     private void OnSnapshotFailed(object? sender, PageSnapshotFailedEventArgs e)
     {
-        if (e.Exception.Message.Contains("laid out", StringComparison.OrdinalIgnoreCase))
-        {
-            if (!_snapshotRetryQueued)
-            {
-                _snapshotRetryQueued = true;
-                Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(120), () =>
-                {
-                    _snapshotRetryQueued = false;
-                    QueueSnapshotRefresh();
-                });
-            }
-
-            return;
-        }
+        if (!_pageActive || !IsActiveTurnSender(sender)) return;
 
         StatusLabel.Text = "Using last snapshot";
         DetailLabel.Text = $"Capture unavailable: {e.Exception.Message}";
@@ -362,8 +371,6 @@ public partial class MainPage : ContentPage
             view.WidthRequest = width;
             view.HeightRequest = height;
         }
-
-        QueueSnapshotRefresh();
     }
 
     private void UpdateResponsiveLayout(double width)
@@ -421,15 +428,17 @@ public partial class MainPage : ContentPage
         _interactivePage = new InteractivePageView();
         _interactivePage.ContentChanged += OnInteractiveContentChanged;
         _videoPage = new VideoPosterPageView();
-        _customBacksidePage = new CustomBacksideView();
     }
 
     private async void OnInteractiveContentChanged(object? sender, EventArgs e)
     {
+        var revision = _lifecycleRevision;
         try
         {
             await Task.Yield();
+            if (!_pageActive || revision != _lifecycleRevision) return;
             await ContentPageView.RefreshSnapshotAsync();
+            if (!_pageActive || revision != _lifecycleRevision) return;
             StatusLabel.Text = "Live content updated";
         }
         catch (OperationCanceledException)
@@ -462,7 +471,6 @@ public partial class MainPage : ContentPage
 
         UpdateCounter();
         UpdateNavigationButtons();
-        QueueSnapshotRefresh();
     }
 
     private void SetImagePage(PageTurnView view, PageNavigationState navigation)
@@ -477,14 +485,24 @@ public partial class MainPage : ContentPage
     private void UpdateSpreadScene()
     {
         var left = _spreadNavigation.LeftPageIndex;
+        if (_spreadContentIndex == left) return;
+        _spreadContentIndex = left;
         var right = _spreadNavigation.RightPageIndex;
         SpreadPageView.LeftContent = CreatePageView(left);
         SpreadPageView.RightContent = right.HasValue ? CreatePageView(right.Value) : null;
         SpreadPageView.PreviousLeftContent = _spreadNavigation.CanTurnBackward
             ? CreatePageView(Math.Max(left - 2, 0))
             : null;
+        // The sheet's back faces carry the adjacent pages the turn lands on,
+        // so each turn reads like flipping one sheet of a physical book.
+        SpreadPageView.PreviousRightContent = _spreadNavigation.CanTurnBackward
+            ? CreatePageView(Math.Max(left - 1, 0))
+            : null;
+        SpreadPageView.NextLeftContent = _spreadNavigation.CanTurnForward
+            ? CreatePageView(left + 2)
+            : null;
         SpreadPageView.NextRightContent = _spreadNavigation.CanTurnForward
-            ? CreatePageView(Math.Min((right ?? left) + 2, _pageSet!.Pages.Count - 1))
+            ? CreatePageView(Math.Min(left + 3, _pageSet!.Pages.Count - 1))
             : null;
     }
 
@@ -505,7 +523,7 @@ public partial class MainPage : ContentPage
     {
         var navigation = _navigation[ShowcaseScene.Backside];
         BacksidePageView.FrontContent = CreatePageView(navigation.PageIndex);
-        BacksidePageView.BackContent = _customBacksidePage;
+        BacksidePageView.BackContent = CreatePageView(navigation.GetUnderPageIndex(PageTurnDirection.Forward));
         BacksidePageView.BacksideMode = _backsideMode;
         BacksidePageView.BacksideColor = Color.FromArgb("#D5CBAF");
         BacksidePageView.UnderPageImage = _pageSet!.Pages[navigation.GetUnderPageIndex(PageTurnDirection.Forward)];
@@ -526,41 +544,6 @@ public partial class MainPage : ContentPage
             _ => ("PAGECURL.MAUI", "Build something tactile.", "The geometry is tested. The surface is yours."),
         };
         return new DemoPageView(pageIndex + 1, copy.Item1, copy.Item2, copy.Item3);
-    }
-
-    private async void QueueSnapshotRefresh()
-    {
-        if (!IsLoaded)
-        {
-            return;
-        }
-
-        await Task.Yield();
-        try
-        {
-            switch (_scene)
-            {
-                case ShowcaseScene.Spread:
-                    await SpreadPageView.RefreshSnapshotAsync();
-                    break;
-                case ShowcaseScene.Content:
-                    await ContentPageView.RefreshSnapshotAsync();
-                    break;
-                case ShowcaseScene.Backside:
-                    await BacksidePageView.RefreshSnapshotAsync();
-                    break;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-
-        if (StatusLabel.Text is "Using last snapshot" or "Capturing")
-        {
-            StatusLabel.Text = "Ready";
-        }
-
-        UpdateNavigationButtons();
     }
 
     private void UpdateCounter()
@@ -627,7 +610,7 @@ public partial class MainPage : ContentPage
         SinglePageView.CancelInteraction();
         ContentPageView.CancelInteraction();
         BacksidePageView.CancelInteraction();
-        SpreadPageView.Overlay.CancelInteraction();
+        SpreadPageView.CancelInteraction();
     }
 
     private void ClearAllContent()
@@ -649,6 +632,8 @@ public partial class MainPage : ContentPage
         SpreadPageView.RightContent = null;
         SpreadPageView.PreviousLeftContent = null;
         SpreadPageView.NextRightContent = null;
+        SpreadPageView.PreviousRightContent = null;
+        SpreadPageView.NextLeftContent = null;
     }
 
     private static string FormatAnchor(PageAnchor anchor) => anchor switch

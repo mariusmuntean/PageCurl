@@ -13,6 +13,8 @@ in Git history and do not define unfinished work.
 - Direct pointer tracking, reversal, cancellation, configurable normalized
   thresholds, threshold transition events, configurable flicks, reduced
   motion, and programmatic turns through one completion path.
+- Grab-relative curl progress for edges and corners: a drag starts flat at
+  the grab point and the sheet curls only while the pointer moves.
 - Explicit, intrinsic, and fallback page width/height ratio layout in the core.
 - MAUI properties for edge/corner anchors, page ratio, normalized threshold,
   threshold events, flick enablement, and flick velocity.
@@ -24,6 +26,14 @@ in Git history and do not define unfinished work.
   capture implementations.
 - A two-page spread with right-forward and left-backward turns, full-gutter
   overlay rendering, readiness-aware commands, and a restrained gutter shadow.
+- Book-model spread turns: the turning sheet's back face carries the adjacent
+  page it lands on (`NextLeftContent`, `PreviousRightContent`), while the
+  under page reveals the destination page, matching a physical sheet flip.
+- Versioned spread snapshot refreshes: automatic requests drain dirty slots,
+  explicit refresh captures in-place edits, cancellation preserves serialization,
+  and active turns retain their images until overlay assignments are cleared.
+  Apple captures convert native formats to sRGB premultiplied BGRA without PNG
+  encode/decode intermediates.
 - A responsive four-scene showcase for single pages, spreads, a licensed image,
   live `ContentView` controls, bundled licensed video with poster fallback,
   configurable backsides, and all edge/corner anchors through shared options.

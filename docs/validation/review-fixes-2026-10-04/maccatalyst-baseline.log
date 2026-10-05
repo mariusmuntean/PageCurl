@@ -1,0 +1,14 @@
+  Determining projects to restore...
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Demo/PageCurl.Demo.csproj (in 438 ms).
+  2 of 3 projects are up-to-date for restore.
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Debug/net10.0/PageCurl.Core.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Debug/net10.0-maccatalyst/PageCurl.Maui.dll
+/Users/marius/.dotnet/packs/Microsoft.MacCatalyst.Sdk.net10.0_26.5/26.5.10301/targets/Xamarin.Shared.Sdk.targets(2570,3): error : This version of .NET for MacCatalyst (26.5.10301) requires Xcode 26.6. The current version of Xcode is 27.0. Either install Xcode 26.6, or use a different version of .NET for MacCatalyst. See https://aka.ms/xcode-requirement for more information. [/Users/marius/Projects/PageCurl/src/PageCurl.Demo/PageCurl.Demo.csproj::TargetFramework=net10.0-maccatalyst]
+
+Build FAILED.
+
+/Users/marius/.dotnet/packs/Microsoft.MacCatalyst.Sdk.net10.0_26.5/26.5.10301/targets/Xamarin.Shared.Sdk.targets(2570,3): error : This version of .NET for MacCatalyst (26.5.10301) requires Xcode 26.6. The current version of Xcode is 27.0. Either install Xcode 26.6, or use a different version of .NET for MacCatalyst. See https://aka.ms/xcode-requirement for more information. [/Users/marius/Projects/PageCurl/src/PageCurl.Demo/PageCurl.Demo.csproj::TargetFramework=net10.0-maccatalyst]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:02.26

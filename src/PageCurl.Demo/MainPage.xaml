@@ -125,7 +125,7 @@
                                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="5">
                                     <Button x:Name="MirrorBackButton" Text="Mirror" CommandParameter="MirroredFront" Style="{StaticResource SegmentButton}" Clicked="OnBacksideModeClicked" />
                                     <Button x:Name="ColorBackButton" Grid.Column="1" Text="Color" CommandParameter="SolidColor" Style="{StaticResource SegmentButton}" Clicked="OnBacksideModeClicked" />
-                                    <Button x:Name="CustomBackButton" Grid.Column="2" Text="View" CommandParameter="CustomContent" Style="{StaticResource SegmentButton}" Clicked="OnBacksideModeClicked" />
+                                    <Button x:Name="CustomBackButton" Grid.Column="2" Text="Page" CommandParameter="CustomContent" Style="{StaticResource SegmentButton}" Clicked="OnBacksideModeClicked" />
                                 </Grid>
                             </VerticalStackLayout>
 

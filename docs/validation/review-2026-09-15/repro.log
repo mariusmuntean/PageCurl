@@ -1,0 +1,7 @@
+GRAB: pointer=<150. 250>, pose=<180. 250>, progress=0,25
+IN_PLACE: captures before=4, after=4
+STALE: current content width=22, stored image width=11, ready=True
+DURING_TURN: prepared=True, state=Settling, front handle=0, overlay retains disposed image=True
+REMOVED_BACK: prepared=True, content null=True, overlay back nonnull=True, mode=CustomContent
+DEMO_STARTUP: elapsed_ms=317,5, allocated_bytes=422840, unused_png_bytes=385992
+CORE_WARMED: iterations=1000, mean_ms=0,973, allocated_bytes=0

@@ -22,12 +22,12 @@ tested without a device or UI toolkit:
 
 ## Try the demo
 
-The repository pins .NET SDK 10.0.301 in [`global.json`](global.json). On a
+The repository pins .NET SDK 10.0.401 in [`global.json`](global.json). On a
 macOS development machine, install the mobile workloads and run the iOS smoke
 workflow:
 
 ```bash
-dotnet workload install maui-ios maui-android
+dotnet workload install maui-ios maui-maccatalyst maui-android
 ./tools/ios-smoke.sh
 ```
 
@@ -70,7 +70,7 @@ and let Xcode create or download the matching development profile.
 
 The sample has four scenes: Single, Spread, Content, and Backside. Content opens
 with a real image and can switch to a live `ContentView` or a bundled Big Buck
-Bunny excerpt. Backside opens with unmistakable custom MAUI content and can
+Bunny excerpt. Backside opens with the adjacent numbered page on its reverse and can
 switch to mirrored or solid-color modes. Shared options expose every edge and
 corner anchor, a percentage threshold, flicks, page ratios, reduced motion, and
 mobile haptics. Desktop uses a scene rail and inspector; compact layouts move
@@ -111,10 +111,12 @@ hinge, while the remaining edges and corners can start a gesture. A corner in
 two-argument `BeginDrag` overload remains the horizontal left/right behavior
 for existing callers. `AspectFit` keeps source images undistorted and maps
 touch coordinates into the same fitted content rectangle used by the mesh.
-During a drag, the renderer keeps the grabbed edge point or corner attached to
-the pointer until the cylinder reaches its physical curl limit; beyond that
-limit the pose stays bounded instead of stretching. The default material is a
-stiff sheet: it curls without cloth-like lag or permanent fold state.
+Curl progress is measured from the grab point, so a drag that starts in the
+middle of a page begins flat and curls only while the pointer moves. During a
+drag, the renderer keeps the grabbed point attached to the pointer until the
+cylinder reaches its physical curl limit; beyond that limit the pose stays
+bounded instead of stretching. The default material is a stiff sheet: it
+curls without cloth-like lag or permanent fold state.
 Set `PreviousPageImage` when backward turns should reveal a different page;
 when it is not set, the control falls back to `UnderPageImage` for compatibility.
 
@@ -195,13 +197,23 @@ under the native video surface as a useful fallback and snapshot source.
     LeftContent="{Binding LeftPage}"
     RightContent="{Binding RightPage}"
     PreviousLeftContent="{Binding PreviousLeftPage}"
-    NextRightContent="{Binding NextRightPage}" />
+    NextRightContent="{Binding NextRightPage}"
+    PreviousRightContent="{Binding PreviousRightPage}"
+    NextLeftContent="{Binding NextLeftPage}" />
 ```
 
 `TryTurnForward()` curls the right sheet across the gutter;
 `TryTurnBackward()` curls the left. `CanTurnForward` and `CanTurnBackward`
 remain false until both the current and destination snapshots are ready.
-Update the four content properties from the shared `PageTurnCompleted` event.
+Update the content properties from the shared `PageTurnCompleted` event.
+Call `RefreshSnapshotAsync()` to capture in-place edits; automatic property
+refreshes recapture only dirty slots. Explicit requests made during a turn wait
+until it ends and preserve cancellation.
+The turn reads like a physical sheet: `NextRightContent` is revealed
+underneath a forward turn, and the sheet's back shows `NextLeftContent`,
+the page it lands on (mirrored by `PreviousLeftContent`/`PreviousRightContent`
+for backward turns). Omit the back-face properties to keep a mirrored or
+solid backside.
 
 ## Performance choices
 

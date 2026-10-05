@@ -15,11 +15,17 @@ and the release criteria belong in
 | --- | --- | --- | --- |
 | PageCurl.Core | .NET 10 | Build | Core tests and allocation guard pass locally |
 | PageCurl.Maui neutral | .NET 10 | Build | `net10.0` Release build passes locally |
-| Android | API 24 | Build | Explicit `net10.0-android` Release demo build passes locally |
-| iOS | iOS 15 | Device build + simulator | Signed Debug build and install pass on an iPhone 17 Pro running iOS 26.6; four-scene simulator smoke, live media, and active-curl recordings pass on Xcode 26.6 / iOS 26.2 |
-| Mac Catalyst | macOS 15 / Catalyst 15 | Build + visual | Debug `net10.0-maccatalyst` build and resizable-window visual check pass locally |
+| Android | API 24 | Build + Rider launch | Release build passes; Rider launches the demo on Pixel 9 / Android 15 |
+| iOS | iOS 17 | Build + Rider simulator launch | Release simulator build passes on Xcode 27.0; Rider launches the demo on iPhone 17e / iOS 27.0. Automated HID interactions remain blocked by idb SimulatorKit |
+| Mac Catalyst | macOS 14 / Catalyst 17 | Build + Rider launch + native assertions | Supported Xcode 27.0 Debug build and Rider launch pass; native fixture checks snapshots, rendered interaction, immediate scene switching and teardown |
 | Windows | Windows 10.0.19041 | Not validated | No Windows host in this validation run |
 
 The package remains platform-portable at the core/API boundary. Physical-device
 performance, low-end hardware, store signing, VoiceOver/TalkBack hardware
 passes, and long-run GPU/texture profiling are separate release gates.
+
+The [latest Rider and interaction validation](validation/rider-and-interaction-2026-10-04/README.md)
+uses SDK 10.0.401, workload set 10.0.401.1 and Xcode 27.0 with version checking
+enabled. Earlier October records used a diagnostic Xcode override; those
+historical results do not describe the current toolchain. The hosted GitHub
+workflow has been updated but has not been dispatched from this checkout.

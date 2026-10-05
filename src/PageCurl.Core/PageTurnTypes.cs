@@ -143,6 +143,9 @@ public sealed class PageCurlOptions
     /// <summary>Vertical mesh resolution. The column/row product may not exceed <see cref="MaximumMeshCellCount"/>.</summary>
     public int MeshRows { get; init; } = 64;
 
+    /// <summary>Turn a hinged sheet across the opposite page; progress spans twice the grab-to-hinge distance.</summary>
+    public bool TurnAcrossHinge { get; init; }
+
     /// <summary>Base cylinder radius as a fraction of page width.</summary>
     public float RadiusScale { get; init; } = 1f / 3f;
 
@@ -353,8 +356,12 @@ public sealed class PageMeshBuffer
         Rows = options.MeshRows;
         BaseGridVertexCount = checked((Columns + 1) * (Rows + 1));
         var cellCount = checked(Columns * Rows);
-        Grid = new GridVertex[checked(BaseGridVertexCount + (cellCount * 8))];
-        Orders = new TriangleOrder[checked(cellCount * 6)];
+        // The cylinder's single straight facing seam crosses at most one
+        // row plus one column of cells. Only those cells need clipped vertices
+        // and extra triangles; a cone uses just the original grid.
+        var seamCellCount = checked(Columns + Rows);
+        Grid = new GridVertex[checked(BaseGridVertexCount + (seamCellCount * 8))];
+        Orders = new TriangleOrder[checked((cellCount * 2) + (seamCellCount * 4))];
         var vertexCapacity = Math.Max(6, checked(Orders.Length * 3));
         FrontVertices = new MeshVertex[vertexCapacity];
         BackVertices = new MeshVertex[vertexCapacity];
