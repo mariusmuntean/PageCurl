@@ -47,3 +47,9 @@ expression and passed after the SDK installation path moved to the setup step.
 Pinned `actionlint` now runs in Verify, with the custom Xcode runner label
 configured explicitly. The Windows job uses a fresh SDK directory and a
 30-minute limit to avoid upgrading unrelated preinstalled workloads.
+
+The next Windows build passed framework restore and failed with `NETSDK1112`
+because its implicit `win-x64` runtime pack was not restored. The workflow now
+uses explicit `win-x64` for demo restore/build and the separate Core restore.
+The isolated SDK installed the pinned Windows workload in 25 seconds, compared
+with roughly seven minutes when upgrading workloads inherited from the image.
