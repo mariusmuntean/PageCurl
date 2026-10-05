@@ -2,15 +2,15 @@
   href: index.md
 - name: Quick start
   href: getting-started.md
-- name: Images and live content
+- name: Content
   href: content.md
-- name: Two-page spreads
+- name: Spreads
   href: spreads.md
-- name: Runtime and lifecycle
+- name: Runtime
   href: runtime.md
-- name: Platform support
+- name: Platforms
   href: platforms.md
-- name: Contributing and validation
+- name: Contributing
   href: contributing.md
 - name: API reference
   href: api/toc.yml
