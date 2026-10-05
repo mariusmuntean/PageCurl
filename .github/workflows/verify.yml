@@ -16,7 +16,7 @@ jobs:
       MSBuildEnableWorkloadResolver: 'false'
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Run platform-free tests
@@ -36,7 +36,7 @@ jobs:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Select Xcode 27.0
@@ -86,7 +86,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Install Windows MAUI workload
