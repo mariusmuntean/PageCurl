@@ -1,0 +1,9 @@
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Delayed animation callback advanced only 0,037.
+System.InvalidOperationException: Delayed animation callback advanced only 0,037.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.PageCurlViewTests.Delayed_animation_timer_advances_by_elapsed_time() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 397
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 33
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 39

@@ -70,8 +70,12 @@ public sealed class FixturePage : ContentPage
         }
         try
         {
+            var window = Window!;
             NativeMeshTests.Run(_results);
-            await DemoRegressionTests.RunAsync(Window!, _results);
+            await DemoWindowLifecycleTests.RunAsync(window, _results);
+            await InteractiveRefreshTests.RunAsync(window, _results);
+            await SceneSwitchTimingTests.RunAsync(window, _results);
+            await DemoRegressionTests.RunAsync(window, _results);
         }
         catch (Exception exception) { _results.Add("FAIL demo " + exception); }
         if (!_results.Any(line => line.StartsWith("FAIL", StringComparison.Ordinal)))

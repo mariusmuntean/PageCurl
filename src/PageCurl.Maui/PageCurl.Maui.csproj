@@ -16,7 +16,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>PageCurl.Maui</PackageId>
     <Title>PageCurl.Maui</Title>
-    <Description>A high-performance interactive stiff-paper page curl for .NET MAUI.</Description>
+    <Description>Interactive stiff-paper page turns for images, live .NET MAUI views and two-page spreads.</Description>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
@@ -33,7 +33,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+    <None Include="../../docs/package-readme.md" Pack="true" PackagePath="README.md" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="LICENSE" />
   </ItemGroup>
 
   <ItemGroup>

@@ -16,6 +16,8 @@ namespace PageCurl.Maui;
 /// </summary>
 public sealed class PageTurnView : SKGLView
 {
+    internal Func<long> AnimationTimestampProvider { get; set; } = Stopwatch.GetTimestamp;
+
     public static readonly BindableProperty FrontImageProperty = BindableProperty.Create(
         nameof(FrontImage),
         typeof(SKImage),
@@ -463,6 +465,15 @@ public sealed class PageTurnView : SKGLView
         QueueSurfaceRecovery();
     }
 
+    protected override void OnPropertyChanged(string? propertyName = null)
+    {
+        base.OnPropertyChanged(propertyName);
+        // A hidden idle GL surface may have consumed earlier invalidations.
+        // Showing it must paint its current images even when they are unchanged.
+        if (propertyName == IsVisibleProperty.PropertyName && IsVisible && !_handlerDisconnected)
+            InvalidateSurface();
+    }
+
     private static void OnVisualPropertyChanged(BindableObject bindable, object? oldValue, object? newValue)
     {
         var view = (PageTurnView)bindable;
@@ -668,6 +679,8 @@ public sealed class PageTurnView : SKGLView
 
         _animationLoopActive = true;
         var generation = ++_animationGeneration;
+        var timestampProvider = AnimationTimestampProvider;
+        var previousTimestamp = timestampProvider();
         Dispatcher.StartTimer(TimeSpan.FromMilliseconds(16), () =>
         {
             if (_handlerDisconnected || Handler is null || generation != _animationGeneration)
@@ -680,12 +693,13 @@ public sealed class PageTurnView : SKGLView
                 return false;
             }
 
-            var active = Controller.Tick(1.0 / 60.0);
+            var timestamp = timestampProvider();
+            var elapsedSeconds = (timestamp - previousTimestamp) / (double)Stopwatch.Frequency;
+            previousTimestamp = timestamp;
+            var active = Controller.Tick(elapsedSeconds);
             InvalidateSurface();
-            if (generation == _animationGeneration)
-            {
-                _animationLoopActive = active;
-            }
+            if (generation != _animationGeneration) return false;
+            _animationLoopActive = active;
 
             return active;
         });

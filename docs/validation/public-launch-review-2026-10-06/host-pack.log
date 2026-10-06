@@ -1,0 +1,10 @@
+  Determining projects to restore...
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Core/PageCurl.Core.csproj (in 37 ms).
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Maui/PageCurl.Maui.csproj (in 211 ms).
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Release/net10.0/PageCurl.Core.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0/PageCurl.Maui.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0-android/PageCurl.Maui.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0-ios/PageCurl.Maui.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0-maccatalyst/PageCurl.Maui.dll
+  Successfully created package '/Users/marius/Projects/PageCurl/.artifacts/launch-mobile-packages/PageCurl.Maui.0.1.0.nupkg'.
+  Successfully created package '/Users/marius/Projects/PageCurl/.artifacts/launch-mobile-packages/PageCurl.Maui.0.1.0.snupkg'.

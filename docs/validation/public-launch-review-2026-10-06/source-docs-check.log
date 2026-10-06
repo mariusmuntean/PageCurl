@@ -1,0 +1,4 @@
+PASS 74 local Markdown links and issue form YAML
+PASS git diff --check
+PASS staging area empty; current commit c52e0ac
+PASS no native fixture process remains

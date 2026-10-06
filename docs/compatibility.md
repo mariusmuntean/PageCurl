@@ -5,13 +5,15 @@ The package targets the .NET 10/MAUI 10 line and pins
 this repository, not a promise that every application renderer behaves the
 same on every device.
 
-The matrix summarizes the latest recorded local evidence. Detailed commands,
-dates, screenshots, and unverified gates belong in
+The matrix summarizes completed local and hosted evidence. Some hosted runs
+precede the current source revision; use each record's date and scope when
+assessing a release. Detailed commands, dates, screenshots and unverified gates
+belong in
 [`docs/validation/ios-release-readiness.md`](validation/ios-release-readiness.md)
 and the release criteria belong in
 [`release-readiness.md`](release-readiness.md).
 
-| Layer/target | Minimum | Current status | Evidence |
+| Layer/target | Minimum | Recorded validation | Evidence |
 | --- | --- | --- | --- |
 | PageCurl.Core | .NET 10 | Build | Core tests and allocation guard pass locally |
 | PageCurl.Maui neutral | .NET 10 | Build | `net10.0` Release build passes locally |
@@ -24,10 +26,18 @@ The package remains platform-portable at the core/API boundary. Physical-device
 performance, low-end hardware, store signing, VoiceOver/TalkBack hardware
 passes, and long-run GPU/texture profiling are separate release gates.
 
-The [latest Rider and interaction validation](validation/rider-and-interaction-2026-10-04/README.md)
+The [Rider and interaction validation on 4 October](validation/rider-and-interaction-2026-10-04/README.md)
 uses SDK 10.0.401, workload set 10.0.401.1 and Xcode 27.0 with version checking
 enabled. Earlier October records used a diagnostic Xcode override; those
-historical results do not describe the current toolchain. The hosted [Verify run on 5 October](https://github.com/mariusmuntean/PageCurl/actions/runs/37283932941)
+historical results do not describe the current toolchain. The
+[production hardening](validation/production-hardening-2026-10-06/README.md) and
+[rapid scene switching](validation/scene-switch-performance-2026-10-06/README.md)
+records cover the later local lifecycle, capture and navigation checks.
+The [public launch review](validation/public-launch-review-2026-10-06/README.md)
+records local elapsed-time settling, background/video lifecycle and package
+checks. The new complete-distribution workflow still needs a hosted run.
+
+The hosted [Verify run on 5 October](https://github.com/mariusmuntean/PageCurl/actions/runs/37283932941)
 passed both Linux and macOS jobs, including the isolated package consumer,
 neutral API tests, Android/iOS/Mac Catalyst builds and native assertions.
 These unsigned builds do not certify store packaging or physical-device behavior.

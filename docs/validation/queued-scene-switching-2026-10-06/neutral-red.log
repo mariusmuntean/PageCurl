@@ -1,0 +1,10 @@
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+PASS PageCurlViewTests
+FAIL: Cancellation synchronously rasterized pending outgoing content.
+System.InvalidOperationException: Cancellation synchronously rasterized pending outgoing content.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.PageSpreadViewTests.Cancellation_defers_pending_automatic_capture_and_hiding_discards_it() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 57
+   at PageCurl.Maui.Tests.PageSpreadViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 13
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 41

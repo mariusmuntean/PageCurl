@@ -34,11 +34,12 @@ The sample has Single, Spread, Content and Backside scenes. It demonstrates
 navigation boundaries, edge/corner anchors, live controls, local video,
 backside choices, reduced motion and haptics.
 
-Use the SDK and workload set pinned in `global.json`. On macOS:
+Use the SDK and workload set pinned in `global.json`. From the repository root
+on macOS:
 
 ```bash
 dotnet workload install maui-ios maui-maccatalyst maui-android
-dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
+dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst
 ```
 
 Open the resulting `PageCurl.Demo.app`, or select the demo's target in Rider.
@@ -64,5 +65,6 @@ The 0.x API may change before 1.0. Hardware performance, screen-reader passes,
 Windows runtime behavior, signing and NuGet publication remain
 [release gates](docs/release-readiness.md). Build coverage alone does not close them.
 
-[MIT license](LICENSE) · [Support policy](SUPPORT.md) ·
+[MIT license](LICENSE) · [Support and issue reporting](SUPPORT.md) ·
+[Contributing](CONTRIBUTING.md) · [Security reporting](SECURITY.md) ·
 [Third-party media notices](THIRD-PARTY-NOTICES.md)

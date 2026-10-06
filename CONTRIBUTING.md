@@ -6,27 +6,33 @@ and the public API understandable to a MAUI application developer.
 
 ## Development loop
 
-1. Create a focused branch from `master` (for example,
+1. Read the [requirements](docs/requirements.md), relevant usage guide and
+   [runtime rules](docs/runtime-contracts.md). For a larger API or behavior
+   change, discuss the use case in an issue before implementation.
+2. Create a focused branch from the repository's default branch (for example,
    `feature/geometry-shadow`).
-2. Make the smallest change that solves the problem.
-3. Add or update a platform-independent test before changing behavior in the
-   core project.
-4. Run the core test runner and the builds for the target frameworks you can
-   install locally.
+3. Make the smallest change that solves the problem. Add a deterministic
+   regression for changed behavior; keep core tests platform-independent.
+4. Run the checks relevant to your change and record their completed results.
 5. Update the relevant page under [`docs/`](docs/index.md) when behavior, a
    design decision, platform limitation, or release assumption changes.
-6. Open a pull request. Keep it draft while device testing or visual review is
-   still outstanding.
+6. Open a pull request with the problem, resulting behavior and validation.
+   Name any affected checks you could not run. Keep it draft while required
+   rendering or runtime review remains outstanding.
 
 ## Required checks
 
 Use [`pagecurl-maui-validation`](.agents/skills/pagecurl-maui-validation/SKILL.md)
-for the exact command and target selection. At minimum, run the dependency-free
-core suite, the neutral MAUI target, and every platform target affected by the
-change. The repository uses the SDK selected by `global.json`; on macOS, the
-skill routes iOS simulator work through `tools/ios-smoke.sh`. A successful
-source build is not a substitute for profiling the control on a representative
-physical device.
+for command and target selection. Choose the smallest relevant path: core
+behavior needs the dependency-free runner; adapter and public API changes need
+neutral MAUI checks; platform changes need that platform's explicit target.
+Rendering and snapshot changes also need runtime or visual evidence. For
+documentation changes, build the site and check its links.
+
+The repository uses the SDK and workload set selected by `global.json`. On
+macOS, the validation skill routes iOS simulator work through
+`tools/ios-smoke.sh`. Separate completed tests and builds from device,
+screen-reader and store checks that remain unverified.
 
 ## Design boundaries
 
@@ -38,7 +44,7 @@ physical device.
 - Keep page-model commits in `PageTurnCompleted`; accessibility commands and
   gestures must share the same completion path.
 - Avoid per-frame allocations and unbounded mesh growth. If a visual improvement
-  needs more work, measure it and expose a deliberate option.
+  changes cost, measure it before adding configuration.
 - Keep durable documentation current and use relative Markdown links inside
   the repository.
 

@@ -1,0 +1,61 @@
+..............F................F
+======================================================================
+FAIL: test_rejects_stale_package_versions_in_output (test_package_assembly.PackageAssemblyTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_package_assembly.py", line 145, in test_rejects_stale_package_versions_in_output
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_rejects_unsafe_archive_members (test_packages.PackageTests) (name='../../outside')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_packages.py", line 91, in test_rejects_unsafe_archive_members
+    self.assertTrue(any(diagnostic in error for error in module.check_package(path, ['net10.0'])))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_rejects_unsafe_archive_members (test_packages.PackageTests) (name='/absolute')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_packages.py", line 91, in test_rejects_unsafe_archive_members
+    self.assertTrue(any(diagnostic in error for error in module.check_package(path, ['net10.0'])))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_rejects_unsafe_archive_members (test_packages.PackageTests) (name='lib\\outside')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_packages.py", line 91, in test_rejects_unsafe_archive_members
+    self.assertTrue(any(diagnostic in error for error in module.check_package(path, ['net10.0'])))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_rejects_unsafe_archive_members (test_packages.PackageTests) (name='readme.md')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_packages.py", line 91, in test_rejects_unsafe_archive_members
+    self.assertTrue(any(diagnostic in error for error in module.check_package(path, ['net10.0'])))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_rejects_unsafe_archive_members (test_packages.PackageTests) (name='.signature.p7s')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_packages.py", line 91, in test_rejects_unsafe_archive_members
+    self.assertTrue(any(diagnostic in error for error in module.check_package(path, ['net10.0'])))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_requires_package_relationships (test_packages.PackageTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_packages.py", line 97, in test_requires_package_relationships
+    self.assertTrue(any('Missing _rels/.rels' in error for error in module.check_package(path, ['net10.0'])))
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 33 tests in 1.456s
+
+FAILED (failures=7)

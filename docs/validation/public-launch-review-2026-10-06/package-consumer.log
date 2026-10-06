@@ -1,0 +1,5 @@
+PASS package PageCurl.Core.0.1.0.nupkg: net10.0
+PASS package PageCurl.Maui.0.1.0.nupkg: net10.0
+  Determining projects to restore...
+  Restored /var/folders/vy/wnlkv7r94fgdgwdy204r6c5h0000gn/T/pagecurl-consumer.h99L5Q/consumer/Consumer.csproj (in 14,61 sec).
+PASS package consumer: PageCurl.Maui, transitive Core, command and mesh

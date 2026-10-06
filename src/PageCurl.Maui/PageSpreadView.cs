@@ -556,7 +556,7 @@ public sealed class PageSpreadView : Grid
             {
                 SnapshotFailed?.Invoke(
                     this,
-                    new PageSnapshotFailedEventArgs(content, isBackside: false, exception));
+                    new PageSnapshotFailedEventArgs(content, isBackside: IsPhysicalBackside(slot), exception));
             }
             return false;
         }
@@ -679,6 +679,9 @@ public sealed class PageSpreadView : Grid
         SnapshotSlot.Right or SnapshotSlot.NextRight or SnapshotSlot.NextLeft => true,
         _ => false,
     };
+
+    private static bool IsPhysicalBackside(SnapshotSlot slot) => slot is
+        SnapshotSlot.PreviousRight or SnapshotSlot.NextLeft;
 
     private void AddActivationZone(PageTurnDirection direction)
     {
@@ -1006,7 +1009,11 @@ public sealed class PageSpreadView : Grid
 
     private async void ResumePendingSnapshotRefresh()
     {
-        if (_handlerDisconnected || !IsVisible)
+        var lifecycleRevision = _lifecycleRevision;
+        // Cancellation can be followed by hiding the spread in the same input
+        // callback. Return to that callback before rasterizing pending content.
+        await Task.Yield();
+        if (_handlerDisconnected || !IsVisible || lifecycleRevision != _lifecycleRevision)
         {
             return;
         }

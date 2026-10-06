@@ -1,0 +1,4 @@
+PASS real package and symbols: PageCurl.Core.0.1.0.nupkg; frameworks=['net10.0']
+PASS real package and symbols: PageCurl.Maui.0.1.0.nupkg; frameworks=['net10.0', 'net10.0-android36.0', 'net10.0-ios26.0', 'net10.0-maccatalyst26.0']
+Missing framework net10.0-windows
+PASS incomplete distribution rejected: Windows assets missing, no outputs published

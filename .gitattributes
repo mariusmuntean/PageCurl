@@ -1,0 +1,3 @@
+# Shared package payloads must match across host checkouts.
+/docs/package-readme.md text eol=lf
+/LICENSE text eol=lf

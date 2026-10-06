@@ -5,6 +5,9 @@ two-page spreads like stiff paper. Use the [public documentation](https://marius
 for setup, usage and API reference. Start with the [README](../README.md), then
 use these repository pages for architecture and validation details:
 
+- [Contributing](../CONTRIBUTING.md): focused changes and validation selection.
+- [Support](../SUPPORT.md): issue reporting and the current target baseline.
+- [Security reporting](../SECURITY.md): private vulnerability intake.
 - [Documentation publishing](documentation.md): site sources, validation and publication.
 - [Architecture](architecture.md): project boundaries and frame flow.
 - [Requirements](requirements.md): acceptance criteria and links to automated coverage.

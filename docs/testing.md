@@ -11,6 +11,10 @@ The [showcase polish record](validation/showcase-polish-2026-10-05/README.md)
 covers shared page copy, theme contrast and stronger UI-replay assertions.
 The [production hardening record](validation/production-hardening-2026-10-06/README.md)
 adds interruption, teardown, layout-wait and complete native navigation evidence.
+The [public launch review](validation/public-launch-review-2026-10-06/README.md)
+adds delayed-timer, window/video lifecycle, package assembly and adoption checks.
+The [queued scene-switch review](validation/queued-scene-switching-2026-10-06/README.md)
+measures input waiting before a handler starts and the destination's first paint.
 
 | Layer | Purpose | Automation |
 | --- | --- | --- |
@@ -18,6 +22,7 @@ adds interruption, teardown, layout-wait and complete native navigation evidence
 | Public control API | R04/R09: valid settings, forwarding, retained state and reduced motion | `PublicApiTests` in the neutral MAUI runner |
 | Snapshot/lifecycle | R06–R08: ownership, revisions, failure and cancellation | Neutral runner on one pumped UI thread |
 | Package consumer | R12: usable transitive packages and representative consumer calls | `tools/test-package-consumer.sh` with a temporary external project, mapped local feed and empty package cache |
+| Quick start | Adoptable XAML/code-behind that stays aligned with the public API | `tools/test-quick-start.sh` compiles the guide's unchanged examples in a temporary neutral MAUI project |
 | Native Apple fixture | R02/R06/R08/R10: native snapshot pixels, mesh submission, actual layout and linked demo commands | Built Mac Catalyst assertion host plus bounded `tools/run-native-fixture.py`; driver tests under `tools/tests` |
 | Computer control | R04/R05/R08/R10: real input routing, visible counters, boundaries and live controls | Replayable AX-based journey plus screenshot-based drags and responsive-layout inspection |
 
@@ -67,6 +72,13 @@ the macOS job runs the neutral API/lifecycle suite and builds/runs the native
 fixture, retaining its assertion log even on failure. A workflow definition is
 not evidence of a hosted run. No computer-control or physical-device pass is
 implied by CI configuration.
+
+The distribution job combines the unsigned macOS and Windows package inputs,
+requires all five target frameworks and matching symbols/release identities,
+then restores a consumer from the assembled feed. Tool regressions reject
+mixed versions/revisions, missing assets, conflicting shared files, malformed
+ZIP/OPC structure and stale output directories. Outputs are validated before
+the complete directory is exposed. Signing happens after assembly.
 
 The neutral MAUI runner pumps asynchronous continuations on one thread to
 match the controls' UI-thread contract. Cancellation tests distinguish a
@@ -134,6 +146,9 @@ The neutral MAUI runner covers:
 - book-model spread wiring: the turning sheet's back face is the adjacent
   page it lands on, in both directions;
 - renderer visibility while flat, during a turn, and after cancellation.
+- physical backside failure labels for all six spread slots;
+- delayed timer callbacks using a manually advanced monotonic clock, fresh
+  clocks after cancellation, obsolete timers, and chained animated completion.
 
 Visual validation still matters. Exercise every edge and corner, reversal,
 snap-back, committed settling, backward turns, all lock modes, large pages,
@@ -163,6 +178,10 @@ validation results to distinguish fixture passes from unavailable device gates.
 Native assertions also verify custom backs in landing orientation, shrinking
 mesh tails, the spread edge's UIKit hit target, immediate cancellation during
 Single-to-Spread switching, and ignored inactive completion events.
+Window lifecycle assertions deliver MAUI stop/resume notifications in the
+native host to require immediate turn rollback, unchanged navigation,
+restored commands, paused video, resumed
+active video and continued pause in an inactive video scene.
 
 The immediate-switch regression renders five actual GL drag frames, releases,
 and clicks Spread in the same event-loop turn. It requires the click handler
@@ -177,6 +196,29 @@ dispatch. Separate regressions prohibit idle cancellation redraws and rebuilding
 unchanged Backside content. Neutral tests invalidate refreshes waiting for a turn
 when the scene hides, including an immediate re-entry. Test snapshotters return
 independently owned images for every capture, including concurrent requests.
+
+Queued timing probes originate on a worker while the native UI is busy, so
+the stopwatch includes time waiting for the scene handler. They verify capture
+overlap, bound setup and dispatch waits, and require queue/handler latency below
+150 ms and next dispatch/visible Single paint below 250 ms. Six timings from
+0 to 80 ms cover pending spread capture and eighteen switches after three
+actual GL drag frames. Actual release-to-request delay and destination
+navigation readiness are recorded separately; dispatch is not proof of a draw
+or completed native capture.
+
+Five real live-counter inputs must produce one native capture containing the
+latest value. An exact pixel and resolution comparison against an explicit
+native capture protects visual quality. Separate injected-provider tests cover
+content-kind replacement/re-entry, scene re-entry, window stop and new inputs
+during an unfinished capture. They isolate the demo's queued update from the
+wrapper's legitimate replacement-content refresh and check current publication
+and independent image disposal.
+
+Neutral spread tests also require cancellation to return before pending
+automatic capture starts, with hiding/re-entry discarding that continuation.
+Normal completion and a turn started by a completion subscriber still refresh
+the dirty slots. Ownership checks gate the resumed capture and await its actual
+chain before asserting disposal of the retained turn images.
 
 The iOS smoke terminates its app, stops recording, removes temporary movies,
 and shuts down simulators it boots, including on failures. Existing simulator

@@ -1,0 +1,6 @@
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+PASS PageCurlViewTests
+PASS PageSpreadViewTests
+All 5 MAUI test groups passed.

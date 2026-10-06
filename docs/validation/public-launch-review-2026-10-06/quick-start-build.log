@@ -1,0 +1,14 @@
+  Determining projects to restore...
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Core/PageCurl.Core.csproj (in 39 ms).
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Maui/PageCurl.Maui.csproj (in 109 ms).
+  Restored /private/var/folders/vy/wnlkv7r94fgdgwdy204r6c5h0000gn/T/pagecurl-quick-start.ZRMWwx/QuickStart.csproj (in 119 ms).
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Release/net10.0/PageCurl.Core.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0/PageCurl.Maui.dll
+  QuickStart -> /private/var/folders/vy/wnlkv7r94fgdgwdy204r6c5h0000gn/T/pagecurl-quick-start.ZRMWwx/bin/Release/net10.0/QuickStart.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.72
+PASS documented quick start: unchanged XAML and code-behind compile

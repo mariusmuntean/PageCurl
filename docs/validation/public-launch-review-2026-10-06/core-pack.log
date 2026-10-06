@@ -1,0 +1,5 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Release/net10.0/PageCurl.Core.dll
+  Successfully created package '/Users/marius/Projects/PageCurl/.artifacts/launch-mobile-packages/PageCurl.Core.0.1.0.nupkg'.
+  Successfully created package '/Users/marius/Projects/PageCurl/.artifacts/launch-mobile-packages/PageCurl.Core.0.1.0.snupkg'.

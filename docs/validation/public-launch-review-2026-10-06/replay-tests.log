@@ -1,0 +1,13 @@
+✔ navigation checks accept valid boundaries and restore motion (3.084917ms)
+✔ unchanged counter cannot hide an enabled boundary button (0.408ms)
+✔ last boundary must disable Next even when the counter stops advancing (0.244209ms)
+✔ accessible controls are verified and compact options are closed (0.33575ms)
+✔ a text label cannot stand in for an accessible switch (0.175334ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 68.220084

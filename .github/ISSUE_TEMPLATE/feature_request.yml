@@ -1,0 +1,22 @@
+name: Feature request
+description: Describe a reader use case the current controls do not cover.
+body:
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: Describe the reader behavior you need, the control you use, and the target platforms.
+    validations:
+      required: true
+  - type: textarea
+    id: current_limitation
+    attributes:
+      label: Current limitation
+      description: Explain what prevents the existing API from meeting the use case, including any workaround you tried.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest change that would solve the problem. Include a usage example or sketch when useful.

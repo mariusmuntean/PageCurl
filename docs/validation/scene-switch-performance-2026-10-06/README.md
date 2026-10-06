@@ -1,5 +1,10 @@
 # Rapid scene switching — 6 October 2026
 
+The later [queued-input review](../queued-scene-switching-2026-10-06/README.md)
+found additional delays this run did not measure: waiting before the scene
+handler begins and waiting for a freshly visible GL view to paint. This record
+retains the original measurements and their scope.
+
 The reported lag reproduces with automated native input timing. The previous
 single Single-to-Spread check missed the worst case: switching away from
 Backside 80 ms into a turn delayed the next UI dispatch by 319.4 ms, including

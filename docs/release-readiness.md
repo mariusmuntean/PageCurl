@@ -20,6 +20,11 @@ The [rapid-switch performance record](validation/scene-switch-performance-2026-1
 reproduces the timing-sensitive scene lag and records reduced dispatch latency,
 obsolete-capture suppression and unchanged rendering/snapshot quality contracts.
 
+The [public launch review](validation/public-launch-review-2026-10-06/README.md)
+adds window/video lifecycle and elapsed-time settling regressions, a compilable
+quick start, private security-reporting guidance, and complete package assembly
+in Verify. Its local evidence does not establish a hosted distribution pass.
+
 Before a public or flagship-reader release:
 
 1. Retain clean hosted builds with pinned .NET, MAUI and SkiaSharp, including
@@ -39,6 +44,12 @@ Before a public or flagship-reader release:
    published baseline, and package publication before distribution. Native
    packages packed on one host contain that host's selected targets; assemble
    and verify a complete distribution before publishing a cross-platform package.
+   Verify now retains unsigned host inputs, assembles the complete Core/MAUI
+   packages and symbols, and restores an isolated consumer from that distribution.
+   Retain a fresh hosted pass of that job before signing or publication.
+7. Make the source/tracker publicly accessible and confirm a private security
+   reporting route. Publish packages only after reviewing the complete artifacts
+   and validating consumption from NuGet.org.
 
 The documentation site has a warning-free build, generated API reference and
 checks for local links, anchors and publication boundaries. See

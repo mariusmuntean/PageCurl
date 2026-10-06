@@ -30,6 +30,8 @@ commands.
 - Package consumption: `bash tools/test-package-consumer.sh`. Set
   `PAGECURL_DOTNET` to an explicit workload-enabled CLI if needed. This packs
   neutral packages and tests a temporary external consumer with an isolated cache.
+- Documented quick start: `bash tools/test-quick-start.sh`. It compiles the
+  guide's unchanged XAML and code-behind in a temporary neutral MAUI project.
 - Validation-driver changes:
   `python3 -m unittest discover -s tools/tests -p 'test_*.py'`.
 - iOS simulator evidence: `./tools/ios-smoke.sh`

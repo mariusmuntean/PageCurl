@@ -10,6 +10,11 @@ internal static class PageSpreadViewTests
 {
     public static async Task RunAllAsync()
     {
+        await Cancellation_defers_pending_automatic_capture_and_hiding_discards_it();
+        await Pending_automatic_refresh_resumes_after_normal_completion();
+        await Pending_automatic_refresh_waits_for_a_reentrant_turn();
+        await Explicit_refresh_waiting_for_a_turn_is_obsolete_after_hiding();
+        await Synchronous_capture_services_queued_hiding_before_the_next_slot();
         await Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
         await Cancellation_handler_can_start_a_replacement_spread_turn();
         await Activation_release_and_cancel_finish_only_the_owned_pointer();
@@ -26,12 +31,183 @@ internal static class PageSpreadViewTests
         await Final_cancelled_capture_propagates_and_disposes_returned_image();
         await Refresh_requested_during_a_turn_runs_after_completion();
         await Failed_capture_keeps_the_slot_dirty_and_a_later_refresh_retries_only_it();
+        await Failed_capture_reports_the_physical_sheet_back_roles();
         await Refresh_captures_only_slots_with_changed_content();
         await Every_content_slot_blocks_only_its_turn_until_recaptured();
         await Forward_turn_shows_the_adjacent_page_on_the_sheet_back();
         await Backward_turn_shows_the_adjacent_page_on_the_sheet_back();
         Overlay_surface_preserves_the_stationary_page();
         Handler_teardown_restores_both_static_pages();
+    }
+
+    private static async Task Cancellation_defers_pending_automatic_capture_and_hiding_discards_it()
+    {
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        foreach (var reveal in new[] { false, true })
+        {
+            var snapshotter = new CountingSnapshotter();
+            var spread = await CreateReadySpreadAsync(snapshotter);
+            try
+            {
+                BeginSettlingTurn(spread, direction);
+                if (direction == PageTurnDirection.Forward) spread.RightContent = new Grid();
+                else spread.LeftContent = new Grid();
+                TestAssert.Equal(4, snapshotter.CaptureCount);
+
+                spread.CancelInteraction();
+                TestAssert.True(snapshotter.CaptureCount == 4,
+                    "Cancellation synchronously rasterized pending outgoing content.");
+                spread.IsVisible = false;
+                if (reveal) spread.IsVisible = true;
+                // Run the deferred completion continuation, as the UI dispatcher would.
+                await Task.Yield();
+                await CurrentRefreshChain(spread);
+                TestAssert.True(snapshotter.CaptureCount == 4,
+                    "The obsolete completion continuation captured a hidden or re-entered spread.");
+
+                spread.IsVisible = true;
+                await spread.RefreshSnapshotAsync();
+                TestAssert.Equal(8, snapshotter.CaptureCount);
+                TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+            }
+            finally { InvokeHandlerChanged(spread); }
+        }
+    }
+
+    private static async Task Pending_automatic_refresh_resumes_after_normal_completion()
+    {
+        var snapshotter = new CountingSnapshotter();
+        var spread = await CreateReadySpreadAsync(snapshotter);
+        try
+        {
+            BeginSettlingTurn(spread, PageTurnDirection.Forward);
+            spread.RightContent = new Grid();
+            TestAssert.TickUntilIdle(spread.Overlay.Controller);
+            TestAssert.True(snapshotter.CaptureCount == 4,
+                "Completion synchronously rasterized pending content.");
+            await Task.Yield();
+            await CurrentRefreshChain(spread);
+            TestAssert.True(snapshotter.CaptureCount == 5,
+                "Completion did not refresh exactly the dirty slot.");
+            TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+        }
+        finally { InvokeHandlerChanged(spread); }
+    }
+
+    private static async Task Pending_automatic_refresh_waits_for_a_reentrant_turn()
+    {
+        var snapshotter = new CountingSnapshotter();
+        var spread = await CreateReadySpreadAsync(snapshotter);
+        var completions = 0;
+        spread.PageTurnCompleted += (_, _) =>
+        {
+            if (++completions == 1) BeginSettlingTurn(spread, PageTurnDirection.Backward);
+        };
+        try
+        {
+            BeginSettlingTurn(spread, PageTurnDirection.Forward);
+            spread.RightContent = new Grid();
+            spread.CancelInteraction();
+            TestAssert.Equal(PageTurnState.Settling, spread.Overlay.Controller.Snapshot.State);
+            await Task.Yield();
+            var pending = CurrentRefreshChain(spread);
+            TestAssert.False(pending.IsCompleted,
+                "Pending capture bypassed the turn started by a completion subscriber.");
+            TestAssert.Equal(4, snapshotter.CaptureCount);
+            TestAssert.TickUntilIdle(spread.Overlay.Controller);
+            await pending;
+            TestAssert.Equal(2, completions);
+            TestAssert.Equal(5, snapshotter.CaptureCount);
+            TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+        }
+        finally { InvokeHandlerChanged(spread); }
+    }
+
+    private static async Task Explicit_refresh_waiting_for_a_turn_is_obsolete_after_hiding()
+    {
+        foreach (var reveal in new[] { false, true })
+        {
+            var snapshotter = new CountingSnapshotter();
+            var spread = await CreateReadySpreadAsync(snapshotter);
+            try
+            {
+                BeginSettlingTurn(spread, PageTurnDirection.Forward);
+                var refresh = spread.RefreshSnapshotAsync();
+                TestAssert.False(refresh.IsCompleted);
+                spread.CancelInteraction();
+                spread.IsVisible = false;
+                if (reveal) spread.IsVisible = true;
+                await refresh;
+                TestAssert.True(snapshotter.CaptureCount == 4,
+                    "An explicit refresh waiting on a turn captured obsolete outgoing content.");
+                spread.IsVisible = true;
+                await spread.RefreshSnapshotAsync();
+                TestAssert.Equal(8, snapshotter.CaptureCount);
+            }
+            finally { InvokeHandlerChanged(spread); }
+        }
+    }
+
+    private static Task CurrentRefreshChain(PageSpreadView spread) =>
+        (Task)typeof(PageSpreadView).GetField("_refreshChain", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(spread)!;
+
+    private static async Task Synchronous_capture_services_queued_hiding_before_the_next_slot()
+    {
+        var snapshotter = new DispatchingSnapshotter();
+        var spread = CreateSpread(snapshotter);
+        spread.PreviousRightContent = new Grid();
+        spread.NextLeftContent = new Grid();
+        var failures = 0;
+        spread.SnapshotFailed += (_, _) => failures++;
+        try
+        {
+            await spread.RefreshSnapshotAsync();
+            TestAssert.Equal(6, snapshotter.Images.Count);
+            TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+            var hidden = false;
+            snapshotter.AfterNextCapture = () =>
+            {
+                hidden = true;
+                spread.IsVisible = false;
+            };
+
+            var refresh = spread.RefreshSnapshotAsync();
+            TestAssert.Equal(7, snapshotter.Images.Count);
+            TestAssert.False(hidden, "The queued hide ran inside synchronous capture.");
+            await refresh;
+            TestAssert.True(hidden, "Spread capture did not service queued UI input.");
+            TestAssert.Equal(7, snapshotter.Images.Count);
+            TestAssert.False(spread.CanTurnForward || spread.CanTurnBackward,
+                "Hiding during capture published navigation readiness.");
+            TestAssert.Equal(0, failures);
+            TestAssert.Equal(IntPtr.Zero, snapshotter.Images[0].Handle);
+            // The first replacement was current when captured. Hiding retains
+            // it and the five existing images without capturing outgoing slots.
+            foreach (var image in snapshotter.Images.Skip(1))
+                TestAssert.True(image.Handle != IntPtr.Zero, "Hiding disposed a retained spread snapshot.");
+        }
+        finally { InvokeHandlerChanged(spread); }
+        foreach (var image in snapshotter.Images)
+            TestAssert.Equal(IntPtr.Zero, image.Handle);
+    }
+
+    private sealed class DispatchingSnapshotter : IPageContentSnapshotter
+    {
+        public List<SKImage> Images { get; } = new();
+        public Action? AfterNextCapture { get; set; }
+
+        public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
+        {
+            var image = MakeImage(4);
+            Images.Add(image);
+            if (AfterNextCapture is { } queued)
+            {
+                AfterNextCapture = null;
+                SynchronizationContext.Current!.Post(_ => queued(), null);
+            }
+            return Task.FromResult(image);
+        }
     }
 
     private static async Task Cancellation_handler_can_start_a_replacement_spread_turn()
@@ -375,9 +551,19 @@ internal static class PageSpreadViewTests
             TestAssert.True(back.Handle != IntPtr.Zero, "The active back snapshot was disposed.");
             TestAssert.True(under.Handle != IntPtr.Zero, "The active destination snapshot was disposed.");
             TestAssert.Same(front, spread.Overlay.FrontImage!);
+            var resumedCapture = snapshotter.DelayNext();
             TestAssert.TickUntilIdle(spread.Overlay.Controller);
-            await refresh;
             TestAssert.Null(spread.Overlay.FrontImage);
+            await Task.Yield();
+            TestAssert.True(front.Handle != IntPtr.Zero, "The retained front snapshot was disposed before capture resumed.");
+            TestAssert.True(back.Handle != IntPtr.Zero, "The retained back snapshot was disposed before capture resumed.");
+            TestAssert.True(under.Handle != IntPtr.Zero, "The retained destination snapshot was disposed before capture resumed.");
+            resumedCapture.SetResult(MakeImage(4));
+            await refresh;
+            // Completion schedules a separate automatic drain. Await its actual
+            // chain before checking disposal rather than assuming synchronous capture.
+            await Task.Yield();
+            await CurrentRefreshChain(spread);
             TestAssert.Equal(IntPtr.Zero, front.Handle);
             TestAssert.Equal(IntPtr.Zero, back.Handle);
             TestAssert.Equal(IntPtr.Zero, under.Handle);
@@ -548,6 +734,43 @@ internal static class PageSpreadViewTests
         TestAssert.True(spread.CanTurnForward);
         TestAssert.True(spread.CanTurnBackward);
         TestAssert.Equal(6, snapshotter.CaptureCount);
+    }
+
+    private static async Task Failed_capture_reports_the_physical_sheet_back_roles()
+    {
+        var snapshotter = new SequencedSnapshotter();
+        snapshotter.EnqueueImages(6);
+        var spread = CreateSpread(snapshotter);
+        spread.PreviousRightContent = new Grid();
+        spread.NextLeftContent = new Grid();
+        await spread.RefreshSnapshotAsync();
+
+        var slots = new (BindableProperty Property, bool IsBackside)[]
+        {
+            (PageSpreadView.LeftContentProperty, false),
+            (PageSpreadView.RightContentProperty, false),
+            (PageSpreadView.PreviousLeftContentProperty, false),
+            (PageSpreadView.NextRightContentProperty, false),
+            (PageSpreadView.PreviousRightContentProperty, true),
+            (PageSpreadView.NextLeftContentProperty, true),
+        };
+        var failures = new List<PageSnapshotFailedEventArgs>();
+        spread.SnapshotFailed += (_, args) => failures.Add(args);
+
+        foreach (var (property, isBackside) in slots)
+        {
+            var replacement = new Grid();
+            spread.SetValue(property, replacement);
+            var failure = snapshotter.EnqueueDelayedFailure();
+            var refresh = DrainAsync(spread);
+            await failure.Started;
+            failure.Fail(new InvalidOperationException("capture failed"));
+            await refresh;
+
+            var failed = failures[^1];
+            TestAssert.Same(replacement, failed.Content);
+            TestAssert.Equal(isBackside, failed.IsBackside);
+        }
     }
 
     private static async Task Refresh_captures_only_slots_with_changed_content()

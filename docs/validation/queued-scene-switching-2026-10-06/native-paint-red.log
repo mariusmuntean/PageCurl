@@ -1,0 +1,21 @@
+PASS red 200x200 #fff90000
+PASS blue 200x200 #ff0000f9
+PASS white 200x200 #fff9f9f9
+PASS gray 200x200 #ff7d7d7d
+PASS half-red 200x200 #80f90000
+PASS Display-P3 red
+PASS all native snapshot tests
+PASS custom backside reads in landing orientation
+PASS shrinking mesh clears stale triangles
+MESH_SUBMISSION frames=1000 elapsed_ms=11261.6 managed_bytes=106944 rss_delta_bytes=1163264
+PASS window stop immediately cancels a turn without advancing navigation
+PASS window resume restores animated navigation
+PASS window stop pauses native video playback
+PASS window resume restores active native video playback
+PASS window resume leaves inactive video paused
+QUEUED_SWITCH Spread->Single delay_ms=0 queue_ms=0.4 handler_ms=13.0 next_dispatch_ms=36.8 first_paint_ms=753.2 handler_captures=0
+PASS pending spread cancellation avoids outgoing native capture (0)
+FAIL demo System.InvalidOperationException: Queued spread switch exceeded its response budget (0).
+   at PageCurl.Apple.Tests.SceneSwitchTimingTests.Require(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/SceneSwitchTimingTests.cs:line 200
+   at PageCurl.Apple.Tests.SceneSwitchTimingTests.RunAsync(Window window, List`1 results) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/SceneSwitchTimingTests.cs:line 47
+   at PageCurl.Apple.Tests.FixturePage.Run(Object sender, EventArgs args) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/FixturePage.cs:line 76

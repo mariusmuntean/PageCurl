@@ -42,6 +42,9 @@ public partial class MainPage : ContentPage
     private bool _pageActive;
     private int _lifecycleRevision;
     private int _sceneRevision;
+    private Window? _observedWindow;
+    private (int Lifecycle, int Scene)? _interactiveRefreshEpoch;
+    private Task? _interactiveRefreshTask;
 
     public MainPage()
     {
@@ -72,6 +75,7 @@ public partial class MainPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        ObserveWindow(Window);
         _pageActive = true;
         _lifecycleRevision++;
         EnsureResources();
@@ -81,6 +85,7 @@ public partial class MainPage : ContentPage
 
     protected override void OnDisappearing()
     {
+        ObserveWindow(null);
         _pageActive = false;
         _lifecycleRevision++;
         CancelAllInteractions();
@@ -95,6 +100,36 @@ public partial class MainPage : ContentPage
         _pageSet?.Dispose();
         _pageSet = null;
         base.OnDisappearing();
+    }
+
+    private void ObserveWindow(Window? window)
+    {
+        if (ReferenceEquals(_observedWindow, window)) return;
+        if (_observedWindow is not null)
+        {
+            _observedWindow.Stopped -= OnWindowStopped;
+            _observedWindow.Resumed -= OnWindowResumed;
+        }
+        _observedWindow = window;
+        if (window is not null)
+        {
+            window.Stopped += OnWindowStopped;
+            window.Resumed += OnWindowResumed;
+        }
+    }
+
+    private void OnWindowStopped(object? sender, EventArgs e)
+    {
+        _lifecycleRevision++;
+        CancelAllInteractions();
+        _videoPage?.SetActive(false);
+    }
+
+    private void OnWindowResumed(object? sender, EventArgs e)
+    {
+        if (_pageActive)
+            _videoPage?.SetActive(_scene == ShowcaseScene.Content
+                && _contentKind == ShowcaseContentKind.Video);
     }
 
     private void OnSceneClicked(object? sender, EventArgs e)
@@ -294,6 +329,11 @@ public partial class MainPage : ContentPage
         if (sender is Button { CommandParameter: string value }
             && Enum.TryParse<ShowcaseContentKind>(value, out var contentKind))
         {
+            if (_contentKind != contentKind)
+            {
+                _sceneRevision++;
+                StatusLabel.Text = "Ready";
+            }
             _contentKind = contentKind;
             _videoPage?.SetActive(contentKind == ShowcaseContentKind.Video);
             UpdateContentScene();
@@ -458,8 +498,34 @@ public partial class MainPage : ContentPage
         _videoPage = new VideoPosterPageView();
     }
 
-    private async void OnInteractiveContentChanged(object? sender, EventArgs e) =>
-        await RefreshContentAsync("Live content updated", deferUntilLayout: true);
+    private async void OnInteractiveContentChanged(object? sender, EventArgs e)
+    {
+        var epoch = (_lifecycleRevision, _sceneRevision);
+        if (_interactiveRefreshEpoch != epoch)
+        {
+            _interactiveRefreshEpoch = epoch;
+            _interactiveRefreshTask = RefreshInteractiveContentAsync(epoch);
+        }
+        await _interactiveRefreshTask!;
+    }
+
+    private async Task RefreshInteractiveContentAsync((int Lifecycle, int Scene) epoch)
+    {
+        // Several inputs can arrive in one dispatch. Present their live updates
+        // before capturing the latest state once, rather than queuing one native
+        // rasterization per click. Explicit Refresh keeps its direct path.
+        await Task.Yield();
+        await Task.Delay(16);
+        if (_interactiveRefreshEpoch == epoch)
+        {
+            _interactiveRefreshEpoch = null;
+            _interactiveRefreshTask = null;
+        }
+        if (!_pageActive || epoch != (_lifecycleRevision, _sceneRevision)
+            || _scene != ShowcaseScene.Content
+            || !ReferenceEquals(ContentPageView.FrontContent, _interactivePage)) return;
+        await RefreshContentAsync("Live content updated");
+    }
 
     private void UpdateActiveSceneContent()
     {

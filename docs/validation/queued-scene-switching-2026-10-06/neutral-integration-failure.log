@@ -1,0 +1,20 @@
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+PASS PageCurlViewTests
+FAIL: Expected 0, but was 502529332928.
+System.InvalidOperationException: Expected 0, but was 502529332928.
+   at PageCurl.Maui.Tests.TestAssert.Equal[T](T expected, T actual) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 31
+   at PageCurl.Maui.Tests.PageSpreadViewTests.Active_turn_keeps_all_overlay_images_alive() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 498
+   at PageCurl.Maui.Tests.PageSpreadViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 26
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 41
+Unhandled exception. System.InvalidOperationException: The collection has been marked as complete with regards to additions.
+   at System.Collections.Concurrent.BlockingCollection`1.TryAddWithNoTimeValidation(T item, Int32 millisecondsTimeout, CancellationToken cancellationToken)
+   at System.Collections.Concurrent.BlockingCollection`1.Add(T item)
+   at PageCurl.Maui.Tests.Program.TestUiContext.Post(SendOrPostCallback callback, Object state) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 62
+   at System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1.AwaitUnsafeOnCompleted[TAwaiter](TAwaiter& awaiter, IAsyncStateMachineBox box)
+--- End of stack trace from previous location ---
+   at System.Threading.Tasks.Task.<>c.<ThrowAsync>b__124_1(Object state)
+   at System.Threading.ThreadPoolWorkQueue.Dispatch()
+   at System.Threading.PortableThreadPool.WorkerThread.WorkerThreadStart()
+   at System.Threading.Thread.StartCallback()

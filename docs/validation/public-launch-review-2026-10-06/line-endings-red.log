@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_windows_checkout_preserves_packaged_text_bytes (test_package_line_endings.PackageLineEndingTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/marius/Projects/PageCurl/tools/tests/test_package_line_endings.py", line 38, in test_windows_checkout_preserves_packaged_text_bytes
+    self.assertEqual((export / name).read_bytes(), (ROOT / name).read_bytes(),
+AssertionError: b'# PageCurl\r\n\r\nPage turns for images, live .NET M[1912 chars]\r\n' != b'# PageCurl\n\nPage turns for images, live .NET MAUI [1832 chars]l)\n' : Windows checkout changes shared package payload: docs/package-readme.md
+
+----------------------------------------------------------------------
+Ran 1 test in 0.042s
+
+FAILED (failures=1)

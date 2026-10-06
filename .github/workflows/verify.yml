@@ -31,6 +31,8 @@ jobs:
           bash tools/check-workflow-projects.sh
           python3 -m unittest discover -s tools/tests -p 'test_*.py'
           node --test tests/computer-control/pagecurl-checks.test.js
+      - name: Compile documented quick start
+        run: bash tools/test-quick-start.sh
       - name: Verify isolated public package consumer
         run: bash tools/test-package-consumer.sh
 
@@ -67,11 +69,20 @@ jobs:
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-android
       - name: Build Mac Catalyst demo
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
+      - name: Pack Core package
+        run: dotnet pack src/PageCurl.Core/PageCurl.Core.csproj -c Release --no-build --output .artifacts/packages
       - name: Pack native library assets
         run: dotnet pack src/PageCurl.Maui/PageCurl.Maui.csproj -c Release --output .artifacts/packages -m:1 -nr:false
       - name: Check native package assets
         shell: bash
         run: python3 tools/check-packages.py .artifacts/packages/PageCurl.Maui.*.nupkg net10.0 net10.0-android net10.0-ios net10.0-maccatalyst
+      - name: Retain macOS package inputs
+        uses: actions/upload-artifact@v7
+        with:
+          name: packages-mobile
+          path: .artifacts/packages/*.*nupkg
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Build native regression fixture
         run: dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Debug -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
       - name: Run native regression assertions
@@ -82,6 +93,7 @@ jobs:
         with:
           name: native-assertions
           path: .artifacts/native-tests.log
+          include-hidden-files: true
           if-no-files-found: warn
 
   windows:
@@ -113,3 +125,43 @@ jobs:
         run: |
           $package = Get-ChildItem .artifacts/packages/PageCurl.Maui.*.nupkg | Select-Object -First 1
           python tools/check-packages.py $package.FullName net10.0-windows
+
+      - name: Retain Windows package inputs
+        uses: actions/upload-artifact@v7
+        with:
+          name: packages-windows
+          path: .artifacts/packages/*.*nupkg
+          include-hidden-files: true
+          if-no-files-found: error
+
+  distribution:
+    needs: [core, mobile, windows]
+    runs-on: ubuntu-latest
+    env:
+      MSBuildEnableWorkloadResolver: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Download macOS package inputs
+        uses: actions/download-artifact@v8
+        with:
+          name: packages-mobile
+          path: .artifacts/package-inputs/mobile
+      - name: Download Windows package inputs
+        uses: actions/download-artifact@v8
+        with:
+          name: packages-windows
+          path: .artifacts/package-inputs/windows
+      - name: Assemble complete unsigned distribution
+        run: python3 tools/assemble-packages.py --output .artifacts/distribution .artifacts/package-inputs/mobile .artifacts/package-inputs/windows
+      - name: Verify isolated consumer of the assembled distribution
+        run: bash tools/test-package-consumer.sh .artifacts/distribution
+      - name: Retain validated distribution
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-distribution
+          path: .artifacts/distribution/*.*nupkg
+          include-hidden-files: true
+          if-no-files-found: error

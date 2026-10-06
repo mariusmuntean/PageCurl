@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible build, interaction, rendering or lifecycle problem.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. For a suspected vulnerability, follow SECURITY.md and request a private reporting route without posting exploit details.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the package version or commit, target framework, OS version, device or simulator model, and SDK/workload versions for build failures.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give the smallest sample and the steps needed to reproduce. Name the control and turn direction; include cancellation, refresh or scene-switch timing when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and visual evidence
+      description: For build failures, include the completed command output and first actual error. For rendering problems, show the active turn. Remove credentials and personal content from attachments.

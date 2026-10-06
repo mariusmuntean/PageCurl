@@ -9,6 +9,7 @@
     <Description>Platform-independent page-turn interaction, navigation and developable page geometry.</Description>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+    <None Include="../../docs/package-readme.md" Pack="true" PackagePath="README.md" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="LICENSE" />
   </ItemGroup>
 </Project>

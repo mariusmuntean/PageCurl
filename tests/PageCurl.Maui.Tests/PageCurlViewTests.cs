@@ -1,6 +1,10 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui;
+using Microsoft.Maui.Dispatching;
+using Microsoft.Maui.Graphics;
 using PageCurl.Core;
 using SkiaSharp;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace PageCurl.Maui.Tests;
@@ -26,6 +30,7 @@ internal static class PageCurlViewTests
         Cancellation_finishes_before_a_view_is_hidden();
         Renderer_uses_the_stage_instead_of_the_page_frame();
         First_programmatic_turn_uses_the_live_page_frame();
+        Delayed_animation_timer_advances_by_elapsed_time();
         Interaction_properties_forward_to_the_renderer();
         Owned_release_and_cancel_remain_handled();
         Activation_layer_preserves_live_content_input();
@@ -367,6 +372,69 @@ internal static class PageCurlViewTests
         TestAssert.False(view.Renderer.IsVisible);
     }
 
+    private static void Delayed_animation_timer_advances_by_elapsed_time()
+    {
+        var previousDispatcher = DispatcherProvider.Current;
+        var dispatcher = new ManualDispatcher();
+        var timestamp = 0L;
+        DispatcherProvider.SetCurrent(new ManualDispatcherProvider(dispatcher));
+        var view = new PageTurnView { AnimationTimestampProvider = () => timestamp };
+        try
+        {
+            view.Handler = new ManualViewHandler(view);
+            TestAssert.True(view.TryTurn(PageTurnDirection.Forward, new(400, 500)));
+            var timer = dispatcher.Timer!;
+            TestAssert.Equal(TimeSpan.FromMilliseconds(16), timer.Interval);
+
+            // Simulate a callback that arrives after the UI thread was busy.
+            // The controller clamps an elapsed sample to 100 ms, so a delayed
+            // callback must make materially more progress than one 60 Hz step.
+            timestamp = Stopwatch.Frequency / 5;
+            timer.Fire();
+
+            TestAssert.True(
+                view.Controller.Snapshot.Progress > 0.1f,
+                $"Delayed animation callback advanced only {view.Controller.Snapshot.Progress:F3}.");
+
+            view.CancelInteraction();
+            timestamp = Stopwatch.Frequency;
+            TestAssert.True(view.TryTurn(PageTurnDirection.Backward, new(400, 500)));
+            var replacementTimer = dispatcher.Timer!;
+            replacementTimer.Fire();
+            TestAssert.True(
+                view.Controller.Snapshot.Progress < 0.1f,
+                "A new animation loop reused the prior loop's elapsed timestamp.");
+
+            // The cancelled timer's generation must not advance the replacement
+            // turn after a newer timer has taken ownership.
+            timer.Fire();
+            TestAssert.True(
+                view.Controller.Snapshot.Progress < 0.1f,
+                "A cancelled animation timer advanced a replacement turn.");
+
+            var completions = 0;
+            view.PageTurnCompleted += (_, e) =>
+            {
+                TestAssert.True(e.Committed);
+                if (++completions == 1)
+                    TestAssert.True(view.TryTurn(PageTurnDirection.Forward, new(400, 500)));
+            };
+            for (var frame = 0; frame < 100 && replacementTimer.IsRunning; frame++)
+            {
+                timestamp += Stopwatch.Frequency / 10;
+                replacementTimer.Fire();
+            }
+            TestAssert.Equal(2, completions);
+            TestAssert.False(replacementTimer.IsRunning);
+            TestAssert.Equal(PageTurnState.Idle, view.Controller.Snapshot.State);
+        }
+        finally
+        {
+            view.Handler = null;
+            DispatcherProvider.SetCurrent(previousDispatcher);
+        }
+    }
+
     private static void Owned_release_and_cancel_remain_handled()
     {
         foreach (var action in new[] { SkiaSharp.Views.Maui.SKTouchAction.Released, SkiaSharp.Views.Maui.SKTouchAction.Cancelled })
@@ -559,5 +627,77 @@ internal static class PageCurlViewTests
             cancellation.Cancel();
             return Task.FromResult(ReturnedImage);
         }
+    }
+
+    private sealed class ManualDispatcherProvider(IDispatcher dispatcher) : IDispatcherProvider
+    {
+        public IDispatcher GetForCurrentThread() => dispatcher;
+    }
+
+    private sealed class ManualDispatcher : IDispatcher
+    {
+        public ManualTimer? Timer { get; private set; }
+
+        public bool IsDispatchRequired => false;
+
+        public bool Dispatch(Action action)
+        {
+            action();
+            return true;
+        }
+
+        public bool DispatchDelayed(TimeSpan delay, Action action) => true;
+
+        public IDispatcherTimer CreateTimer() => Timer = new ManualTimer();
+    }
+
+    private sealed class ManualTimer : IDispatcherTimer
+    {
+        public TimeSpan Interval { get; set; }
+
+        public bool IsRepeating { get; set; }
+
+        public bool IsRunning { get; private set; }
+
+        public event EventHandler? Tick;
+
+        public void Start() => IsRunning = true;
+
+        public void Stop() => IsRunning = false;
+
+        public void Fire()
+        {
+            TestAssert.True(IsRunning, "The animation timer did not start.");
+            Tick?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private sealed class ManualViewHandler(PageTurnView view) : IViewHandler
+    {
+        public object PlatformView { get; } = new object();
+
+        public IView VirtualView => view;
+
+        IElement IElementHandler.VirtualView => view;
+
+        public IMauiContext MauiContext => null!;
+
+        public bool HasContainer { get; set; }
+
+        public object? ContainerView => null;
+
+        public void SetMauiContext(IMauiContext mauiContext) { }
+
+        public void SetVirtualView(IElement view) { }
+
+        public void UpdateValue(string property) { }
+
+        public void Invoke(string command, object? args) { }
+
+        public void DisconnectHandler() { }
+
+        public Size GetDesiredSize(double widthConstraint, double heightConstraint) => Size.Zero;
+
+        public void PlatformArrange(Rect frame) { }
     }
 }

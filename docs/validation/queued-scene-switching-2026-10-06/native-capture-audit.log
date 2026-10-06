@@ -1,0 +1,155 @@
+PASS red 200x200 #fff90000
+PASS blue 200x200 #ff0000f9
+PASS white 200x200 #fff9f9f9
+PASS gray 200x200 #ff7d7d7d
+PASS half-red 200x200 #80f90000
+PASS Display-P3 red
+PASS all native snapshot tests
+PASS custom backside reads in landing orientation
+PASS shrinking mesh clears stale triangles
+MESH_SUBMISSION frames=1000 elapsed_ms=11176.2 managed_bytes=106944 rss_delta_bytes=507904
+PASS window stop immediately cancels a turn without advancing navigation
+PASS window resume restores animated navigation
+PASS window stop pauses native video playback
+PASS window resume restores active native video playback
+PASS window resume leaves inactive video paused
+PASS pending Add one ignores Interactive-to-Image replacement
+PASS pending Add one ignores Interactive-to-Video replacement
+PASS pending Add one ignores Interactive-to-Image-to-Interactive re-entry
+PASS pending Add one ignores hidden scene re-entry
+PASS pending Add one ignores window stop
+PASS counter input during suspended capture coalesces and publishes the latest value
+QUEUED_SWITCH Spread->Single delay_ms=0 queue_ms=9.4 handler_ms=14.9 next_dispatch_ms=49.3 first_paint_ms=47.3 handler_captures=0
+PASS pending spread cancellation avoids outgoing native capture (0)
+PASS hidden spread discards pending automatic capture (0)
+QUEUED_SWITCH Spread->Single delay_ms=8 queue_ms=0.0 handler_ms=14.9 next_dispatch_ms=38.9 first_paint_ms=37.0 handler_captures=0
+PASS pending spread cancellation avoids outgoing native capture (8)
+PASS hidden spread discards pending automatic capture (8)
+QUEUED_SWITCH Spread->Single delay_ms=16 queue_ms=0.0 handler_ms=14.7 next_dispatch_ms=38.2 first_paint_ms=36.6 handler_captures=0
+PASS pending spread cancellation avoids outgoing native capture (16)
+PASS hidden spread discards pending automatic capture (16)
+QUEUED_SWITCH Spread->Single delay_ms=24 queue_ms=32.1 handler_ms=13.2 next_dispatch_ms=67.8 first_paint_ms=66.2 handler_captures=0
+PASS pending spread cancellation avoids outgoing native capture (24)
+PASS hidden spread discards pending automatic capture (24)
+QUEUED_SWITCH Spread->Single delay_ms=40 queue_ms=13.2 handler_ms=13.1 next_dispatch_ms=48.5 first_paint_ms=46.9 handler_captures=0
+PASS pending spread cancellation avoids outgoing native capture (40)
+PASS hidden spread discards pending automatic capture (40)
+QUEUED_SWITCH Spread->Single delay_ms=80 queue_ms=5.4 handler_ms=12.5 next_dispatch_ms=41.4 first_paint_ms=39.7 handler_captures=0
+PASS pending spread cancellation avoids outgoing native capture (80)
+PASS hidden spread discards pending automatic capture (80)
+QUEUED_DRAG_SWITCH Single->Spread delay_ms=0 release_to_request_ms=0.3 queue_ms=0.0 handler_ms=12.2 next_dispatch_ms=32.8 navigation_ready_ms=318.2
+QUEUED_DRAG_SWITCH Single->Content delay_ms=0 release_to_request_ms=0.2 queue_ms=31.4 handler_ms=19.9 next_dispatch_ms=98.5 navigation_ready_ms=98.6
+QUEUED_DRAG_SWITCH Single->Backside delay_ms=0 release_to_request_ms=0.2 queue_ms=31.2 handler_ms=29.5 next_dispatch_ms=106.1 navigation_ready_ms=106.3
+QUEUED_DRAG_SWITCH Single->Spread delay_ms=8 release_to_request_ms=10.3 queue_ms=21.0 handler_ms=12.6 next_dispatch_ms=54.4 navigation_ready_ms=325.3
+QUEUED_DRAG_SWITCH Single->Content delay_ms=8 release_to_request_ms=10.4 queue_ms=21.0 handler_ms=11.9 next_dispatch_ms=55.2 navigation_ready_ms=175.4
+QUEUED_DRAG_SWITCH Single->Backside delay_ms=8 release_to_request_ms=10.3 queue_ms=21.0 handler_ms=12.2 next_dispatch_ms=55.5 navigation_ready_ms=191.4
+QUEUED_DRAG_SWITCH Single->Spread delay_ms=16 release_to_request_ms=18.3 queue_ms=12.9 handler_ms=12.5 next_dispatch_ms=45.8 navigation_ready_ms=319.0
+QUEUED_DRAG_SWITCH Single->Content delay_ms=16 release_to_request_ms=18.4 queue_ms=13.2 handler_ms=14.1 next_dispatch_ms=48.4 navigation_ready_ms=170.4
+QUEUED_DRAG_SWITCH Single->Backside delay_ms=16 release_to_request_ms=18.3 queue_ms=13.1 handler_ms=12.0 next_dispatch_ms=49.4 navigation_ready_ms=185.1
+QUEUED_DRAG_SWITCH Single->Spread delay_ms=24 release_to_request_ms=26.3 queue_ms=5.0 handler_ms=12.8 next_dispatch_ms=38.4 navigation_ready_ms=309.5
+QUEUED_DRAG_SWITCH Single->Content delay_ms=24 release_to_request_ms=26.3 queue_ms=5.3 handler_ms=13.3 next_dispatch_ms=40.0 navigation_ready_ms=159.7
+QUEUED_DRAG_SWITCH Single->Backside delay_ms=24 release_to_request_ms=26.3 queue_ms=5.2 handler_ms=13.2 next_dispatch_ms=18.6 navigation_ready_ms=18.7
+QUEUED_DRAG_SWITCH Single->Spread delay_ms=40 release_to_request_ms=42.3 queue_ms=22.0 handler_ms=12.3 next_dispatch_ms=55.2 navigation_ready_ms=343.3
+QUEUED_DRAG_SWITCH Single->Content delay_ms=40 release_to_request_ms=42.3 queue_ms=21.8 handler_ms=11.8 next_dispatch_ms=54.7 navigation_ready_ms=54.9
+QUEUED_DRAG_SWITCH Single->Backside delay_ms=40 release_to_request_ms=42.3 queue_ms=22.6 handler_ms=12.0 next_dispatch_ms=55.3 navigation_ready_ms=55.5
+QUEUED_DRAG_SWITCH Single->Spread delay_ms=80 release_to_request_ms=82.4 queue_ms=17.5 handler_ms=12.6 next_dispatch_ms=53.3 navigation_ready_ms=334.7
+QUEUED_DRAG_SWITCH Single->Content delay_ms=80 release_to_request_ms=82.3 queue_ms=14.9 handler_ms=11.8 next_dispatch_ms=47.7 navigation_ready_ms=48.3
+QUEUED_DRAG_SWITCH Single->Backside delay_ms=80 release_to_request_ms=82.4 queue_ms=15.3 handler_ms=11.7 next_dispatch_ms=47.3 navigation_ready_ms=47.4
+PASS queued scene switches stay responsive after rendered Single drags
+QUEUED_CAPTURE_SWITCH Spread->Single queue_ms=65.8 handler_ms=11.7 next_dispatch_ms=97.5 first_paint_ms=96.0 source_captures=1
+PASS queued scene input interrupts spread capture between native slots
+QUEUED_LIVE_SWITCH clicks=5 queue_ms=73.0 handler_ms=11.6 next_dispatch_ms=104.3 first_paint_ms=102.8 source_captures=1
+PASS live counter burst captures the latest content once
+PASS queued scene input stays responsive during live refresh
+PASS coalesced live refresh retains current native pixels and resolution
+RESOURCE_CREATE elapsed_ms=4.9 managed_bytes=36736
+PASS Light option text contrast 5.72:1
+PASS Dark option text contrast 6.53:1
+PASS page 01 back is page 02
+PASS curl surface spans stage
+SINGLE_PAINT frames=5 mean_ms=30.7 last_ms=32.1
+IMMEDIATE_SWITCH handler_ms=52.4 dispatcher_ms=102.9
+SNAPSHOT_CAPTURE count=2 total_ms=136.6
+PASS immediate switch stays responsive
+PASS scene switch cancels immediately
+PASS inactive completion ignored
+PASS spread ready after Single drag
+ZONE logical={X=1586 Y=0 Width=52 Height=1092} native={{1586, 0}, {52, 1092}} center={1845.5, 669} hit=SKCanvasView enabled=True
+PASS spread outer edge receives input
+PASS idle cancellation does not request redundant paints
+PASS scene re-entry retains unchanged Backside content
+RAPID_SWITCH Single->Spread delay_ms=0 handler_ms=11.5 dispatcher_ms=14.7 captures=0 capture_ms=0.0
+PASS Single->Spread scene dispatch precedes automatic capture (0)
+RAPID_SWITCH Spread->Content delay_ms=0 handler_ms=19.0 dispatcher_ms=68.0 captures=0 capture_ms=0.0
+PASS Spread->Content scene dispatch precedes automatic capture (0)
+RAPID_SWITCH Content->Backside delay_ms=0 handler_ms=11.7 dispatcher_ms=31.3 captures=0 capture_ms=0.0
+PASS Content->Backside scene dispatch precedes automatic capture (0)
+RAPID_SWITCH Backside->Single delay_ms=0 handler_ms=11.8 dispatcher_ms=34.5 captures=0 capture_ms=0.0
+PASS Backside->Single scene dispatch precedes automatic capture (0)
+RAPID_SWITCH Single->Spread delay_ms=16 handler_ms=12.4 dispatcher_ms=33.5 captures=0 capture_ms=0.0
+PASS Single->Spread scene dispatch precedes automatic capture (16)
+RAPID_SWITCH Spread->Content delay_ms=16 handler_ms=12.4 dispatcher_ms=35.3 captures=0 capture_ms=0.0
+PASS Spread->Content scene dispatch precedes automatic capture (16)
+RAPID_SWITCH Content->Backside delay_ms=16 handler_ms=12.5 dispatcher_ms=35.1 captures=0 capture_ms=0.0
+PASS Content->Backside scene dispatch precedes automatic capture (16)
+RAPID_SWITCH Backside->Single delay_ms=16 handler_ms=12.4 dispatcher_ms=13.8 captures=0 capture_ms=0.0
+PASS Backside->Single scene dispatch precedes automatic capture (16)
+RAPID_SWITCH Single->Spread delay_ms=80 handler_ms=12.1 dispatcher_ms=32.7 captures=0 capture_ms=0.0
+PASS Single->Spread scene dispatch precedes automatic capture (80)
+RAPID_SWITCH Spread->Content delay_ms=80 handler_ms=12.5 dispatcher_ms=34.6 captures=0 capture_ms=0.0
+PASS Spread->Content scene dispatch precedes automatic capture (80)
+RAPID_SWITCH Content->Backside delay_ms=80 handler_ms=12.3 dispatcher_ms=34.0 captures=0 capture_ms=0.0
+PASS Content->Backside scene dispatch precedes automatic capture (80)
+RAPID_SWITCH Backside->Single delay_ms=80 handler_ms=12.4 dispatcher_ms=33.4 captures=0 capture_ms=0.0
+PASS Backside->Single scene dispatch precedes automatic capture (80)
+RAPID_SWITCH Single->Spread delay_ms=-1 handler_ms=11.9 dispatcher_ms=13.3 captures=0 capture_ms=0.0
+PASS Single->Spread scene dispatch precedes automatic capture (-1)
+RAPID_SWITCH Spread->Content delay_ms=-1 handler_ms=11.8 dispatcher_ms=40.0 captures=0 capture_ms=0.0
+PASS Spread->Content scene dispatch precedes automatic capture (-1)
+RAPID_SWITCH Content->Backside delay_ms=-1 handler_ms=12.5 dispatcher_ms=33.4 captures=0 capture_ms=0.0
+PASS Content->Backside scene dispatch precedes automatic capture (-1)
+RAPID_SWITCH Backside->Single delay_ms=-1 handler_ms=11.4 dispatcher_ms=31.6 captures=0 capture_ms=0.0
+PASS Backside->Single scene dispatch precedes automatic capture (-1)
+PASS rapid scene switches cancel every outgoing turn
+PASS Single immediate status
+PASS Single next available
+PASS Spread immediate status
+PASS Spread next available
+PASS Content immediate status
+PASS Content next available
+PASS Backside immediate status
+PASS Backside next available
+PASS explicit refresh reports failure and retains last frame
+PASS live refresh reports capture failure honestly
+PASS queued live refresh ignores scene re-entry
+PASS Content delayed failure ignores scene re-entry
+PASS Spread delayed failure ignores scene re-entry
+PASS suspended refresh cannot overwrite another scene
+PASS suspended refresh cannot overwrite a re-entered scene
+PASS compact live content keeps counter and button visible
+PASS all six spread slots detached
+PASS queued callback ignores disappearance
+PASS resources recreated after return
+PASS animated command starts
+PASS animated completion
+PASS compact options open and close at a 600x750 page layout
+PASS returning to wide layout restores option controls
+PASS unarranged spread refresh cancellation releases layout wait
+PASS unarranged spread refresh disconnection releases layout wait
+PASS Single wide full forward/backward journey and boundaries
+PASS Single wide animated forward/backward completion
+PASS Spread wide full forward/backward journey and boundaries
+PASS Spread wide animated forward/backward completion
+PASS Content wide full forward/backward journey and boundaries
+PASS Content wide animated forward/backward completion
+PASS Backside wide full forward/backward journey and boundaries
+PASS Backside wide animated forward/backward completion
+PASS Single compact full forward/backward journey and boundaries
+PASS Single compact animated forward/backward completion
+PASS Spread compact full forward/backward journey and boundaries
+PASS Spread compact animated forward/backward completion
+PASS Content compact full forward/backward journey and boundaries
+PASS Content compact animated forward/backward completion
+PASS Backside compact full forward/backward journey and boundaries
+PASS Backside compact animated forward/backward completion
+PASS all native suites

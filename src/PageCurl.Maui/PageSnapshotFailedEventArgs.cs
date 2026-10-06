@@ -13,6 +13,10 @@ public sealed class PageSnapshotFailedEventArgs : EventArgs
 
     public View Content { get; }
 
+    /// <summary>
+    /// Gets whether the failed content belongs to a physical sheet backside.
+    /// For a spread, this is the previous-right or next-left page.
+    /// </summary>
     public bool IsBackside { get; }
 
     public Exception Exception { get; }

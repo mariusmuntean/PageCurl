@@ -1,0 +1,2 @@
+PASS actionlint v1.7.12 (-shellcheck= -pyflakes=), exit 0
+PASS bash -n tools/test-package-consumer.sh tools/test-quick-start.sh, exit 0

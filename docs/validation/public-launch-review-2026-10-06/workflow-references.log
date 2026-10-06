@@ -1,0 +1,6 @@
+OK src/PageCurl.Core/PageCurl.Core.csproj (.github/workflows/verify.yml)
+OK src/PageCurl.Demo/PageCurl.Demo.csproj (.github/workflows/verify.yml)
+OK src/PageCurl.Maui/PageCurl.Maui.csproj (.github/workflows/verify.yml)
+OK tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj (.github/workflows/verify.yml)
+OK tests/PageCurl.Core.Tests/PageCurl.Core.Tests.csproj (.github/workflows/verify.yml)
+OK tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj (.github/workflows/verify.yml)

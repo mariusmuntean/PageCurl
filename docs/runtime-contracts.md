@@ -14,6 +14,9 @@
   controller's `Tick` continues to request frames for that new settling turn.
   Connected wrappers preserve a turn started from a cancellation subscriber;
   disconnected wrappers reject restart requests before releasing snapshots.
+- Settling uses monotonic elapsed time between dispatcher callbacks. A delayed
+  callback advances the spring within Core's 100 ms sample limit; each new loop
+  starts a fresh clock and obsolete timer generations cannot advance a new turn.
 - Commands rejected during an active turn preserve its presentation. A new
   pointer press cannot replace a settling turn; competing presses during an
   owned drag remain consumed without changing the owner.
@@ -24,8 +27,14 @@
   rolls back and releases pointer ownership; it does not leave a hidden animation. On teardown,
   cancel interaction, clear image properties, unsubscribe events, and only then
   dispose recycled images.
+- Cancel active turns when the application window stops. The demo observes
+  window stop/resume while its page is visible, cancels without committing
+  navigation, pauses video, and resumes playback only in the active video scene.
 - Enable `PerformanceDiagnosticsEnabled` only while collecting evidence. The
   default paint path avoids stopwatch and allocation reads.
+- Showing an idle `PageTurnView` requests a fresh paint even when its images
+  are unchanged. Hidden invalidations cannot substitute for that visible draw;
+  the renderer remains on demand.
 - Treat `SKGLView` as the current adapter, not part of the geometry contract. A
   target can replace it while retaining the core API.
 
@@ -36,10 +45,14 @@
 - Keep page content attached and laid out before capture. The wrapper captures
   after load and size changes; call `RefreshSnapshotAsync()` when a counter,
   image, animation, or video preview changes while idle.
-- Automatic refreshes coalesce invalidations for one frame (16 ms), allowing
+- Automatic load and layout refreshes coalesce invalidations for one frame (16 ms), allowing
   live content and input to present before native rasterization. Explicit
   `RefreshSnapshotAsync()` does not add this scheduling delay. Layout readiness,
   snapshot resolution and inclusion of recent native changes remain required.
+- The demo batches rapid live-counter changes into one capture of the latest
+  value. Switching scenes or content kind, or stopping the window before the
+  queued refresh begins, discards that obsolete request. Explicit Refresh keeps
+  its direct, awaitable path.
 - Refresh waits for an active curl to finish, including a turn started during
   capture. Waiting preserves cancellation; textures and null slots are not
   replaced while the sheet is moving. Obsolete content revisions and cancelled
@@ -59,6 +72,8 @@
   refreshes, including after hide/reveal.
 - `SnapshotFailed` reports the content and exception. The wrapper keeps the
   last good frame. A missing native video layer needs an app-supplied poster.
+  For spreads, `IsBackside` identifies the previous-right and next-left sheet
+  backs; current and under-page destinations report `false`.
 - Gesture start never waits for capture. Edge and corner activation zones use
   the cached frame, and the center remains available to live child controls.
 - On handler teardown, the wrapper cancels capture, clears renderer image
@@ -93,5 +108,10 @@
   cancellation token. Cancellation of one request does not cancel queued ones.
   Capture publication and disposal pause while the overlay references images;
   completion or teardown clears overlay assignments before disposing snapshots.
+- Pending automatic spread capture resumes on a later UI dispatch after turn
+  completion. This lets a cancellation callback hide or remove the outgoing
+  spread before native rasterization; immediate hide/re-entry also invalidates
+  that continuation. Normal completion still captures the dirty slots, and an
+  explicit refresh remains awaitable.
 - Removed optional sheet backs immediately use the configured fallback, even
   while clearing their cached images is queued.
