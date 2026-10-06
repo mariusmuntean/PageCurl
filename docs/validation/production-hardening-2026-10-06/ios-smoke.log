@@ -1,0 +1,54 @@
+Building the iOS simulator demo...
+  Determining projects to restore...
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Core/PageCurl.Core.csproj (in 81 ms).
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Maui/PageCurl.Maui.csproj (in 294 ms).
+  Restored /Users/marius/Projects/PageCurl/src/PageCurl.Demo/PageCurl.Demo.csproj (in 299 ms).
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Release/net10.0/PageCurl.Core.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0-ios/PageCurl.Maui.dll
+/Users/marius/.dotnet/packs/Microsoft.iOS.Sdk.net10.0_27.0/27.0.10722/tools/msbuild/Xamarin.Shared.targets(2129,3): warning : The settings file '/Users/marius/Library/Preferences/Xamarin/Settings.plist' is deprecated, and will be ignored in .NET 11+. Use the 'DEVELOPER_DIR' environment variable or the 'XcodeLocation' MSBuild property to use an Xcode other than the system's current default Xcode. [/Users/marius/Projects/PageCurl/src/PageCurl.Demo/PageCurl.Demo.csproj::TargetFramework=net10.0-ios]
+  Detected signing identity:
+    Code Signing Key: "" (-)
+    Provisioning Profile: "" () - no entitlements
+    Bundle Id: de.marius.PageCurlDemo
+    App Id: de.marius.PageCurlDemo
+  XAML source generation is enabled (MauiXamlInflator=SourceGen). This generates C# code from XAML at compile time for better performance. To disable, remove the MauiXamlInflator line from your .csproj file (reverts to configuration-based defaults: Runtime in Debug, XamlC in Release).
+  PageCurl.Demo -> /Users/marius/Projects/PageCurl/src/PageCurl.Demo/bin/Release/net10.0-ios/iossimulator-arm64/PageCurl.Demo.dll
+  Optimizing assemblies for size may change the behavior of the app. Be sure to test after publishing. See: https://aka.ms/dotnet-illink
+  Optimizing assemblies for size. This process might take a while.
+  IL stripping assemblies
+
+Build succeeded.
+
+/Users/marius/.dotnet/packs/Microsoft.iOS.Sdk.net10.0_27.0/27.0.10722/tools/msbuild/Xamarin.Shared.targets(2129,3): warning : The settings file '/Users/marius/Library/Preferences/Xamarin/Settings.plist' is deprecated, and will be ignored in .NET 11+. Use the 'DEVELOPER_DIR' environment variable or the 'XcodeLocation' MSBuild property to use an Xcode other than the system's current default Xcode. [/Users/marius/Projects/PageCurl/src/PageCurl.Demo/PageCurl.Demo.csproj::TargetFramework=net10.0-ios]
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:17.74
+Booting simulator 2BAE44EE-B0AA-4B3F-B0FC-7776FD52A89F...
+Monitoring boot status for iPhone 17 Pro (2BAE44EE-B0AA-4B3F-B0FC-7776FD52A89F).
+[2026-10-06 06:42:02 +0000] Status=2, isTerminal=NO, Elapsed=00:02.
+	Waiting on Data Migration
+		Reason:(null)
+		Migration Elapsed:00:00 seconds
+
+[2026-10-06 06:42:03 +0000] Status=4, isTerminal=NO, Elapsed=00:03.
+	Waiting on System App
+
+[2026-10-06 06:42:05 +0000] Status=4, isTerminal=NO, Elapsed=00:04.
+	Waiting on System App
+
+[2026-10-06 06:42:05 +0000] Status=4, isTerminal=NO, Elapsed=00:05.
+	Waiting on System App
+
+[2026-10-06 06:42:08 +0000] Status=4294967295, isTerminal=YES, Elapsed=00:07.
+	Finished
+
+de.marius.PageCurlDemo: 33253
+Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: 8D88F6B4-2A88-4F43-B448-B1F6597A4E7A (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/marius/Projects/PageCurl/.artifacts/ios-smoke-production-20261006/light.png
+de.marius.PageCurlDemo: 33330
+Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: 8D88F6B4-2A88-4F43-B448-B1F6597A4E7A (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/marius/Projects/PageCurl/.artifacts/ios-smoke-production-20261006/dark.png
+SimulatorKit is required for HID interactions: Error Domain=com.facebook.FBControlCore Code=0 "Attempting to load a file at path '/Applications/Xcode.app/Contents/Developer/Library/PrivateFrameworks/SimulatorKit.framework', but it does not exist" UserInfo={NSLocalizedDescription=Attempting to load a file at path '/Applications/Xcode.app/Contents/Developer/Library/PrivateFrameworks/SimulatorKit.framework', but it does not exist}

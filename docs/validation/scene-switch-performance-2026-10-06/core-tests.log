@@ -1,0 +1,13 @@
+PASS PageTurnControllerTests
+PASS PageCurlGeometryTests
+PASS PageEdgeTests
+PASS PageTurnPointerCaptureTests
+PASS PageNavigationStateTests
+PASS PageTurnPerformanceTests
+PASS PageViewportTests
+PASS PageAnchorTests
+PASS PageAspectLayoutTests
+PASS PageBacksideMappingTests
+PASS PageSpreadNavigationStateTests
+PASS PageTurnFeedbackPolicyTests
+All 12 test groups passed.

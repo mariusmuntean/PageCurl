@@ -1,0 +1,37 @@
+Tool 'docfx' (version '2.81.0') was restored. Available commands: docfx
+
+Restore was successful.
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PageCurl.Core -> /Users/marius/Projects/PageCurl/src/PageCurl.Core/bin/Release/net10.0/PageCurl.Core.dll
+  PageCurl.Maui -> /Users/marius/Projects/PageCurl/src/PageCurl.Maui/bin/Release/net10.0/PageCurl.Maui.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.25
+Loading assembly /Users/marius/Projects/PageCurl/.artifacts/docs-input/PageCurl.Maui.dll
+Loading assembly /Users/marius/Projects/PageCurl/.artifacts/docs-input/PageCurl.Core.dll
+Processing PageCurl.Maui
+Processing PageCurl.Core
+Creating output...
+Searching built-in plugins in directory /Users/marius/.nuget/packages/docfx/2.81.0/tools/net10.0/any/...
+Post processor ExtractSearchIndex loaded.
+7 plug-in(s) loaded.
+ExtractSearchIndex: UseMetadata = False, UseMetadataTitle = True
+Building 1 file(s) in ResourceDocumentProcessor(ValidateResourceMetadata)...
+Building 2 file(s) in TocDocumentProcessor(BuildTocDocument)...
+Building 8 file(s) in ConceptualDocumentProcessor(BuildConceptualDocument=>ValidateConceptualDocumentMetadata)...
+Building 35 file(s) in ManagedReferenceDocumentProcessor(BuildManagedReferenceDocument=>SplitClassPageToMemberLevel=>ValidateManagedReferenceDocumentMetadata=>ApplyOverwriteDocumentForMref=>FillReferenceInformation=>FillMetadata)...
+Applying templates to 46 model(s)...
+XRef map exported.
+Extracting index data from 43 html files
+
+
+Build succeeded.
+
+    0 warning(s)
+    0 error(s)
+
+PASS documentation links, anchors and publication boundaries

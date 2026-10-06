@@ -27,6 +27,9 @@ internal static class DemoRegressionTests
         var captureTimings = new TimedSnapshotter();
         typeof(PageSpreadView).GetField("_snapshotter", BindingFlags.Instance | BindingFlags.NonPublic)!
             .SetValue(page.FindByName<PageSpreadView>("SpreadPageView"), captureTimings);
+        foreach (var name in new[] { "ContentPageView", "BacksidePageView" })
+            typeof(PageCurlView).GetField("_snapshotter", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(page.FindByName<PageCurlView>(name), captureTimings);
         window.Width = 1728;
         window.Height = 1000;
         window.Page = page;
@@ -77,7 +80,7 @@ internal static class DemoRegressionTests
         var clickMilliseconds = watch.Elapsed.TotalMilliseconds;
         await Task.Delay(1);
         results.Add($"IMMEDIATE_SWITCH handler_ms={clickMilliseconds:F1} dispatcher_ms={watch.Elapsed.TotalMilliseconds:F1}");
-        results.Add($"SPREAD_CAPTURE count={captureTimings.Count} total_ms={captureTimings.TotalMilliseconds:F1}");
+        results.Add($"SNAPSHOT_CAPTURE count={captureTimings.Count} total_ms={captureTimings.TotalMilliseconds:F1}");
         results.Add(clickMilliseconds < 150 && watch.Elapsed.TotalMilliseconds < 250
             ? "PASS immediate switch stays responsive" : "FAIL immediate switch blocks UI thread");
         results.Add(single.Controller.Snapshot.State == PageTurnState.Idle
@@ -97,6 +100,10 @@ internal static class DemoRegressionTests
         var hit = nativeWindow.HitTest(point, null);
         results.Add($"ZONE logical={zone.Bounds} native={nativeZone.Frame} center={point} hit={hit?.GetType().Name} enabled={nativeZone.UserInteractionEnabled}");
         results.Add(hit?.Handle == nativeZone.Handle ? "PASS spread outer edge receives input" : "FAIL spread edge input intercepted");
+        ((IButtonController)page.FindByName<Button>("SingleSceneButton")).SendClicked();
+        await Idle_cancellation_does_not_render(single, results);
+        Backside_scene_reuses_unchanged_content(page, results);
+        await Rapid_scene_switches(page, results, captureTimings);
         page.FindByName<Switch>("ReduceMotionSwitch").IsToggled = true;
         foreach (var scene in new[] { "Single", "Spread", "Content", "Backside" })
         {
@@ -104,6 +111,7 @@ internal static class DemoRegressionTests
             await Task.Delay(300);
             if (scene == "Content") await page.FindByName<PageCurlView>("ContentPageView").RefreshSnapshotAsync();
             if (scene == "Backside") await page.FindByName<PageCurlView>("BacksidePageView").RefreshSnapshotAsync();
+            await WaitUntilAsync(() => page.FindByName<Button>("NextButton").IsEnabled);
             Invoke(page, "RequestTurn", PageTurnDirection.Forward);
             var status = page.FindByName<Label>("StatusLabel").Text;
             results.Add(status == "Turn complete" ? $"PASS {scene} immediate status" : $"FAIL {scene} immediate status: {status}");
@@ -116,6 +124,7 @@ internal static class DemoRegressionTests
         await Explicit_refresh_preserves_failure_and_scene_status(page, results);
         Invoke(page, "OnContentKindClicked", new Button { CommandParameter = "Interactive" }, EventArgs.Empty);
         var live = (ContentView)typeof(MainPage).GetField("_interactivePage", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(page)!;
+        await WaitUntilAsync(() => live.Handler is not null && live.Width > 0 && live.Height > 0);
         await page.FindByName<PageCurlView>("ContentPageView").RefreshSnapshotAsync();
         ((IView)live).Measure(250, 333);
         ((IView)live).Arrange(new Rect(0, 0, 250, 333));
@@ -155,6 +164,140 @@ internal static class DemoRegressionTests
         results.Add(page.FindByName<Label>("StatusLabel").Text == "Turn complete"
             ? "PASS animated completion" : "FAIL animated completion");
         Check_compact_options(page, results);
+        await Unarranged_spread_refresh_can_be_cancelled_or_disconnected(page, results);
+        await Navigation_journeys_cover_every_scene_in_both_layouts(page, results);
+    }
+
+    private static async Task Unarranged_spread_refresh_can_be_cancelled_or_disconnected(MainPage page, List<string> results)
+    {
+        var stage = page.FindByName<Grid>("StageHost");
+        foreach (var cancel in new[] { true, false })
+        {
+            var probe = new PageSpreadView { IsVisible = false };
+            using var cancellation = new CancellationTokenSource();
+            var failures = 0;
+            probe.SnapshotFailed += (_, _) => failures++;
+            stage.Children.Add(probe);
+            try
+            {
+                await WaitUntilAsync(() => probe.Handler is not null);
+                // Hidden, freshly assigned content has no arranged native bounds.
+                probe.LeftContent = new Grid();
+                var refresh = probe.RefreshSnapshotAsync(cancellation.Token);
+                Require(!refresh.IsCompleted && failures == 0, "Unarranged content was captured instead of waiting for layout.");
+                if (cancel)
+                {
+                    cancellation.Cancel();
+                    try
+                    {
+                        await refresh.WaitAsync(TimeSpan.FromSeconds(3));
+                        throw new InvalidOperationException("Layout wait ignored caller cancellation.");
+                    }
+                    catch (OperationCanceledException) { }
+                }
+                else
+                {
+                    stage.Children.Remove(probe);
+                    probe.Handler = null;
+                    await refresh.WaitAsync(TimeSpan.FromSeconds(3));
+                }
+                Require(failures == 0 && !probe.CanTurnForward && !probe.CanTurnBackward,
+                    "Aborted layout wait published failure or navigation readiness.");
+                results.Add($"PASS unarranged spread refresh {(cancel ? "cancellation" : "disconnection")} releases layout wait");
+            }
+            finally
+            {
+                if (ReferenceEquals(probe.Parent, stage)) stage.Children.Remove(probe);
+                probe.Handler = null;
+            }
+        }
+    }
+
+    private static async Task Navigation_journeys_cover_every_scene_in_both_layouts(MainPage page, List<string> results)
+    {
+        var originalBounds = page.Bounds;
+        var motion = page.FindByName<Switch>("ReduceMotionSwitch");
+        var wasReduced = motion.IsToggled;
+        motion.IsToggled = true;
+        try
+        {
+            foreach (var compact in new[] { false, true })
+            {
+                if (compact)
+                {
+                    ((IView)page).Measure(600, 750);
+                    ((IView)page).Arrange(new Rect(0, 0, 600, 750));
+                }
+                foreach (var scene in new[] { "Single", "Spread", "Content", "Backside" })
+                {
+                    ((IButtonController)page.FindByName<Button>((compact ? "Mobile" : "") + scene + "SceneButton")).SendClicked();
+                    var previous = page.FindByName<Button>(compact ? "MobilePreviousButton" : "PreviousButton");
+                    var next = page.FindByName<Button>(compact ? "MobileNextButton" : "NextButton");
+                    var counter = page.FindByName<Label>("PageCounterLabel");
+                    var spread = page.FindByName<PageSpreadView>("SpreadPageView");
+                    async Task Ready()
+                    {
+                        if (scene == "Spread")
+                            await WaitUntilAsync(() => spread.CanTurnForward || spread.CanTurnBackward);
+                    }
+                    await Ready();
+                    // Earlier suites leave different page indices. Normalize through real commands.
+                    for (var step = 0; previous.IsEnabled && step < 8; step++)
+                    {
+                        ((IButtonController)previous).SendClicked();
+                        await Ready();
+                    }
+                    Require(!previous.IsEnabled && next.IsEnabled, $"{scene}: first boundary buttons");
+                    var counters = scene == "Spread"
+                        ? new[] { "01–02 / 08", "03–04 / 08", "05–06 / 08", "07–08 / 08" }
+                        : new[] { "01 / 08", "02 / 08", "03 / 08", "04 / 08", "05 / 08", "06 / 08", "07 / 08", "08 / 08" };
+                    Require(counter.Text == counters[0], $"{scene}: first counter was {counter.Text}");
+                    for (var step = 1; step < counters.Length; step++)
+                    {
+                        Require(next.IsEnabled, $"{scene}: next unavailable at step {step}");
+                        ((IButtonController)next).SendClicked();
+                        await Ready();
+                        Require(counter.Text == counters[step], $"{scene}: forward step {step} was {counter.Text}");
+                        Require(page.FindByName<Label>("StatusLabel").Text == "Turn complete", $"{scene}: forward completion status {page.FindByName<Label>("StatusLabel").Text}; {page.FindByName<Label>("DetailLabel").Text}");
+                    }
+                    Require(!next.IsEnabled && previous.IsEnabled, $"{scene}: last boundary buttons");
+                    for (var step = counters.Length - 2; step >= 0; step--)
+                    {
+                        Require(previous.IsEnabled, $"{scene}: previous unavailable at step {step}");
+                        ((IButtonController)previous).SendClicked();
+                        await Ready();
+                        Require(counter.Text == counters[step], $"{scene}: backward step {step} was {counter.Text}");
+                        Require(page.FindByName<Label>("StatusLabel").Text == "Turn complete", $"{scene}: backward completion status");
+                    }
+                    Require(!previous.IsEnabled && next.IsEnabled, $"{scene}: restored boundary buttons");
+                    Require(page.FindByName<Button>("PreviousButton").IsEnabled == page.FindByName<Button>("MobilePreviousButton").IsEnabled
+                        && page.FindByName<Button>("NextButton").IsEnabled == page.FindByName<Button>("MobileNextButton").IsEnabled,
+                        $"{scene}: compact and wide navigation disagree");
+                    results.Add($"PASS {scene} {(compact ? "compact" : "wide")} full forward/backward journey and boundaries");
+                    motion.IsToggled = false;
+                    foreach (var forward in new[] { true, false })
+                    {
+                        await WaitUntilAsync(() => (forward ? next : previous).IsEnabled);
+                        ((IButtonController)(forward ? next : previous)).SendClicked();
+                        Require(page.FindByName<Label>("StatusLabel").Text == "Turning"
+                            && !previous.IsEnabled && !next.IsEnabled,
+                            $"{scene}: animated turn did not lock commands: forward={forward}, status={page.FindByName<Label>("StatusLabel").Text}, previous={previous.IsEnabled}, next={next.IsEnabled}");
+                        var expected = forward ? counters[1] : counters[0];
+                        await WaitUntilAsync(() => counter.Text == expected
+                            && page.FindByName<Label>("StatusLabel").Text == "Turn complete");
+                        await Ready();
+                    }
+                    Require(!previous.IsEnabled && next.IsEnabled, $"{scene}: animated return boundary");
+                    results.Add($"PASS {scene} {(compact ? "compact" : "wide")} animated forward/backward completion");
+                    motion.IsToggled = true;
+                }
+            }
+        }
+        finally
+        {
+            motion.IsToggled = wasReduced;
+            ((IView)page).Arrange(originalBounds);
+        }
     }
 
     private static void Check_compact_options(MainPage page, List<string> results)
@@ -303,6 +446,74 @@ internal static class DemoRegressionTests
         }
     }
 
+    private static async Task Idle_cancellation_does_not_render(PageTurnView renderer, List<string> results)
+    {
+        await Task.Delay(100);
+        renderer.PerformanceDiagnosticsEnabled = true;
+        renderer.ResetPerformanceSnapshot();
+        for (var i = 0; i < 10; i++) renderer.CancelInteraction();
+        await Task.Delay(100);
+        results.Add(renderer.PerformanceSnapshot.FrameCount == 0
+            ? "PASS idle cancellation does not request redundant paints"
+            : $"FAIL idle cancellation requested {renderer.PerformanceSnapshot.FrameCount} redundant paints");
+    }
+
+    private static void Backside_scene_reuses_unchanged_content(MainPage page, List<string> results)
+    {
+        ((IButtonController)page.FindByName<Button>("BacksideSceneButton")).SendClicked();
+        var backside = page.FindByName<PageCurlView>("BacksidePageView");
+        var front = backside.FrontContent;
+        var back = backside.BackContent;
+        ((IButtonController)page.FindByName<Button>("SingleSceneButton")).SendClicked();
+        ((IButtonController)page.FindByName<Button>("BacksideSceneButton")).SendClicked();
+        results.Add(ReferenceEquals(front, backside.FrontContent) && ReferenceEquals(back, backside.BackContent)
+            ? "PASS scene re-entry retains unchanged Backside content"
+            : "FAIL scene re-entry rebuilds unchanged Backside content");
+    }
+
+    private static async Task Rapid_scene_switches(MainPage page, List<string> results, TimedSnapshotter captures)
+    {
+        string[] scenes = ["Single", "Spread", "Content", "Backside"];
+        page.FindByName<Switch>("ReduceMotionSwitch").IsToggled = false;
+        foreach (var delay in new[] { 0, 16, 80, -1 })
+        {
+            for (var index = 0; index < scenes.Length; index++)
+            {
+                var source = scenes[index];
+                var destination = scenes[(index + 1) % scenes.Length];
+                ((IButtonController)page.FindByName<Button>($"{source}SceneButton")).SendClicked();
+                var next = page.FindByName<Button>("NextButton");
+                var previous = page.FindByName<Button>("PreviousButton");
+                await WaitUntilAsync(() => next.IsEnabled || previous.IsEnabled);
+                var renderer = source switch
+                {
+                    "Single" => page.FindByName<PageTurnView>("SinglePageView"),
+                    "Spread" => page.FindByName<PageSpreadView>("SpreadPageView").Overlay,
+                    _ => page.FindByName<PageCurlView>($"{source}PageView").Renderer,
+                };
+                ((IButtonController)(next.IsEnabled ? next : previous)).SendClicked();
+                Require(renderer.Controller.Snapshot.State == PageTurnState.Settling,
+                    $"{source} rapid-switch probe did not start a turn.");
+                if (delay < 0) await WaitUntilAsync(() => renderer.Controller.Snapshot.State == PageTurnState.Idle);
+                else if (delay > 0) await Task.Delay(delay);
+                var count = captures.Count;
+                var captureTime = captures.TotalMilliseconds;
+                var watch = Stopwatch.StartNew();
+                ((IButtonController)page.FindByName<Button>($"{destination}SceneButton")).SendClicked();
+                var handler = watch.Elapsed.TotalMilliseconds;
+                await Task.Delay(1);
+                var dispatch = watch.Elapsed.TotalMilliseconds;
+                results.Add($"RAPID_SWITCH {source}->{destination} delay_ms={delay} handler_ms={handler:F1} dispatcher_ms={dispatch:F1} captures={captures.Count - count} capture_ms={captures.TotalMilliseconds - captureTime:F1}");
+                results.Add(captures.Count == count
+                    ? $"PASS {source}->{destination} scene dispatch precedes automatic capture ({delay})"
+                    : $"FAIL {source}->{destination} automatic capture blocked scene dispatch ({delay})");
+                Require(renderer.Controller.Snapshot.State == PageTurnState.Idle,
+                    $"{source} kept animating after a rapid switch.");
+            }
+        }
+        results.Add("PASS rapid scene switches cancel every outgoing turn");
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         var timeout = Stopwatch.StartNew();
@@ -337,9 +548,13 @@ internal static class DemoRegressionTests
     {
         private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource<SKImage> _capture = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly PageContentSnapshotter _inner = new();
+        private bool _first = true;
         public Task Started => _started.Task;
         public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
         {
+            if (!_first) return _inner.CaptureAsync(content, cancellationToken);
+            _first = false;
             _started.TrySetResult();
             return _capture.Task;
         }
@@ -365,6 +580,11 @@ internal static class DemoRegressionTests
         {
             var watch = Stopwatch.StartNew();
             try { return await _inner.CaptureAsync(content, cancellationToken); }
+            catch (Exception exception)
+            {
+                Console.WriteLine($"CAPTURE_FAILURE logical={content.Bounds} native={(content.Handler?.PlatformView as UIView)?.Bounds}: {exception.Message}");
+                throw;
+            }
             finally { Count++; TotalMilliseconds += watch.Elapsed.TotalMilliseconds; }
         }
     }

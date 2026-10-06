@@ -1,0 +1,85 @@
+PASS red 200x200 #fff90000
+PASS blue 200x200 #ff0000f9
+PASS white 200x200 #fff9f9f9
+PASS gray 200x200 #ff7d7d7d
+PASS half-red 200x200 #80f90000
+PASS Display-P3 red
+PASS all native snapshot tests
+PASS custom backside reads in landing orientation
+PASS shrinking mesh clears stale triangles
+MESH_SUBMISSION frames=1000 elapsed_ms=11245.0 managed_bytes=106944 rss_delta_bytes=950272
+RESOURCE_CREATE elapsed_ms=16.2 managed_bytes=51296
+PASS Light option text contrast 5.72:1
+PASS Dark option text contrast 6.53:1
+PASS page 01 back is page 02
+PASS curl surface spans stage
+SINGLE_PAINT frames=5 mean_ms=31.6 last_ms=30.5
+IMMEDIATE_SWITCH handler_ms=51.5 dispatcher_ms=173.0
+SPREAD_CAPTURE count=5 total_ms=330.5
+PASS immediate switch stays responsive
+PASS scene switch cancels immediately
+PASS inactive completion ignored
+PASS spread ready after Single drag
+ZONE logical={X=1586 Y=0 Width=52 Height=1092} native={{1586, 0}, {52, 1092}} center={1845.5, 669} hit=SKCanvasView enabled=True
+PASS spread outer edge receives input
+PASS idle cancellation does not request redundant paints
+PASS scene re-entry retains unchanged Backside content
+RAPID_SWITCH Single->Spread delay_ms=0 handler_ms=13.4 dispatcher_ms=108.0 captures=1 capture_ms=66.8
+RAPID_SWITCH Spread->Content delay_ms=0 handler_ms=31.6 dispatcher_ms=205.6 captures=1 capture_ms=119.6
+RAPID_SWITCH Content->Backside delay_ms=0 handler_ms=12.4 dispatcher_ms=166.1 captures=2 capture_ms=152.1
+RAPID_SWITCH Backside->Single delay_ms=0 handler_ms=14.7 dispatcher_ms=36.2 captures=0 capture_ms=0.0
+RAPID_SWITCH Single->Spread delay_ms=16 handler_ms=12.7 dispatcher_ms=98.8 captures=1 capture_ms=65.0
+RAPID_SWITCH Spread->Content delay_ms=16 handler_ms=13.4 dispatcher_ms=154.9 captures=1 capture_ms=115.3
+RAPID_SWITCH Content->Backside delay_ms=16 handler_ms=13.3 dispatcher_ms=163.5 captures=2 capture_ms=126.4
+RAPID_SWITCH Backside->Single delay_ms=16 handler_ms=13.0 dispatcher_ms=35.7 captures=0 capture_ms=0.0
+RAPID_SWITCH Single->Spread delay_ms=80 handler_ms=12.8 dispatcher_ms=99.3 captures=1 capture_ms=64.7
+RAPID_SWITCH Spread->Content delay_ms=80 handler_ms=13.8 dispatcher_ms=155.5 captures=1 capture_ms=116.1
+RAPID_SWITCH Content->Backside delay_ms=80 handler_ms=13.7 dispatcher_ms=168.2 captures=2 capture_ms=132.7
+RAPID_SWITCH Backside->Single delay_ms=80 handler_ms=12.9 dispatcher_ms=34.7 captures=0 capture_ms=0.0
+RAPID_SWITCH Single->Spread delay_ms=-1 handler_ms=12.8 dispatcher_ms=99.5 captures=1 capture_ms=85.2
+RAPID_SWITCH Spread->Content delay_ms=-1 handler_ms=12.8 dispatcher_ms=160.8 captures=1 capture_ms=142.0
+RAPID_SWITCH Content->Backside delay_ms=-1 handler_ms=15.8 dispatcher_ms=180.5 captures=2 capture_ms=142.2
+RAPID_SWITCH Backside->Single delay_ms=-1 handler_ms=12.6 dispatcher_ms=15.4 captures=0 capture_ms=0.0
+PASS rapid scene switches cancel every outgoing turn
+PASS Single immediate status
+PASS Single next available
+PASS Spread immediate status
+PASS Spread next available
+PASS Content immediate status
+PASS Content next available
+PASS Backside immediate status
+PASS Backside next available
+PASS explicit refresh reports failure and retains last frame
+PASS live refresh reports capture failure honestly
+PASS queued live refresh ignores scene re-entry
+PASS Content delayed failure ignores scene re-entry
+PASS Spread delayed failure ignores scene re-entry
+PASS suspended refresh cannot overwrite another scene
+PASS suspended refresh cannot overwrite a re-entered scene
+PASS compact live content keeps counter and button visible
+PASS all six spread slots detached
+PASS queued callback ignores disappearance
+PASS resources recreated after return
+PASS animated command starts
+PASS animated completion
+PASS compact options open and close at a 600x750 page layout
+PASS returning to wide layout restores option controls
+PASS unarranged spread refresh cancellation releases layout wait
+PASS unarranged spread refresh disconnection releases layout wait
+PASS Single wide full forward/backward journey and boundaries
+PASS Single wide animated forward/backward completion
+PASS Spread wide full forward/backward journey and boundaries
+PASS Spread wide animated forward/backward completion
+PASS Content wide full forward/backward journey and boundaries
+PASS Content wide animated forward/backward completion
+PASS Backside wide full forward/backward journey and boundaries
+PASS Backside wide animated forward/backward completion
+PASS Single compact full forward/backward journey and boundaries
+PASS Single compact animated forward/backward completion
+PASS Spread compact full forward/backward journey and boundaries
+PASS Spread compact animated forward/backward completion
+PASS Content compact full forward/backward journey and boundaries
+PASS Content compact animated forward/backward completion
+PASS Backside compact full forward/backward journey and boundaries
+PASS Backside compact animated forward/backward completion
+PASS all native suites

@@ -9,8 +9,14 @@ internal static class PageCurlViewTests
 {
     public static async Task RunAllAsync()
     {
+        Rejected_command_preserves_an_active_curl();
+        Pointer_press_during_settling_preserves_the_pending_completion();
+        Competing_pointer_presses_remain_consumed_during_a_drag();
+        Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
+        Cancellation_handler_can_start_a_visible_replacement_turn();
         await Superseded_capture_does_not_report_a_stale_failure();
         await Hidden_capture_cannot_publish_after_visibility_returns();
+        await Refresh_waiting_for_a_turn_does_not_capture_after_hiding();
         await Capture_failure_does_not_clear_the_active_sheet_back();
         await Active_curl_defers_snapshot_replacement();
         await Front_and_back_content_are_captured_independently();
@@ -25,6 +31,160 @@ internal static class PageCurlViewTests
         Activation_layer_preserves_live_content_input();
         Flat_content_hides_renderer_outside_turns();
         Handler_teardown_restores_live_content();
+    }
+
+    private static void Competing_pointer_presses_remain_consumed_during_a_drag()
+    {
+        var view = new PageTurnView { ContentScale = PageContentScale.Fill, ReduceMotion = true };
+        ((IView)view).Arrange(new Rect(0, 0, 400, 500));
+        var touch = typeof(PageTurnView).GetMethod("OnTouch", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!;
+        void Press(long id)
+        {
+            var input = new SkiaSharp.Views.Maui.SKTouchEventArgs(id, SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                new SKPoint(350, 250), true);
+            touch.Invoke(view, [view, input]);
+            TestAssert.True(input.Handled, "An active drag allowed a competing press to bubble to its parent.");
+        }
+        try
+        {
+            Press(42);
+            var active = view.Controller.Snapshot;
+            Press(99);
+            Press(42);
+            TestAssert.Equal(active, view.Controller.Snapshot);
+        }
+        finally { view.CancelInteraction(); }
+    }
+
+    private static void Cancellation_handler_can_start_a_visible_replacement_turn()
+    {
+        var view = new PageCurlView(new FakeSnapshotter());
+        var frame = (Grid)view.Children[0];
+        frame.WidthRequest = 400;
+        frame.HeightRequest = 500;
+        void UseManualFrames() => typeof(PageTurnView).GetField("_animationLoopActive", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(view.Renderer, true);
+        UseManualFrames();
+        var completions = new List<PageTurnCompletedEventArgs>();
+        view.PageTurnCompleted += (_, args) =>
+        {
+            completions.Add(args);
+            if (completions.Count == 1)
+            {
+                UseManualFrames();
+                TestAssert.True(view.TryTurn(PageTurnDirection.Backward));
+            }
+        };
+        TestAssert.True(view.TryTurn(PageTurnDirection.Forward));
+        view.CancelInteraction();
+        TestAssert.Equal(PageTurnState.Settling, view.Renderer.Controller.Snapshot.State);
+        TestAssert.True(view.Renderer.IsVisible, "Cancellation hid the turn started by its completion subscriber.");
+        TestAssert.TickUntilIdle(view.Renderer.Controller);
+        TestAssert.Equal(2, completions.Count);
+        TestAssert.False(completions[0].Committed);
+        TestAssert.True(completions[1].Committed);
+        TestAssert.Equal(PageTurnDirection.Backward, completions[1].Direction);
+        TestAssert.False(view.Renderer.IsVisible);
+    }
+
+    private static void Teardown_rejects_a_turn_requested_by_the_cancellation_handler()
+    {
+        var view = new PageCurlView(new FakeSnapshotter());
+        var frame = (Grid)view.Children[0];
+        frame.WidthRequest = 400;
+        frame.HeightRequest = 500;
+        typeof(PageTurnView).GetField("_animationLoopActive", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(view.Renderer, true);
+        TestAssert.True(view.TryTurn(PageTurnDirection.Forward));
+        var restarted = false;
+        var completions = 0;
+        view.PageTurnCompleted += (_, _) =>
+        {
+            completions++;
+            typeof(PageTurnView).GetField("_animationLoopActive", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view.Renderer, true);
+            restarted = view.TryTurn(PageTurnDirection.Backward);
+        };
+        typeof(PageCurlView).GetMethod("OnHandlerChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(view, null);
+        TestAssert.False(restarted, "Cancellation subscriber restarted a disconnected wrapper.");
+        TestAssert.Equal(1, completions);
+        TestAssert.Equal(PageTurnState.Idle, view.Renderer.Controller.Snapshot.State);
+        TestAssert.False(view.Renderer.IsVisible);
+    }
+
+    private static void Pointer_press_during_settling_preserves_the_pending_completion()
+    {
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        {
+            var view = new PageTurnView { ContentScale = PageContentScale.Fill };
+            ((IView)view).Arrange(new Rect(0, 0, 400, 500));
+            typeof(PageTurnView).GetField("_animationLoopActive", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view, true);
+            var completions = 0;
+            PageTurnCompletedEventArgs? completed = null;
+            view.PageTurnCompleted += (_, args) =>
+            {
+                completed = args;
+                completions++;
+            };
+            try
+            {
+                TestAssert.True(view.TryTurn(direction));
+                view.Controller.Tick(0.1);
+                var active = view.Controller.Snapshot;
+                var touch = typeof(PageTurnView).GetMethod("OnTouch", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!;
+                foreach (var action in new[] { SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                    SkiaSharp.Views.Maui.SKTouchAction.Moved, SkiaSharp.Views.Maui.SKTouchAction.Released })
+                {
+                    var input = new SkiaSharp.Views.Maui.SKTouchEventArgs(42L, action, new SKPoint(350, 250),
+                        action != SkiaSharp.Views.Maui.SKTouchAction.Released);
+                    touch.Invoke(view, [view, input]);
+                    TestAssert.Equal(active, view.Controller.Snapshot);
+                    TestAssert.False(input.Handled, "Settling view captured another pointer.");
+                }
+                TestAssert.TickUntilIdle(view.Controller);
+                TestAssert.Equal(1, completions);
+                TestAssert.True(completed!.Committed);
+                TestAssert.Equal(direction, completed.Direction);
+            }
+            finally { view.CancelInteraction(); }
+        }
+    }
+
+    private static void Rejected_command_preserves_an_active_curl()
+    {
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        {
+            var view = new PageCurlView(new FakeSnapshotter());
+            var frame = (Grid)view.Children[0];
+            frame.WidthRequest = 400;
+            frame.HeightRequest = 500;
+            // The neutral target has no native dispatcher; advance frames explicitly.
+            typeof(PageTurnView).GetField("_animationLoopActive", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view.Renderer, true);
+            var completions = 0;
+            view.PageTurnCompleted += (_, _) => completions++;
+            try
+            {
+                TestAssert.True(view.TryTurn(direction));
+                view.Renderer.Controller.Tick(0.1);
+                var active = view.Renderer.Controller.Snapshot;
+                TestAssert.True(view.Renderer.IsVisible);
+                TestAssert.False(view.TryTurn(direction));
+                TestAssert.Equal(active, view.Renderer.Controller.Snapshot);
+                TestAssert.True(view.Renderer.IsVisible, "Rejected command hid the active curl.");
+                TestAssert.Equal(1d, view.Renderer.Opacity);
+                TestAssert.Equal(0, completions);
+                TestAssert.TickUntilIdle(view.Renderer.Controller);
+                TestAssert.Equal(1, completions);
+                TestAssert.False(view.Renderer.IsVisible);
+            }
+            finally
+            {
+                view.CancelInteraction();
+            }
+        }
     }
 
     private static async Task Superseded_capture_does_not_report_a_stale_failure()
@@ -75,6 +235,32 @@ internal static class PageCurlViewTests
                 typeof(PageCurlView).GetMethod("OnHandlerChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .Invoke(view, null);
             }
+        }
+    }
+
+    private static async Task Refresh_waiting_for_a_turn_does_not_capture_after_hiding()
+    {
+        foreach (var reenter in new[] { false, true })
+        {
+            var snapshotter = new FakeSnapshotter();
+            var view = new PageCurlView(snapshotter) { FrontContent = new Grid() };
+            try
+            {
+                snapshotter.EnqueueImage(SKColors.Red);
+                snapshotter.EnqueueImage(SKColors.Blue);
+                await view.RefreshSnapshotAsync();
+                var captures = snapshotter.CaptureCount;
+                TestAssert.True(view.Renderer.Controller.BeginDrag(new(350, 250), new(400, 500), PageAnchor.Auto));
+                var refresh = view.RefreshSnapshotAsync();
+                TestAssert.False(refresh.IsCompleted);
+                view.IsVisible = false;
+                if (reenter) view.IsVisible = true;
+                view.CancelInteraction();
+                await refresh;
+                TestAssert.True(captures == snapshotter.CaptureCount,
+                    "A refresh waiting for the outgoing turn captured the hidden scene.");
+            }
+            finally { InvokeHandlerChanged(view); }
         }
     }
 
@@ -329,6 +515,7 @@ internal static class PageCurlViewTests
     private sealed class FakeSnapshotter : IPageContentSnapshotter
     {
         private readonly Queue<Func<SKImage>> _captures = new();
+        public int CaptureCount { get; private set; }
 
         public void EnqueueImage(SKColor color) => _captures.Enqueue(() =>
         {
@@ -343,6 +530,7 @@ internal static class PageCurlViewTests
         public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            CaptureCount++;
             return Task.FromResult(_captures.Dequeue()());
         }
     }

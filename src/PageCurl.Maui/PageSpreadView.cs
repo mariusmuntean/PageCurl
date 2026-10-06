@@ -26,6 +26,7 @@ public sealed class PageSpreadView : Grid
     private readonly bool[] _snapshotDirty = new bool[SlotCount];
     private readonly long[] _snapshotRevision = new long[SlotCount];
     private TaskCompletionSource? _turnFinished;
+    private TaskCompletionSource? _contentLayoutChanged;
     private int _lifecycleRevision;
     private PageSnapshotState<SKImage> _currentSnapshots = new();
     private PageSnapshotState<SKImage> _destinationSnapshots = new();
@@ -349,7 +350,7 @@ public sealed class PageSpreadView : Grid
     {
         _activePointerId = null;
         Overlay.CancelInteraction();
-        RestoreStaticPages();
+        if (Overlay.Controller.Snapshot.State == PageTurnState.Idle) RestoreStaticPages();
     }
 
     public bool TryTurnForward() => TryTurn(PageTurnDirection.Forward);
@@ -382,6 +383,7 @@ public sealed class PageSpreadView : Grid
     {
         base.OnHandlerChanged();
         _lifecycleRevision++;
+        NotifyContentLayoutChanged();
         if (Handler is null)
         {
             _handlerDisconnected = true;
@@ -439,6 +441,13 @@ public sealed class PageSpreadView : Grid
 
             var revision = _snapshotRevision[slot];
             var typedSlot = (SnapshotSlot)slot;
+            await WaitForContentLayoutAsync(typedSlot, cancellationToken, lifecycleRevision);
+            if (_handlerDisconnected || lifecycleRevision != _lifecycleRevision) return;
+            if (_turnInProgress || _snapshotRevision[slot] != revision)
+            {
+                slot--;
+                continue;
+            }
             var state = GetSlotState(typedSlot);
             var capture = state.BeginCapture(cancellationToken);
             var stored = await CaptureSlotAsync(
@@ -471,6 +480,28 @@ public sealed class PageSpreadView : Grid
             await _turnFinished!.Task.WaitAsync(cancellationToken);
         }
         cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private async Task WaitForContentLayoutAsync(SnapshotSlot slot, CancellationToken cancellationToken, int lifecycleRevision)
+    {
+        // A queued refresh can outlive the page views it was queued for.
+        // Wait for replacement views to attach and arrange before capturing.
+        // Neutral/custom snapshotters without a native handler remain usable.
+        while (Handler is not null && !_handlerDisconnected && lifecycleRevision == _lifecycleRevision
+            && GetSlotContent(slot) is { } content
+            && (content.Handler is null || content.Width <= 0 || content.Height <= 0))
+        {
+            _contentLayoutChanged ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            await _contentLayoutChanged.Task.WaitAsync(cancellationToken);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private void NotifyContentLayoutChanged()
+    {
+        var changed = _contentLayoutChanged;
+        _contentLayoutChanged = null;
+        changed?.TrySetResult();
     }
 
     private async Task<bool> CaptureSlotAsync(
@@ -592,12 +623,14 @@ public sealed class PageSpreadView : Grid
 
         _snapshotRevision[(int)slot]++;
         _snapshotDirty[(int)slot] = true;
+        NotifyContentLayoutChanged();
         UpdateNavigationAvailability();
         QueueSnapshotRefresh();
     }
 
     private void OnContentLayoutChanged(object? sender, EventArgs e)
     {
+        NotifyContentLayoutChanged();
         for (var slot = 0; slot < SlotCount; slot++)
         {
             if (!ReferenceEquals(GetSlotContent((SnapshotSlot)slot), sender)) continue;
@@ -615,6 +648,7 @@ public sealed class PageSpreadView : Grid
             if (!IsVisible)
             {
                 _lifecycleRevision++;
+                NotifyContentLayoutChanged();
                 MarkAllSnapshotsDirty();
                 UpdateNavigationAvailability();
             }
@@ -732,7 +766,7 @@ public sealed class PageSpreadView : Grid
 
     private bool PrepareTurn(PageTurnDirection direction)
     {
-        if (_turnInProgress
+        if (_handlerDisconnected || _turnInProgress
             || (direction == PageTurnDirection.Forward && !CanTurnForward)
             || (direction == PageTurnDirection.Backward && !CanTurnBackward))
         {
@@ -943,6 +977,9 @@ public sealed class PageSpreadView : Grid
         _refreshQueued = true;
         var lifecycleRevision = _lifecycleRevision;
         await Task.Yield();
+        // Let the newly visible spread present and receive input before
+        // synchronous native capture; explicit refreshes do not wait here.
+        await Task.Delay(16);
         _refreshQueued = false;
         if (_handlerDisconnected || Handler is null || !IsVisible) return;
         if (lifecycleRevision != _lifecycleRevision)

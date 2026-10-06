@@ -394,10 +394,11 @@ public sealed class PageTurnView : SKGLView
 
     public void CancelInteraction()
     {
+        var wasActive = Controller.Snapshot.State != PageTurnState.Idle;
         _pointerCapture.Cancel();
         StopAnimationLoop();
         Controller.Cancel(animate: false);
-        InvalidateSurface();
+        if (wasActive) InvalidateSurface();
     }
 
     internal bool TryBeginInteraction(
@@ -628,10 +629,9 @@ public sealed class PageTurnView : SKGLView
                     break;
                 }
 
-                if (Controller.BeginDrag(pressedPointer, pageSize, LockedAnchor))
+                if (TryBeginInteraction(pressedPointer, pageSize, LockedAnchor))
                 {
                     e.Handled = true;
-                    InvalidateSurface();
                 }
                 else
                 {

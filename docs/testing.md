@@ -9,6 +9,8 @@ The [test-quality audit](validation/test-quality-2026-10-05/README.md) records
 which tests were removed or strengthened and the hosted Actions fixes.
 The [showcase polish record](validation/showcase-polish-2026-10-05/README.md)
 covers shared page copy, theme contrast and stronger UI-replay assertions.
+The [production hardening record](validation/production-hardening-2026-10-06/README.md)
+adds interruption, teardown, layout-wait and complete native navigation evidence.
 
 | Layer | Purpose | Automation |
 | --- | --- | --- |
@@ -18,6 +20,15 @@ covers shared page copy, theme contrast and stronger UI-replay assertions.
 | Package consumer | R12: usable transitive packages and representative consumer calls | `tools/test-package-consumer.sh` with a temporary external project, mapped local feed and empty package cache |
 | Native Apple fixture | R02/R06/R08/R10: native snapshot pixels, mesh submission, actual layout and linked demo commands | Built Mac Catalyst assertion host plus bounded `tools/run-native-fixture.py`; driver tests under `tools/tests` |
 | Computer control | R04/R05/R08/R10: real input routing, visible counters, boundaries and live controls | Replayable AX-based journey plus screenshot-based drags and responsive-layout inspection |
+
+The native demo fixture also runs full first-to-last-to-first command journeys
+in every scene, using both wide and compact buttons. It checks each counter,
+completion status, endpoint button state and agreement between both layouts.
+Each scene also settles an animated forward and backward turn in each layout,
+requiring commands to stay disabled during the animation.
+This catches navigation and asynchronous capture regressions without a desktop
+replay. Reserve computer control for actual pointer routing, accessibility-tree
+inspection and visible rendering/layout behavior that these assertions cannot prove.
 
 For computer control, load
 [`pagecurl-checks.js`](../tests/computer-control/pagecurl-checks.js) into a
@@ -66,6 +77,17 @@ touch tests exercise owned and foreign pointer release/cancellation in both
 directions, including duplicate terminal events. Native rendering regressions
 remain alongside these behavioral checks; private IL call-name inspections and
 checks for an already removed API are intentionally omitted.
+
+Interruption tests also require rejected commands to preserve the visible live
+curl, new pointer presses to leave a settling image turn intact, and cancellation
+subscribers to be unable to restart disconnected wrappers. Both turn directions
+retain their original completion. A connected wrapper preserves a replacement
+turn started synchronously by a cancellation subscriber. Rapid native spread journeys cover replacement
+pages becoming ready during an already queued refresh; that refresh waits for
+layout events instead of capturing an unarranged native view.
+Native probes also cancel or disconnect a refresh while its content remains
+unarranged, requiring prompt completion without a capture failure or false
+navigation readiness.
 
 The platform-free test runner covers:
 
@@ -146,6 +168,15 @@ The immediate-switch regression renders five actual GL drag frames, releases,
 and clicks Spread in the same event-loop turn. It requires the click handler
 to return within 150 ms and the next UI dispatch within 250 ms. Navigation
 checks await snapshot readiness rather than assuming a fixed capture duration.
+
+The native fixture also switches across all four scenes immediately after a
+turn starts, after 16 or 80 ms, and immediately after completion. It records
+handler/dispatcher latency and native capture count/time, requires outgoing
+turns to stop, and checks that automatic capture follows the first scene
+dispatch. Separate regressions prohibit idle cancellation redraws and rebuilding
+unchanged Backside content. Neutral tests invalidate refreshes waiting for a turn
+when the scene hides, including an immediate re-entry. Test snapshotters return
+independently owned images for every capture, including concurrent requests.
 
 The iOS smoke terminates its app, stops recording, removes temporary movies,
 and shuts down simulators it boots, including on failures. Existing simulator

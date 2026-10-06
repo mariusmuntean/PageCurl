@@ -11,6 +11,15 @@ computer-control journeys. These support public discussion of the implementation
 and demonstrated behavior; avoid claims of universal device performance or
 completed screen-reader certification.
 
+The [6 October hardening record](validation/production-hardening-2026-10-06/README.md)
+adds interruption and teardown regressions, cancellable layout waits and full
+native command journeys in both layouts. These are local checks; the final
+changes still need a hosted Verify pass and the hardware gates below.
+
+The [rapid-switch performance record](validation/scene-switch-performance-2026-10-06/README.md)
+reproduces the timing-sensitive scene lag and records reduced dispatch latency,
+obsolete-capture suppression and unchanged rendering/snapshot quality contracts.
+
 Before a public or flagship-reader release:
 
 1. Retain clean hosted builds with pinned .NET, MAUI and SkiaSharp, including

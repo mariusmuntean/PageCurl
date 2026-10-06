@@ -31,6 +31,7 @@ public partial class MainPage : ContentPage
     private readonly PageTurnHaptics _haptics = new();
     private DemoPageSet? _pageSet;
     private int? _spreadContentIndex;
+    private int? _backsideContentIndex;
     private ImagePageView? _imagePage;
     private InteractivePageView? _interactivePage;
     private VideoPosterPageView? _videoPage;
@@ -85,6 +86,7 @@ public partial class MainPage : ContentPage
         CancelAllInteractions();
         ClearAllContent();
         _spreadContentIndex = null;
+        _backsideContentIndex = null;
         if (_interactivePage is not null) _interactivePage.ContentChanged -= OnInteractiveContentChanged;
         _imagePage = null;
         _interactivePage = null;
@@ -535,8 +537,12 @@ public partial class MainPage : ContentPage
     private void UpdateBacksideScene()
     {
         var navigation = _navigation[ShowcaseScene.Backside];
-        BacksidePageView.FrontContent = CreatePageView(navigation.PageIndex);
-        BacksidePageView.BackContent = CreatePageView(navigation.GetUnderPageIndex(PageTurnDirection.Forward));
+        if (_backsideContentIndex != navigation.PageIndex)
+        {
+            _backsideContentIndex = navigation.PageIndex;
+            BacksidePageView.FrontContent = CreatePageView(navigation.PageIndex);
+            BacksidePageView.BackContent = CreatePageView(navigation.GetUnderPageIndex(PageTurnDirection.Forward));
+        }
         BacksidePageView.BacksideMode = _backsideMode;
         BacksidePageView.BacksideColor = Color.FromArgb("#D5CBAF");
         BacksidePageView.UnderPageImage = _pageSet!.Pages[navigation.GetUnderPageIndex(PageTurnDirection.Forward)];

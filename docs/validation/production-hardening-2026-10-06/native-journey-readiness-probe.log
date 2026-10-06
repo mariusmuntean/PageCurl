@@ -1,0 +1,56 @@
+2026-10-06 08:43:11.610 PageCurl.Apple.Tests[33454:3858675] You've implemented -[<UIApplicationDelegate> application:performFetchWithCompletionHandler:], but you still need to add "fetch" to the list of your supported UIBackgroundModes in your Info.plist.
+PASS red 200x200 #fff90000
+PASS blue 200x200 #ff0000f9
+PASS white 200x200 #fff9f9f9
+PASS gray 200x200 #ff7d7d7d
+PASS half-red 200x200 #80f90000
+PASS Display-P3 red
+PASS all native snapshot tests
+PASS custom backside reads in landing orientation
+PASS shrinking mesh clears stale triangles
+MESH_SUBMISSION frames=1000 elapsed_ms=11433.0 managed_bytes=106944 rss_delta_bytes=1310720
+RESOURCE_CREATE elapsed_ms=15.7 managed_bytes=51296
+PASS Light option text contrast 5.72:1
+PASS Dark option text contrast 6.53:1
+PASS page 01 back is page 02
+PASS curl surface spans stage
+SINGLE_PAINT frames=5 mean_ms=31.5 last_ms=30.2
+IMMEDIATE_SWITCH handler_ms=51.8 dispatcher_ms=176.2
+SPREAD_CAPTURE count=1 total_ms=66.2
+PASS immediate switch stays responsive
+PASS scene switch cancels immediately
+PASS inactive completion ignored
+PASS spread ready after Single drag
+ZONE logical={X=1586 Y=0 Width=52 Height=1092} native={{1586, 0}, {52, 1092}} center={1845.5, 669} hit=SKCanvasView enabled=True
+PASS spread outer edge receives input
+PASS Single immediate status
+PASS Single next available
+PASS Spread immediate status
+PASS Spread next available
+PASS Content immediate status
+PASS Content next available
+PASS Backside immediate status
+PASS Backside next available
+PASS explicit refresh reports failure and retains last frame
+PASS live refresh reports capture failure honestly
+PASS queued live refresh ignores scene re-entry
+PASS Content delayed failure ignores scene re-entry
+PASS Spread delayed failure ignores scene re-entry
+PASS suspended refresh cannot overwrite another scene
+PASS suspended refresh cannot overwrite a re-entered scene
+PASS compact live content keeps counter and button visible
+PASS all six spread slots detached
+PASS queued callback ignores disappearance
+PASS resources recreated after return
+PASS animated command starts
+PASS animated completion
+PASS compact options open and close at a 600x750 page layout
+PASS returning to wide layout restores option controls
+PASS Single wide full forward/backward journey and boundaries
+PASS Single wide animated forward/backward completion
+PASS Spread wide full forward/backward journey and boundaries
+FAIL demo System.InvalidOperationException: Spread: animated turn did not lock commands: forward=False, status=Turn complete, previous=False, next=True, elapsed_ms=0.0, reduced=False/False/False, state=Idle
+   at PageCurl.Apple.Tests.DemoRegressionTests.Require(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/DemoRegressionTests.cs:line 445
+   at PageCurl.Apple.Tests.DemoRegressionTests.Navigation_journeys_cover_every_scene_in_both_layouts(MainPage page, List`1 results) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/DemoRegressionTests.cs:line 228
+   at PageCurl.Apple.Tests.DemoRegressionTests.RunAsync(Window window, List`1 results) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/DemoRegressionTests.cs:line 158
+   at PageCurl.Apple.Tests.FixturePage.Run(Object sender, EventArgs args) in /Users/marius/Projects/PageCurl/tests/PageCurl.Apple.Tests/FixturePage.cs:line 74

@@ -10,6 +10,8 @@ internal static class PageSpreadViewTests
 {
     public static async Task RunAllAsync()
     {
+        await Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
+        await Cancellation_handler_can_start_a_replacement_spread_turn();
         await Activation_release_and_cancel_finish_only_the_owned_pointer();
         await Cancelled_queued_request_cannot_bypass_a_running_capture();
         await Deferred_refresh_is_awaitable_and_cancellable();
@@ -30,6 +32,56 @@ internal static class PageSpreadViewTests
         await Backward_turn_shows_the_adjacent_page_on_the_sheet_back();
         Overlay_surface_preserves_the_stationary_page();
         Handler_teardown_restores_both_static_pages();
+    }
+
+    private static async Task Cancellation_handler_can_start_a_replacement_spread_turn()
+    {
+        var spread = await CreateReadySpreadAsync(new CountingSnapshotter());
+        var completions = new List<PageTurnCompletedEventArgs>();
+        spread.PageTurnCompleted += (_, args) =>
+        {
+            completions.Add(args);
+            if (completions.Count == 1) BeginSettlingTurn(spread, PageTurnDirection.Backward);
+        };
+        try
+        {
+            BeginSettlingTurn(spread, PageTurnDirection.Forward);
+            spread.CancelInteraction();
+            TestAssert.Equal(PageTurnState.Settling, spread.Overlay.Controller.Snapshot.State);
+            TestAssert.Equal(1d, spread.Overlay.Opacity);
+            TestAssert.NotNull(spread.Overlay.FrontImage, "Cancellation cleared the replacement turn's textures.");
+            TestAssert.NotNull(spread.Overlay.PreviousPageImage);
+            TestAssert.False(spread.CanTurnForward || spread.CanTurnBackward);
+            TestAssert.TickUntilIdle(spread.Overlay.Controller);
+            TestAssert.Equal(2, completions.Count);
+            TestAssert.False(completions[0].Committed);
+            TestAssert.True(completions[1].Committed);
+            TestAssert.Equal(PageTurnDirection.Backward, completions[1].Direction);
+            TestAssert.Equal(0d, spread.Overlay.Opacity);
+            TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+        }
+        finally { InvokeHandlerChanged(spread); }
+    }
+
+    private static async Task Teardown_rejects_a_turn_requested_by_the_cancellation_handler()
+    {
+        var spread = await CreateReadySpreadAsync(new CountingSnapshotter());
+        BeginSettlingTurn(spread, PageTurnDirection.Forward);
+        var restarted = false;
+        var completions = 0;
+        spread.PageTurnCompleted += (_, _) =>
+        {
+            completions++;
+            restarted = (bool)typeof(PageSpreadView).GetMethod("PrepareTurn", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(spread, [PageTurnDirection.Backward])!;
+        };
+        InvokeHandlerChanged(spread);
+        TestAssert.False(restarted, "Cancellation subscriber reused disconnected spread textures.");
+        TestAssert.Equal(1, completions);
+        TestAssert.Equal(PageTurnState.Idle, spread.Overlay.Controller.Snapshot.State);
+        TestAssert.Null(spread.Overlay.FrontImage);
+        TestAssert.Null(spread.Overlay.BackImage);
+        TestAssert.False(spread.CanTurnForward || spread.CanTurnBackward);
     }
 
     private static async Task Every_content_slot_blocks_only_its_turn_until_recaptured()

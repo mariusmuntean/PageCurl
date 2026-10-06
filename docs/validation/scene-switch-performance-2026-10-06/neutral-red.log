@@ -1,0 +1,9 @@
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: A refresh waiting for the outgoing turn captured the hidden scene.
+System.InvalidOperationException: A refresh waiting for the outgoing turn captured the hidden scene.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.PageCurlViewTests.Refresh_waiting_for_a_turn_does_not_capture_after_hiding() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 255
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 19
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 39

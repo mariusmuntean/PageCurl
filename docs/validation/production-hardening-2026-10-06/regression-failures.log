@@ -1,0 +1,82 @@
+
+maui-red
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Rejected command hid the active curl.
+System.InvalidOperationException: Rejected command hid the active curl.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.PageCurlViewTests.Rejected_command_preserves_an_active_curl() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 52
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 12
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 39
+
+pointer-red
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Expected PageTurnSnapshot { State = Settling, Direction = Forward, DragStartPosition = <400. 250>, PointerPosition = <400. 250>, Progress = 0,53716314, TargetProgress = 1, LockedAnchor = Left, HingeEdge = Left, FreeEdge = Right }, but was PageTurnSnapshot { State = Dragging, Direction = Forward, DragStartPosition = <350. 250>, PointerPosition = <350. 250>, Progress = 0, TargetProgress = 0, LockedAnchor = Auto, HingeEdge = Left, FreeEdge = Right }.
+System.InvalidOperationException: Expected PageTurnSnapshot { State = Settling, Direction = Forward, DragStartPosition = <400. 250>, PointerPosition = <400. 250>, Progress = 0,53716314, TargetProgress = 1, LockedAnchor = Left, HingeEdge = Left, FreeEdge = Right }, but was PageTurnSnapshot { State = Dragging, Direction = Forward, DragStartPosition = <350. 250>, PointerPosition = <350. 250>, Progress = 0, TargetProgress = 0, LockedAnchor = Auto, HingeEdge = Left, FreeEdge = Right }.
+   at PageCurl.Maui.Tests.TestAssert.Equal[T](T expected, T actual) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 31
+   at PageCurl.Maui.Tests.PageCurlViewTests.Pointer_press_during_settling_preserves_the_pending_completion() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 59
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 13
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 39
+
+teardown-red
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Cancellation subscriber restarted a disconnected wrapper.
+System.InvalidOperationException: Cancellation subscriber restarted a disconnected wrapper.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.TestAssert.False(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 16
+   at PageCurl.Maui.Tests.PageCurlViewTests.Teardown_rejects_a_turn_requested_by_the_cancellation_handler() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 53
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 14
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 39
+
+spread-teardown-red
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+PASS PageCurlViewTests
+FAIL: Cancellation subscriber reused disconnected spread textures.
+System.InvalidOperationException: Cancellation subscriber reused disconnected spread textures.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.TestAssert.False(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 16
+   at PageCurl.Maui.Tests.PageSpreadViewTests.Teardown_rejects_a_turn_requested_by_the_cancellation_handler() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 49
+   at PageCurl.Maui.Tests.PageSpreadViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 13
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 41
+
+cancel-red
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: Cancellation hid the turn started by its completion subscriber.
+System.InvalidOperationException: Cancellation hid the turn started by its completion subscriber.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.PageCurlViewTests.Cancellation_handler_can_start_a_visible_replacement_turn() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 56
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 15
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 39
+
+spread-cancel-red
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+PASS PageCurlViewTests
+FAIL: Expected 1, but was 0.
+System.InvalidOperationException: Expected 1, but was 0.
+   at PageCurl.Maui.Tests.TestAssert.Equal[T](T expected, T actual) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 31
+   at PageCurl.Maui.Tests.PageSpreadViewTests.Cancellation_handler_can_start_a_replacement_spread_turn() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 51
+   at PageCurl.Maui.Tests.PageSpreadViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageSpreadViewTests.cs:line 14
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 41
+
+competing-pointer-red
+PASS PublicApiTests
+PASS PageContentSnapshotterTests
+PASS PageSnapshotStateTests
+FAIL: An active drag allowed a competing press to bubble to its parent.
+System.InvalidOperationException: An active drag allowed a competing press to bubble to its parent.
+   at PageCurl.Maui.Tests.TestAssert.True(Boolean condition, String message) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/TestAssert.cs:line 11
+   at PageCurl.Maui.Tests.PageCurlViewTests.<Competing_pointer_presses_remain_consumed_during_a_drag>g__Press|1_0(Int64 id, <>c__DisplayClass1_0&) in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 45
+   at PageCurl.Maui.Tests.PageCurlViewTests.Competing_pointer_presses_remain_consumed_during_a_drag() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 50
+   at PageCurl.Maui.Tests.PageCurlViewTests.RunAllAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/PageCurlViewTests.cs:line 14
+   at PageCurl.Maui.Tests.Program.RunAsync() in /Users/marius/Projects/PageCurl/tests/PageCurl.Maui.Tests/Program.cs:line 39

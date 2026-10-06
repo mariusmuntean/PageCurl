@@ -6,6 +6,10 @@ Assign content and image properties, issue turn commands and refresh snapshots
 on the MAUI UI thread. Core geometry and interaction have no UI dependencies;
 the MAUI adapter and its dispatcher do.
 
+Turn commands return `false` while a turn is active or the control is
+disconnected. A rejected command preserves the current curl. New pointer
+presses during settling leave the pending completion intact.
+
 ## Own images deliberately
 
 `PageTurnView` borrows images. Your application must keep them alive until they
@@ -23,15 +27,29 @@ before disposing them. Handler teardown cancels active work and releases
 adapter-owned snapshots; a cancelled caller wait does not mean the underlying
 serialized capture has finished cleaning up.
 
+A spread refresh also waits for replacement content to attach and finish
+layout. Cancellation can stop the caller's wait; hiding, replacing content or
+disconnecting the handler releases obsolete layout waits. Keep refresh calls
+asynchronous so the UI thread can finish arranging the views.
+
 The controls reject delayed results from hidden, replaced or disconnected
-content. If you supply a custom snapshotter, honor cancellation, use the UI
+content. A live-page refresh waiting for a turn also becomes obsolete when its
+content is hidden or replaced, so it cannot recapture the outgoing scene.
+If you supply a custom snapshotter, honor cancellation, use the UI
 thread and transfer ownership of the returned image to the control.
+Automatic refreshes coalesce changes over one frame before capturing, allowing
+the live page and input to present first. Explicit `RefreshSnapshotAsync()`
+retains its direct capture path and still waits for active interaction.
 
 ## Commit once
 
 `PageTurnCompleted` reports direction and whether the turn committed. Advance
 the model only when `Committed` is true. Threshold-crossing events provide
 feedback; they do not change the current page.
+
+A completion subscriber may start another turn on a connected control,
+including after cancellation. Disconnecting a wrapper rejects such restart
+requests before releasing its snapshots.
 
 The sample routes gestures, buttons, reduced motion and haptics through this
 same completion path. Handle failed snapshots separately from successful

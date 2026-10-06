@@ -12,6 +12,11 @@
   raise the same event once.
 - A completion subscriber may start another animated turn synchronously. The
   controller's `Tick` continues to request frames for that new settling turn.
+  Connected wrappers preserve a turn started from a cancellation subscriber;
+  disconnected wrappers reject restart requests before releasing snapshots.
+- Commands rejected during an active turn preserve its presentation. A new
+  pointer press cannot replace a settling turn; competing presses during an
+  owned drag remain consumed without changing the owner.
 - Invalid enum and non-finite setting assignments leave the last valid value
   intact. Finite backside dim factors clamp to 0–1. Binding rejection follows
   MAUI semantics and does not promise an exception for every invalid assignment.
@@ -31,6 +36,10 @@
 - Keep page content attached and laid out before capture. The wrapper captures
   after load and size changes; call `RefreshSnapshotAsync()` when a counter,
   image, animation, or video preview changes while idle.
+- Automatic refreshes coalesce invalidations for one frame (16 ms), allowing
+  live content and input to present before native rasterization. Explicit
+  `RefreshSnapshotAsync()` does not add this scheduling delay. Layout readiness,
+  snapshot resolution and inclusion of recent native changes remain required.
 - Refresh waits for an active curl to finish, including a turn started during
   capture. Waiting preserves cancellation; textures and null slots are not
   replaced while the sheet is moving. Obsolete content revisions and cancelled
@@ -38,6 +47,9 @@
 - Hiding invalidates captures started in the previous presentation. Existing
   snapshots remain available; late images are disposed and late failures are
   suppressed even if the control becomes visible again.
+- A live-page refresh records its content revision before waiting for a turn.
+  Hiding or replacing that content during the wait makes the request obsolete;
+  it finishes without rasterizing the outgoing page.
 - A new capture cancels the previous generation. A late result is disposed and
   cannot replace the current frame. Front and back captures fail independently.
 - Custom `IPageContentSnapshotter` implementations must eventually complete and
@@ -68,6 +80,9 @@
 - Public `RefreshSnapshotAsync` invalidates every slot so changes inside an
   existing content view are captured. Automatic property and layout refreshes
   serialize behind the running capture and drain only dirty slots.
+- A queued drain waits for newly assigned content to attach and arrange before
+  capture. Cancellation, replacement, hiding and handler teardown wake layout
+  waits; replacement content is checked again before any capture can publish.
 - Hiding ends the current refresh lifecycle and marks all slots dirty while
   retaining their last good textures. Showing queues a fresh drain.
 - Each content/layout invalidation increments a slot revision. Obsolete results

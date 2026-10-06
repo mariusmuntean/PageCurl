@@ -223,6 +223,11 @@ public sealed class PageCurlView : Grid
 
     public bool TryTurn(PageTurnDirection direction)
     {
+        if (_handlerDisconnected || Renderer.Controller.Snapshot.State != PageTurnState.Idle)
+        {
+            return false;
+        }
+
         ShowRenderer();
         // The renderer is hidden while flat and may never have been measured.
         // Use the already fitted live frame for the first command as well.
@@ -240,10 +245,10 @@ public sealed class PageCurlView : Grid
 
     public async Task RefreshSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        await WaitForInteractionAsync(cancellationToken);
-        if (_handlerDisconnected) return;
         var snapshots = _snapshots;
         var revision = _contentRevision;
+        await WaitForInteractionAsync(cancellationToken);
+        if (!IsCurrentCapture(snapshots, revision)) return;
         var capture = snapshots.BeginCapture(cancellationToken);
         await CaptureContentAsync(FrontContent, snapshots, revision, capture, isBackside: false);
         capture.Token.ThrowIfCancellationRequested();
@@ -255,7 +260,7 @@ public sealed class PageCurlView : Grid
     {
         _activePointerId = null;
         Renderer.CancelInteraction();
-        ShowLiveContent();
+        if (Renderer.Controller.Snapshot.State == PageTurnState.Idle) ShowLiveContent();
     }
 
     protected override void OnHandlerChanged()
@@ -655,6 +660,10 @@ public sealed class PageCurlView : Grid
         if (_handlerDisconnected || Handler is null || !IsVisible || _refreshQueued) return;
         _refreshQueued = true;
         await Task.Yield();
+        // Coalesce automatic invalidations over one frame. Present live
+        // content and service input before synchronous native rasterization.
+        // Explicit refreshes retain their immediate, awaitable capture path.
+        await Task.Delay(16);
         _refreshQueued = false;
         if (_handlerDisconnected || Handler is null || !IsVisible) return;
         if (!IsContentReady(FrontContent) || !IsContentReady(BackContent)) return;
