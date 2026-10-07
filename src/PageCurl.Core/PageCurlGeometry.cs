@@ -1,8 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 namespace PageCurl.Core;
 
 /// <summary>Builds a reusable, shaded developable page curl mesh.</summary>
+[SuppressMessage("Naming", "CA1720", Justification =
+    "Existing pointer parameters describe input coordinates and retain named-argument compatibility.")]
 public static class PageCurlGeometry
 {
     private const float Epsilon = 0.0001f;

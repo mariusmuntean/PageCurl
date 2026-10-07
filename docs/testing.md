@@ -89,6 +89,9 @@ reject timeout, missing/partial output and contradictory exit/result cases.
 `PAGECURL_TEST_OUTPUT` selects the fixture log; a native build alone does not run
 its assertions. CI runs Core, isolated consumption and driver/replay tests on
 Linux, plus neutral MAUI and native assertions on macOS, retaining failure logs.
+The native host runs in Release with the demo's XAML source generation so timing
+checks exercise the shipping configuration. Microsoft also recommends
+[Release builds for profiling](https://learn.microsoft.com/en-us/dotnet/maui/fundamentals/profiling?view=net-maui-10.0).
 
 ## Visual and device checks
 
@@ -121,6 +124,21 @@ Fixture passes do not satisfy physical-device or unavailable interaction gates.
 
 ## Distribution and documentation
 
+Product builds pin the .NET 10 analyzer rules. Core uses Microsoft's
+`recommended` mode; MAUI and the demo use `minimum`, which Microsoft recommends
+for build enforcement, plus `recommended` globalization rules. Compiler and
+enabled analyzer warnings fail these builds. Existing public `pointer` parameter
+names retain named-argument compatibility through a localized CA1720 exception.
+Test projects keep their existing analyzer settings so interface-contract tests
+are not rewritten merely to satisfy concrete-type performance suggestions.
+See Microsoft's [analysis modes](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/overview).
+
+Packing Core and MAUI runs the SDK's [package validation](https://learn.microsoft.com/en-us/dotnet/fundamentals/apicompat/package-validation/overview).
+MAUI also requires equal public APIs and parameter names across compatible
+frameworks in each host's package. Android's generated resource class is internal;
+it is not part of the controls' public contract. Cross-version compatibility
+against a published baseline remains a release gate.
+
 The distribution job combines unsigned macOS/Windows inputs, requires all five
 frameworks and matching package/symbol/release identities, then restores an
 isolated consumer. Tool tests reject mixed versions/revisions, missing assets,
@@ -142,6 +160,7 @@ publishing](documentation.md).
 
 ## Completed validation records
 
+- [Microsoft guidance](validation/microsoft-guidance-2026-10-07/README.md): analyzer enforcement, strict package APIs and Release native assertions.
 - [Runtime cleanup](validation/runtime-cleanup-2026-10-07/README.md): numerical edges, capture races, readiness and native video.
 - [Requirements](validation/requirements-2026-10-05/README.md): failures, fixes, repeated runs and visible observations.
 - [Test quality](validation/test-quality-2026-10-05/README.md): removed/strengthened tests and hosted Actions fixes.

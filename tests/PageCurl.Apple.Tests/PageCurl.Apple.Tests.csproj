@@ -7,6 +7,7 @@
     <SingleProject>true</SingleProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <MauiXamlInflator>SourceGen</MauiXamlInflator>
     <ApplicationTitle>PageCurl Native Tests</ApplicationTitle>
     <ApplicationId>de.marius.PageCurlRegressionTests</ApplicationId>
     <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>

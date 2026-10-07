@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace PageCurl.Demo.Views;
 
 internal sealed class InteractivePageView : ContentView
@@ -30,7 +32,7 @@ internal sealed class InteractivePageView : ContentView
         button.Clicked += (_, _) =>
         {
             _count++;
-            _countLabel.Text = _count.ToString();
+            _countLabel.Text = _count.ToString(CultureInfo.CurrentCulture);
             ContentChanged?.Invoke(this, EventArgs.Empty);
         };
 

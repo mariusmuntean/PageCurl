@@ -1,3 +1,4 @@
+using System.Globalization;
 using PageCurl.Core;
 using PageCurl.Demo.Views;
 using PageCurl.Maui;
@@ -281,7 +282,7 @@ public partial class MainPage : ContentPage
     private void OnThresholdChanged(object? sender, ValueChangedEventArgs e)
     {
         var threshold = (float)e.NewValue;
-        ThresholdLabel.Text = threshold.ToString("P0");
+        ThresholdLabel.Text = threshold.ToString("P0", CultureInfo.CurrentCulture);
         SinglePageView.PageChangeThreshold = threshold;
         SpreadPageView.PageChangeThreshold = threshold;
         ContentPageView.PageChangeThreshold = threshold;
@@ -609,7 +610,7 @@ public partial class MainPage : ContentPage
         BacksidePageView.PreviousPageImage = _pageSet.Pages[navigation.GetUnderPageIndex(PageTurnDirection.Backward)];
     }
 
-    private DemoPageView CreatePageView(int pageIndex)
+    private static DemoPageView CreatePageView(int pageIndex)
     {
         var copy = DemoPageCopy.Pages[pageIndex];
         return new DemoPageView(pageIndex + 1, copy.Eyebrow, copy.Title, copy.Body);

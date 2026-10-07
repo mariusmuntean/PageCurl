@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace PageCurl.Demo.Views;
 
 internal sealed class DemoPageView : ContentView
@@ -68,7 +70,7 @@ internal sealed class DemoPageView : ContentView
         });
         footer.Add(new Label
         {
-            Text = pageNumber.ToString("00"),
+            Text = pageNumber.ToString("00", CultureInfo.CurrentCulture),
             FontSize = 13,
             FontAttributes = FontAttributes.Bold,
             TextColor = Color.FromArgb("#1C211F"),

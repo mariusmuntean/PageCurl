@@ -73,6 +73,19 @@ internal static class PageAnchorTests
 
     private static void Threshold_and_flick_options_reject_invalid_values()
     {
+        var options = new PageCurlOptions { PageChangeThreshold = .7f, FlickVelocityThreshold = 2f };
+        foreach (var invalid in new[] { -.01f, 1.01f, float.NaN, float.NegativeInfinity, float.PositiveInfinity })
+        {
+            TestAssert.Throws<ArgumentOutOfRangeException>(() => options.PageChangeThreshold = invalid);
+            TestAssert.Throws<ArgumentOutOfRangeException>(() => options.SnapThreshold = invalid);
+            TestAssert.Equal(.7f, options.PageChangeThreshold);
+            TestAssert.Equal(.7f, options.SnapThreshold);
+        }
+        foreach (var invalid in new[] { 0f, -1f, float.NaN, float.NegativeInfinity, float.PositiveInfinity })
+        {
+            TestAssert.Throws<ArgumentOutOfRangeException>(() => options.FlickVelocityThreshold = invalid);
+            TestAssert.Equal(2f, options.FlickVelocityThreshold);
+        }
         TestAssert.Throws<ArgumentOutOfRangeException>(() =>
             _ = new PageTurnController(new PageCurlOptions { PageChangeThreshold = -0.01f }));
         TestAssert.Throws<ArgumentOutOfRangeException>(() =>

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 namespace PageCurl.Core;
@@ -6,6 +7,8 @@ namespace PageCurl.Core;
 /// Tracks a finger drag and settles it to the nearest page endpoint using a
 /// critically damped spring. It has no UI or platform dependencies.
 /// </summary>
+[SuppressMessage("Naming", "CA1720", Justification =
+    "Existing pointer parameters describe input coordinates and retain named-argument compatibility.")]
 public sealed class PageTurnController
 {
     private const float EdgeEpsilon = 0.001f;

@@ -5,10 +5,7 @@ public sealed class PageSpreadNavigationState
 {
     public PageSpreadNavigationState(int pageCount)
     {
-        if (pageCount < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(pageCount));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageCount, 1);
 
         PageCount = pageCount;
     }

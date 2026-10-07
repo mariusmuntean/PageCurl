@@ -155,7 +155,11 @@ public sealed class PageCurlOptions
         get => _pageChangeThreshold;
         set
         {
-            ValidatePageChangeThreshold(value);
+            if (!float.IsFinite(value) || value is < 0 or > 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(PageChangeThreshold),
+                    "PageChangeThreshold must be between zero and one.");
+            }
             _pageChangeThreshold = value;
         }
     }
@@ -164,11 +168,7 @@ public sealed class PageCurlOptions
     public float SnapThreshold
     {
         get => _pageChangeThreshold;
-        set
-        {
-            ValidatePageChangeThreshold(value);
-            _pageChangeThreshold = value;
-        }
+        set => PageChangeThreshold = value;
     }
 
     /// <summary>Whether release velocity may override the page-change threshold.</summary>
@@ -180,7 +180,11 @@ public sealed class PageCurlOptions
         get => _flickVelocityThreshold;
         set
         {
-            ValidateFlickVelocityThreshold(value);
+            if (!float.IsFinite(value) || value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(FlickVelocityThreshold),
+                    "FlickVelocityThreshold must be finite and positive.");
+            }
             _flickVelocityThreshold = value;
         }
     }
@@ -213,32 +217,9 @@ public sealed class PageCurlOptions
             throw new ArgumentOutOfRangeException(nameof(RadiusScale), "RadiusScale must be finite and positive.");
         }
 
-        ValidatePageChangeThreshold(PageChangeThreshold);
-        ValidateFlickVelocityThreshold(FlickVelocityThreshold);
-
         if (!float.IsFinite(SpringFrequency) || SpringFrequency <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(SpringFrequency), "SpringFrequency must be finite and positive.");
-        }
-    }
-
-    private static void ValidatePageChangeThreshold(float value)
-    {
-        if (!float.IsFinite(value) || value is < 0 or > 1)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(PageChangeThreshold),
-                "PageChangeThreshold must be between zero and one.");
-        }
-    }
-
-    private static void ValidateFlickVelocityThreshold(float value)
-    {
-        if (!float.IsFinite(value) || value <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(FlickVelocityThreshold),
-                "FlickVelocityThreshold must be finite and positive.");
         }
     }
 }

@@ -36,11 +36,12 @@ commands.
   `python3 -m unittest discover -s tools/tests -p 'test_*.py'`.
 - iOS simulator evidence: `./tools/ios-smoke.sh`
 - Native Apple snapshot and linked demo regression fixture:
-  `dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Debug -f net10.0-maccatalyst`,
+  `dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64`,
   then execute the built app binary with `PAGECURL_TEST_OUTPUT` set to an absolute log path.
   The process exits nonzero on any assertion failure. Record any local Xcode override separately.
   Prefer `python3 tools/run-native-fixture.py <absolute-built-app-binary>` to
   bound execution and reject stale or incomplete assertion output.
+  Use Release for timing evidence; the host uses the demo's XAML source generation.
 - Mac Catalyst layout:
   `dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Debug -f net10.0-maccatalyst`
 - CI project references: run `bash tools/check-workflow-projects.sh` and

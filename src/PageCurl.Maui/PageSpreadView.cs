@@ -372,7 +372,7 @@ public sealed class PageSpreadView : Grid
         // through the per-slot dirty flags, so a queued request that finds
         // everything current completes without capturing anything.
         var previous = _refreshChain;
-        var current = RefreshAfterAsync(previous, cancellationToken, _lifecycleRevision);
+        var current = RefreshAfterAsync(previous, _lifecycleRevision, cancellationToken);
         _refreshChain = current;
         // The caller may stop waiting immediately, but the internal chain
         // still owns its predecessor barrier until the running capture ends.
@@ -411,7 +411,7 @@ public sealed class PageSpreadView : Grid
         QueueSnapshotRefresh();
     }
 
-    private async Task RefreshAfterAsync(Task previous, CancellationToken cancellationToken, int lifecycleRevision)
+    private async Task RefreshAfterAsync(Task previous, int lifecycleRevision, CancellationToken cancellationToken)
     {
         // A cancelled predecessor must not cancel the requests queued
         // behind it.
@@ -423,7 +423,7 @@ public sealed class PageSpreadView : Grid
         {
         }
 
-        await WaitForTurnAsync(cancellationToken, lifecycleRevision);
+        await WaitForTurnAsync(lifecycleRevision, cancellationToken);
         if (_handlerDisconnected || lifecycleRevision != _lifecycleRevision)
         {
             return;
@@ -431,7 +431,7 @@ public sealed class PageSpreadView : Grid
 
         for (var slot = 0; slot < SlotCount; slot++)
         {
-            await WaitForTurnAsync(cancellationToken, lifecycleRevision);
+            await WaitForTurnAsync(lifecycleRevision, cancellationToken);
             if (_handlerDisconnected || lifecycleRevision != _lifecycleRevision) return;
             if (!_snapshotDirty[slot])
             {
@@ -440,7 +440,7 @@ public sealed class PageSpreadView : Grid
 
             var revision = _snapshotRevision[slot];
             var typedSlot = (SnapshotSlot)slot;
-            await WaitForContentLayoutAsync(typedSlot, cancellationToken, lifecycleRevision);
+            await WaitForContentLayoutAsync(typedSlot, lifecycleRevision, cancellationToken);
             if (_handlerDisconnected || lifecycleRevision != _lifecycleRevision) return;
             if (_turnInProgress || _snapshotRevision[slot] != revision)
             {
@@ -472,7 +472,7 @@ public sealed class PageSpreadView : Grid
         }
     }
 
-    private async Task WaitForTurnAsync(CancellationToken cancellationToken, int lifecycleRevision)
+    private async Task WaitForTurnAsync(int lifecycleRevision, CancellationToken cancellationToken)
     {
         while (_turnInProgress && lifecycleRevision == _lifecycleRevision)
         {
@@ -481,7 +481,7 @@ public sealed class PageSpreadView : Grid
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    private async Task WaitForContentLayoutAsync(SnapshotSlot slot, CancellationToken cancellationToken, int lifecycleRevision)
+    private async Task WaitForContentLayoutAsync(SnapshotSlot slot, int lifecycleRevision, CancellationToken cancellationToken)
     {
         // A queued refresh can outlive the page views it was queued for.
         // Wait for replacement views to attach and arrange before capturing.

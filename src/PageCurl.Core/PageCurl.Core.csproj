@@ -6,6 +6,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>10.0-recommended</AnalysisLevel>
+    <EnablePackageValidation>true</EnablePackageValidation>
     <Description>Platform-independent page-turn interaction, navigation and developable page geometry.</Description>
   </PropertyGroup>
   <ItemGroup>

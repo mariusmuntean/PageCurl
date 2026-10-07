@@ -19,4 +19,10 @@
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <PackageTags>maui;page-curl;skia;document;reader</PackageTags>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'PageCurl.Core'
+                         Or '$(MSBuildProjectName)' == 'PageCurl.Maui'
+                         Or '$(MSBuildProjectName)' == 'PageCurl.Demo'">
+    <AnalysisLevel>10.0-minimum</AnalysisLevel>
+    <AnalysisLevelGlobalization>10.0-recommended</AnalysisLevelGlobalization>
+  </PropertyGroup>
 </Project>

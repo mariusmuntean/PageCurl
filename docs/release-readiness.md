@@ -4,12 +4,17 @@ The core behavior and public MAUI surface are implemented. This repository has
 local build, simulator, and deterministic test evidence, but it does not yet
 establish production readiness on representative hardware.
 
-The hosted [Verify workflow](https://github.com/mariusmuntean/PageCurl/actions/runs/37283932941)
-now passes clean Android, iOS simulator and Mac Catalyst builds, neutral package
-consumption and native Mac Catalyst assertions. The showcase also has recorded
+The hosted [Verify run on 5 October](https://github.com/mariusmuntean/PageCurl/actions/runs/37343487227)
+passed Android, iOS simulator, Mac Catalyst and Windows builds, package checks,
+neutral package consumption and native Mac Catalyst assertions. The showcase has recorded
 computer-control journeys. These support public discussion of the implementation
 and demonstrated behavior; avoid claims of universal device performance or
 completed screen-reader certification.
+
+The [7 October Verify run](https://github.com/mariusmuntean/PageCurl/actions/runs/37581805987)
+for `ea0ea61` did not start its jobs because of the account's billing or spending
+limit. The Documentation run was blocked for the same reason. Later changes
+therefore need a fresh hosted pass once the account restriction is resolved.
 
 The [6 October hardening record](validation/production-hardening-2026-10-06/README.md)
 adds interruption and teardown regressions, cancellable layout waits and full
@@ -29,6 +34,10 @@ The [7 October runtime cleanup](validation/runtime-cleanup-2026-10-07/README.md)
 adds failing-before/passing-after coverage for numerical extremes, capture races,
 snapshot readiness and late video attachment. Its native checks retain the
 existing timing and pixel-quality requirements; hosted and hardware gates remain.
+
+The [Microsoft guidance review](validation/microsoft-guidance-2026-10-07/README.md)
+adds pinned analyzer enforcement, strict framework API checks during packing,
+and Release native assertions with the demo's XAML source generation.
 
 Before a public or flagship-reader release:
 

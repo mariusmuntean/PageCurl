@@ -84,9 +84,9 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
       - name: Build native regression fixture
-        run: dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Debug -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
+        run: dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
       - name: Run native regression assertions
-        run: python3 tools/run-native-fixture.py tests/PageCurl.Apple.Tests/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Apple.Tests.app/Contents/MacOS/PageCurl.Apple.Tests
+        run: python3 tools/run-native-fixture.py tests/PageCurl.Apple.Tests/bin/Release/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Apple.Tests.app/Contents/MacOS/PageCurl.Apple.Tests
       - name: Retain native assertion evidence
         if: always()
         uses: actions/upload-artifact@v7

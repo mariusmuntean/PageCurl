@@ -19,7 +19,7 @@ and the release criteria belong in
 | PageCurl.Maui neutral | .NET 10 | Build | `net10.0` Release build passes locally |
 | Android | API 24 | Build + Rider launch | Release build passes; Rider launches the demo on Pixel 9 / Android 15 |
 | iOS | iOS 17 | Build + Rider simulator launch | Release simulator build passes on Xcode 27.0; Rider launches the demo on iPhone 17e / iOS 27.0. Automated HID interactions remain blocked by idb SimulatorKit |
-| Mac Catalyst | macOS 14 / Catalyst 17 | Build + Rider launch + native assertions | Supported Xcode 27.0 Debug build and Rider launch pass; native fixture checks snapshots, rendered interaction, immediate scene switching and teardown |
+| Mac Catalyst | macOS 14 / Catalyst 17 | Build + Rider launch + native assertions | Supported Xcode 27.0 Release build passes; prior Rider launch and current Release fixture cover snapshots, rendered interaction, immediate scene switching and teardown |
 | Windows | Windows 10.0.17763 | Hosted Release build + package checks | Windows demo build, assembly/XML assets and transitive Core dependency passed; runtime evidence remains open |
 
 The package remains platform-portable at the core/API boundary. Physical-device
@@ -35,7 +35,11 @@ historical results do not describe the current toolchain. The
 records cover the later local lifecycle, capture and navigation checks.
 The [public launch review](validation/public-launch-review-2026-10-06/README.md)
 records local elapsed-time settling, background/video lifecycle and package
-checks. The new complete-distribution workflow still needs a hosted run.
+checks. Complete distribution assembly still needs a hosted run.
+
+The [7 October Verify run](https://github.com/mariusmuntean/PageCurl/actions/runs/37581805987)
+for `ea0ea61` was blocked before execution by the account's billing or spending
+limit. Earlier green runs do not validate that revision or later changes.
 
 The hosted [Verify run on 5 October](https://github.com/mariusmuntean/PageCurl/actions/runs/37283932941)
 passed both Linux and macOS jobs, including the isolated package consumer,
