@@ -38,6 +38,12 @@ remains available to child controls. Native snapshotters capture Android,
 Apple, and Windows views after layout. The wrapper clears renderer references
 before disposing owned snapshots on handler teardown.
 
+Live wrappers start turns only with current required snapshots. Explicit
+refreshes wait for native layout and active turns; layout waits are cancellable
+and end when the presentation is hidden or disconnected. Automatic refreshes
+coalesce layout changes without cancelling an explicit request. Optional sheet
+backs use the configured fallback when their current capture is unavailable.
+
 `PageSpreadView` lays out two equal page cells. Its renderer spans both cells,
 then aligns one page mesh to the left or right half. Forward turns hide the
 right live page and reveal the next-right destination; backward turns do the

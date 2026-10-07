@@ -3,27 +3,14 @@ from pathlib import Path
 import tempfile
 import unittest
 import warnings
+import xml.etree.ElementTree as ET
 import zipfile
+
+from package_fixtures import package, rewrite
 
 spec = importlib.util.spec_from_file_location('check_packages', Path(__file__).parents[1] / 'check-packages.py')
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
-
-
-def package(path, frameworks, missing_xml=False, missing_core=False, core_version="0.1.0"):
-    dependency = '' if missing_core else f'<dependency id="PageCurl.Core" version="{core_version}" />'
-    groups = ''.join(f'<group targetFramework="{tfm}">{dependency}</group>' for tfm in frameworks)
-    metadata = '<id>PageCurl.Maui</id><version>0.1.0</version><description>Page turns</description><license type="expression">MIT</license><readme>README.md</readme><projectUrl>https://mariusmuntean.github.io/PageCurl-docs/</projectUrl><repository type="git" url="https://github.com/mariusmuntean/PageCurl" commit="0123456789012345678901234567890123456789" />'
-    with zipfile.ZipFile(path, 'w') as archive:
-        archive.writestr('PageCurl.Maui.nuspec', f'<package><metadata>{metadata}<dependencies>{groups}</dependencies></metadata></package>')
-        archive.writestr('_rels/.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/PageCurl.Maui.nuspec" Id="manifest" /><Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/nuget.psmdcp" Id="properties" /></Relationships>')
-        archive.writestr('package/services/metadata/core-properties/nuget.psmdcp', '<properties/>')
-        archive.writestr('[Content_Types].xml', '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types" />')
-        archive.writestr('README.md', '# PageCurl')
-        for tfm in frameworks:
-            archive.writestr(f'lib/{tfm}/PageCurl.Maui.dll', b'assembly')
-            if not missing_xml:
-                archive.writestr(f'lib/{tfm}/PageCurl.Maui.xml', '<doc/>')
 
 
 class PackageTests(unittest.TestCase):
@@ -34,7 +21,8 @@ class PackageTests(unittest.TestCase):
             return module.check_package(path, expected)
 
     def test_accepts_platform_versioned_assets(self):
-        self.assertEqual(self.check(['net10.0', 'net10.0-ios27.0'], ['net10.0', 'net10.0-ios']), [])
+        for namespaced in (False, True):
+            self.assertEqual(self.check(['net10.0', 'net10.0-ios27.0'], ['net10.0', 'net10.0-ios'], namespaced=namespaced), [])
 
     def test_requires_neutral_asset_separately(self):
         self.assertIn('Missing framework net10.0', self.check(['net10.0-ios27.0'], ['net10.0']))
@@ -58,9 +46,10 @@ class PackageTests(unittest.TestCase):
     def test_malformed_manifest_reports_failure(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'test.nupkg'
-            with zipfile.ZipFile(path, 'w') as archive:
-                archive.writestr('PageCurl.Maui.nuspec', '<package/>')
-            self.assertTrue(module.check_package(path, ['net10.0']))
+            package(path, ['net10.0'])
+            rewrite(path, {'PageCurl.Maui.nuspec': '<package/>'})
+            self.assertEqual(module.check_package(path, ['net10.0']),
+                             ['Invalid package test.nupkg: Missing package metadata in test.nupkg'])
 
     def test_corrupt_archive_reports_failure(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -97,9 +86,42 @@ class PackageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'test.nupkg'
             package(path, ['net10.0'])
-            with zipfile.ZipFile(path) as archive:
-                entries = {name: archive.read(name) for name in archive.namelist() if name != '_rels/.rels'}
-            with zipfile.ZipFile(path, 'w') as archive:
-                for name, payload in entries.items():
-                    archive.writestr(name, payload)
+            rewrite(path, {'_rels/.rels': None})
             self.assertTrue(any('Missing _rels/.rels' in error for error in module.check_package(path, ['net10.0'])))
+
+    def test_rejects_invalid_opc_parts(self):
+        namespaces = {
+            '_rels/.rels': 'http://schemas.openxmlformats.org/package/2006/relationships',
+            '[Content_Types].xml': 'http://schemas.openxmlformats.org/package/2006/content-types',
+        }
+        cases = [(part, level, namespace) for part in namespaces
+                 for level in ('root', 'child') for namespace in ('', 'urn:invalid')]
+        cases += [(part, level, 'Unexpected') for part in namespaces for level in ('root-name', 'child-name')]
+        cases += [(part, attribute, value) for part, attribute in [
+            ('_rels/.rels', 'Relationship.Id'),
+            ('[Content_Types].xml', 'Default.Extension'),
+            ('[Content_Types].xml', 'Default.ContentType'),
+            ('[Content_Types].xml', 'Override.PartName'),
+            ('[Content_Types].xml', 'Override.ContentType'),
+        ] for value in (None, '')]
+        for part, location, value in cases:
+            with self.subTest(part=part, location=location, value=value), tempfile.TemporaryDirectory() as folder:
+                path = Path(folder) / 'test.nupkg'
+                package(path, ['net10.0'])
+                with zipfile.ZipFile(path) as archive:
+                    root = ET.fromstring(archive.read(part))
+                if location in ('root', 'child', 'root-name', 'child-name'):
+                    node = root if location.startswith('root') else root[0]
+                    namespace, name = (value, node.tag.split('}')[-1]) if '-' not in location else (namespaces[part], value)
+                    node.tag = f'{{{namespace}}}{name}' if namespace else name
+                else:
+                    kind, attribute = location.split('.')
+                    node = next((child for child in root if child.tag.split('}')[-1] == kind), None)
+                    if node is None:
+                        node = ET.SubElement(root, f'{{{namespaces[part]}}}Override', PartName='/README.md', ContentType='application/octet')
+                    if value is None:
+                        node.attrib.pop(attribute)
+                    else:
+                        node.set(attribute, value)
+                rewrite(path, {part: ET.tostring(root)})
+                self.assertTrue(any(f'Invalid OPC part {part}' in error for error in module.check_package(path, ['net10.0'])))

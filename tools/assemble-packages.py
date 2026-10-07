@@ -3,51 +3,26 @@ import argparse
 import copy
 import importlib.util
 from pathlib import Path
-import sys
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
 FRAMEWORKS = ['net10.0', 'net10.0-android', 'net10.0-ios', 'net10.0-maccatalyst', 'net10.0-windows']
-PROPERTIES = 'package/services/metadata/core-properties/'
 
 spec = importlib.util.spec_from_file_location('check_packages', Path(__file__).with_name('check-packages.py'))
 checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
 
 
-def canonical(node):
-    if node is None:
-        return None
-    return (node.tag.split('}')[-1], tuple(sorted(node.attrib.items())), (node.text or '').strip(),
-            tuple(sorted(canonical(child) for child in node)))
+canonical = checker.canonical
+Package = checker.Package
+PROPERTIES = checker.PROPERTIES
 
 
 def xml_bytes(root):
     if root.tag.startswith('{'):
         ET.register_namespace('', root.tag.split('}')[0][1:])
     return ET.tostring(root, encoding='utf-8', xml_declaration=True)
-
-
-class Package:
-    def __init__(self, path):
-        self.path = path
-        self.files = checker.read_package_files(path)
-        manifests = [name for name in self.files if name.endswith('.nuspec')]
-        if len(manifests) != 1:
-            raise ValueError(f'Expected one package manifest in {path.name}')
-        self.manifest = manifests[0]
-        self.root = ET.fromstring(self.files[self.manifest])
-        self.metadata = self.root.find('{*}metadata')
-        if self.metadata is None:
-            raise ValueError(f'Missing package metadata in {path.name}')
-        self.package_id = self.metadata.findtext('{*}id')
-        self.version = self.metadata.findtext('{*}version')
-        self.dependencies = self.metadata.find('{*}dependencies')
-        self.identity = (self.package_id, self.version, canonical(self.metadata.find('{*}repository')))
-        self.frameworks = {name.split('/')[1] for name in self.files
-                           if name.startswith('lib/') and name.endswith(f'/{self.package_id}.dll')}
-
 
 
 def symbol_package(package):
@@ -79,8 +54,7 @@ def merge_packages(packages):
     dependencies = metadata.find('{*}dependencies')
     if dependencies is None:
         raise ValueError('Missing MAUI dependency groups')
-    for node in list(dependencies):
-        dependencies.remove(node)
+    dependencies[:] = []
     common = copy.deepcopy(base.metadata)
     common.remove(common.find('{*}dependencies'))
     files = {}
@@ -88,8 +62,7 @@ def merge_packages(packages):
     groups = {}
     content_types = {}
     type_root = ET.fromstring(base.files['[Content_Types].xml'])
-    for node in list(type_root):
-        type_root.remove(node)
+    type_root[:] = []
     for package in packages:
         candidate = copy.deepcopy(package.metadata)
         if package.dependencies is None:
@@ -143,6 +116,8 @@ def write_package(path, files):
 
 
 def assemble_distribution(directories, output):
+    if output.exists() and (not output.is_dir() or any(output.iterdir())):
+        raise ValueError(f'Distribution already exists; use an empty output directory: {output}')
     paths = []
     for directory in directories:
         candidates = sorted(directory.glob('PageCurl.*.nupkg'))
@@ -166,8 +141,6 @@ def assemble_distribution(directories, output):
         maui[0].path.name: merged,
         symbols[0].path.name: merge_packages(symbols),
     }
-    if output.exists() and (not output.is_dir() or any(output.iterdir())):
-        raise ValueError(f'Distribution already exists; use an empty output directory: {output}')
     # Validate on the destination filesystem, then expose the complete directory.
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.pagecurl-package-', dir=output.parent) as scratch:

@@ -23,7 +23,7 @@ public sealed class PageSpreadNavigationState
         ? LeftPageIndex + 1
         : null;
 
-    public bool CanTurnForward => LeftPageIndex + 2 < PageCount;
+    public bool CanTurnForward => LeftPageIndex < PageCount - 2;
 
     public bool CanTurnBackward => SpreadIndex > 0;
 

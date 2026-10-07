@@ -16,10 +16,28 @@ internal sealed class PageSnapshotState<TSnapshot> : IDisposable
     public PageSnapshotCapture BeginCapture(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_isDisposed, this);
-        _captureCancellation?.Cancel();
-        _captureCancellation?.Dispose();
-        _captureCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        return new PageSnapshotCapture(++_generation, _captureCancellation.Token);
+        var previous = _captureCancellation;
+        var replacement = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _captureCancellation = replacement;
+        var generation = ++_generation;
+        var token = replacement.Token;
+
+        // Publish the replacement before cancelling the previous source. A
+        // cancellation subscriber can synchronously start another capture;
+        // in that case it must retain the newer source and generation.
+        if (previous is not null)
+        {
+            try
+            {
+                previous.Cancel();
+            }
+            finally
+            {
+                previous.Dispose();
+            }
+        }
+
+        return new PageSnapshotCapture(generation, token);
     }
 
     public bool TryReplaceFront(int generation, TSnapshot snapshot) =>

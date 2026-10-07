@@ -17,15 +17,19 @@ are no longer assigned or used by an active turn.
 
 `PageCurlView` and `PageSpreadView` own their captured textures. They reject and
 dispose obsolete captures, retain a last-good frame on failure, and keep active
-turn textures stable until the turn ends.
+turn textures stable until the turn ends. Supplied destination images on
+`PageCurlView` remain caller-owned. Your application also owns resources used by
+hosted MAUI views, such as media players.
 
 ## Handle cancellation and reuse
 
-Call `CancelInteraction()` when removing or recycling a view. It rolls back,
-stops settling and releases pointer ownership. Clear borrowed image references
-before disposing them. Handler teardown cancels active work and releases
-adapter-owned snapshots; a cancelled caller wait does not mean the underlying
-serialized capture has finished cleaning up.
+Before removing or recycling a view, detach or guard callbacks that can restart
+turns so they ignore an inactive page. Then call `CancelInteraction()`, clear
+borrowed image references and dispose images that no view still uses.
+Cancellation rolls back, stops settling and releases pointer ownership.
+Handler teardown cancels active work and releases adapter-owned snapshots.
+For spreads, a cancelled caller wait does not mean the serialized capture has
+finished cleaning up.
 
 Also cancel active turns when your window stops. The demo subscribes to window
 stop/resume while its page is visible: it rolls back the turn, pauses video,
@@ -40,15 +44,15 @@ asynchronous so the UI thread can finish arranging the views.
 The controls reject delayed results from hidden, replaced or disconnected
 content. A live-page refresh waiting for a turn also becomes obsolete when its
 content is hidden or replaced, so it cannot recapture the outgoing scene.
-If you supply a custom snapshotter, honor cancellation, use the UI
-thread and transfer ownership of the returned image to the control.
-Automatic load and layout refreshes coalesce changes over one frame before capturing, allowing
-the live page and input to present first. Explicit `RefreshSnapshotAsync()`
-retains its direct capture path and still waits for active interaction.
-Pending automatic spread capture yields after turn completion, allowing an
-immediate scene switch to discard outgoing work before rasterization.
-The demo also batches rapid live-counter inputs into one capture of their
-latest value, discarding queued work when its presentation changes.
+If you supply a custom snapshotter, use the UI thread, honor cancellation and
+ensure each request eventually completes. Return an independently owned
+`SKImage` for each successful capture. Transfer ownership to the control; do
+not return an image shared with your cache or another capture.
+
+Load and layout changes request automatic captures. Use
+`RefreshSnapshotAsync()` for in-place edits; it waits for native layout and active
+interaction to finish. Hiding or disconnecting a presentation ends its existing
+layout waits.
 
 An idle `PageTurnView` requests a fresh paint when it becomes visible, including
 when the assigned images are unchanged. Rendering remains on demand.
@@ -62,10 +66,6 @@ feedback; they do not change the current page.
 A completion subscriber may start another turn on a connected control,
 including after cancellation. Disconnecting a wrapper rejects such restart
 requests before releasing its snapshots.
-
-Settling follows elapsed time between dispatcher callbacks, with the Core
-controller limiting each sample to 100 ms. Busy UI callbacks therefore do not
-slow the spring by advancing only one assumed frame.
 
 The sample routes gestures, buttons, reduced motion and haptics through this
 same completion path. Handle failed snapshots separately from successful

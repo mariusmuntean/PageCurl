@@ -55,6 +55,7 @@ internal static class PageTurnControllerTests
         Reused_controller_starts_each_turn_without_previous_release_intent();
         Completion_handler_can_start_the_next_animated_turn();
         Invalid_frame_times_do_not_change_a_settling_turn();
+        High_finite_spring_frequencies_complete_without_non_finite_state();
         Repeated_commit_and_rollback_turns_remain_bounded_and_complete_once();
     }
 
@@ -69,6 +70,38 @@ internal static class PageTurnControllerTests
             TestAssert.Equal(initial, controller.Snapshot);
         }
         RunUntilIdle(controller);
+    }
+
+    private static void High_finite_spring_frequencies_complete_without_non_finite_state()
+    {
+        foreach (var frequency in new[] { 1e20f, float.MaxValue })
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        foreach (var tinyFirstSample in new[] { false, true })
+        {
+            var controller = new PageTurnController(new PageCurlOptions { SpringFrequency = frequency });
+            var completions = 0;
+            controller.PageTurnCompleted += (_, args) =>
+            {
+                completions++;
+                TestAssert.True(args.Committed);
+                TestAssert.Equal(direction, args.Direction);
+            };
+            TestAssert.True(controller.BeginProgrammaticTurn(PageSize, direction));
+            if (tinyFirstSample)
+            {
+                TestAssert.True(controller.Tick(float.Epsilon));
+                TestAssert.InRange(controller.Snapshot.Progress, 0, 1);
+                TestAssert.Equal(0, completions);
+            }
+
+            TestAssert.False(controller.Tick(1d / 60),
+                $"Spring frequency {frequency} kept requesting frames after reaching its endpoint.");
+            TestAssert.Equal(PageTurnState.Idle, controller.Snapshot.State);
+            TestAssert.Equal(1f, controller.Snapshot.Progress);
+            TestAssert.Equal(1, completions);
+            TestAssert.False(controller.Tick(1d / 60));
+            TestAssert.Equal(1, completions);
+        }
     }
 
     private static void Repeated_commit_and_rollback_turns_remain_bounded_and_complete_once()

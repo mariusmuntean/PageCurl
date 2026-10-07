@@ -13,11 +13,20 @@ internal static class PageCurlViewTests
 {
     public static async Task RunAllAsync()
     {
-        Rejected_command_preserves_an_active_curl();
+        await Replaced_front_snapshot_blocks_commands_and_touch_until_recaptured();
+        await Explicit_refresh_survives_a_queued_automatic_refresh();
+        await Content_invalidated_during_explicit_refresh_is_not_lost_by_automatic_coalescing();
+        await Overlapping_refreshes_do_not_leave_a_completed_chain_predecessor();
+        await Failed_optional_back_falls_back_without_a_stale_image();
+        await Refresh_waits_for_native_content_layout();
+        await Hidden_layout_wait_exits_when_the_wrapper_hides();
+        await Hidden_layout_wait_exits_after_immediate_reentry();
+        await Layout_wait_terminates_for_replacement_disconnect_and_cancellation();
+        await Rejected_command_preserves_an_active_curl();
         Pointer_press_during_settling_preserves_the_pending_completion();
         Competing_pointer_presses_remain_consumed_during_a_drag();
-        Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
-        Cancellation_handler_can_start_a_visible_replacement_turn();
+        await Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
+        await Cancellation_handler_can_start_a_visible_replacement_turn();
         await Superseded_capture_does_not_report_a_stale_failure();
         await Hidden_capture_cannot_publish_after_visibility_returns();
         await Refresh_waiting_for_a_turn_does_not_capture_after_hiding();
@@ -29,13 +38,371 @@ internal static class PageCurlViewTests
         Caller_images_survive_replacement_cancellation_and_teardown();
         Cancellation_finishes_before_a_view_is_hidden();
         Renderer_uses_the_stage_instead_of_the_page_frame();
-        First_programmatic_turn_uses_the_live_page_frame();
+        await First_programmatic_turn_uses_the_live_page_frame();
         Delayed_animation_timer_advances_by_elapsed_time();
         Interaction_properties_forward_to_the_renderer();
         Owned_release_and_cancel_remain_handled();
         Activation_layer_preserves_live_content_input();
         Flat_content_hides_renderer_outside_turns();
         Handler_teardown_restores_live_content();
+    }
+
+    private static async Task Replaced_front_snapshot_blocks_commands_and_touch_until_recaptured()
+    {
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueImage(SKColors.Red);
+        snapshotter.EnqueueImage(SKColors.Blue);
+        var original = new Grid();
+        var replacement = new Grid();
+        var view = new PageCurlView(snapshotter)
+        {
+            FrontContent = original,
+            ReduceMotion = true,
+        };
+        var frame = (Grid)view.Children[0];
+        frame.WidthRequest = 400;
+        frame.HeightRequest = 500;
+
+        try
+        {
+            await view.RefreshSnapshotAsync();
+            var previous = view.Renderer.FrontImage;
+            view.FrontContent = replacement;
+
+            TestAssert.Same(previous!, view.Renderer.FrontImage!);
+            TestAssert.False(view.TryTurn(PageTurnDirection.Forward),
+                "A command started with a snapshot from replaced front content.");
+            TestAssert.Equal(PageTurnState.Idle, view.Renderer.Controller.Snapshot.State);
+
+            var activationLayer = (Grid)frame.Children[^1];
+            var zone = activationLayer.Children
+                .OfType<SkiaSharp.Views.Maui.Controls.SKCanvasView>()
+                .Single(child => Equals(child.BindingContext, PageAnchor.Right));
+            var touch = new SkiaSharp.Views.Maui.SKTouchEventArgs(
+                41L,
+                SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                new SKPoint(10, 250),
+                true);
+            typeof(PageCurlView)
+                .GetMethod("OnActivationTouch", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(view, [zone, touch]);
+
+            TestAssert.False(touch.Handled,
+                "A touch started with a snapshot from replaced front content.");
+            TestAssert.Equal(PageTurnState.Idle, view.Renderer.Controller.Snapshot.State);
+
+            await view.RefreshSnapshotAsync();
+            TestAssert.True(view.TryTurn(PageTurnDirection.Forward),
+                "A current front snapshot did not restore command readiness.");
+        }
+        finally
+        {
+            InvokeHandlerChanged(view);
+        }
+    }
+
+    private static async Task Explicit_refresh_survives_a_queued_automatic_refresh()
+    {
+        var snapshotter = new SequencedSuspendedSnapshotter();
+        var view = new PageCurlView(snapshotter) { FrontContent = new Grid() };
+        try
+        {
+            var queuedRevision = (long)typeof(PageCurlView)
+                .GetField("_contentRevision", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .GetValue(view)!;
+            var explicitRefresh = view.RefreshSnapshotAsync();
+            await snapshotter.FirstStarted;
+
+            // The delayed automatic callback has now reached the same refresh
+            // path. It must not cancel the explicit request for this unchanged
+            // content revision.
+            var automaticRefresh = (Task)typeof(PageCurlView)
+                .GetMethod("RefreshAutomaticSnapshotAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(view, [0L, queuedRevision])!;
+            snapshotter.ReleaseFirst();
+
+            await explicitRefresh;
+            TestAssert.True(snapshotter.CaptureCount == 1,
+                "A queued automatic refresh duplicated an explicit capture.");
+            TestAssert.True(automaticRefresh.IsCompleted,
+                "The superseded automatic refresh remained pending.");
+        }
+        finally
+        {
+            InvokeHandlerChanged(view);
+        }
+    }
+
+    private static async Task Refresh_waits_for_native_content_layout()
+    {
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueImage(SKColors.White);
+        var content = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = content };
+        try
+        {
+            content.Handler = new ManualViewHandler(content);
+            view.Handler = new ManualViewHandler(view);
+            typeof(PageCurlView).GetField("_refreshQueued", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view, true);
+
+            var refresh = view.RefreshSnapshotAsync();
+            TestAssert.False(refresh.IsCompleted,
+                "An explicit refresh captured native content before layout completed.");
+            TestAssert.Equal(0, snapshotter.CaptureCount);
+
+            ((IView)content).Arrange(new Rect(0, 0, 4, 4));
+            typeof(PageCurlView)
+                .GetMethod("OnContentLayoutChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(view, [content, EventArgs.Empty]);
+            await refresh;
+            TestAssert.Equal(1, snapshotter.CaptureCount);
+        }
+        finally
+        {
+            view.Handler = null;
+            content.Handler = null;
+        }
+    }
+
+    private static async Task Content_invalidated_during_explicit_refresh_is_not_lost_by_automatic_coalescing()
+    {
+        var snapshotter = new SequencedSuspendedSnapshotter();
+        var original = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = original };
+        try
+        {
+            typeof(PageCurlView).GetField("_refreshQueued", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view, true);
+            view.Handler = new ManualViewHandler(view);
+            original.Handler = new ManualViewHandler(original);
+            ((IView)original).Arrange(new Rect(0, 0, 4, 4));
+            var queuedRevision = (long)typeof(PageCurlView)
+                .GetField("_contentRevision", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .GetValue(view)!;
+
+            var explicitRefresh = view.RefreshSnapshotAsync();
+            await snapshotter.FirstStarted;
+
+            var replacement = new Grid();
+            view.FrontContent = replacement;
+            replacement.Handler = new ManualViewHandler(replacement);
+            ((IView)replacement).Arrange(new Rect(0, 0, 4, 4));
+            typeof(PageCurlView)
+                .GetMethod("OnContentLayoutChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(view, [replacement, EventArgs.Empty]);
+
+            snapshotter.ReleaseFirst();
+            await explicitRefresh;
+            var automaticRefresh = (Task)typeof(PageCurlView)
+                .GetMethod("RefreshAutomaticSnapshotAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(view, [0L, queuedRevision])!;
+            await automaticRefresh;
+
+            TestAssert.True(snapshotter.CaptureCount == 2,
+                "A content invalidation during an explicit capture was lost.");
+            TestAssert.Same(replacement, snapshotter.LastContent!);
+        }
+        finally
+        {
+            view.Handler = null;
+            original.Handler = null;
+        }
+    }
+
+    private static async Task Overlapping_refreshes_do_not_leave_a_completed_chain_predecessor()
+    {
+        var snapshotter = new OverlappingSnapshotter();
+        var original = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = original };
+        try
+        {
+            var queuedRevision = (long)typeof(PageCurlView)
+                .GetField("_contentRevision", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .GetValue(view)!;
+            var first = view.RefreshSnapshotAsync();
+            await snapshotter.FirstStarted.WaitAsync(TimeSpan.FromSeconds(2));
+            var second = view.RefreshSnapshotAsync();
+            await snapshotter.SecondStarted.WaitAsync(TimeSpan.FromSeconds(2));
+
+            var replacement = new Grid();
+            view.FrontContent = replacement;
+            snapshotter.ReleaseFirst();
+            await TestAssert.ThrowsAsync<OperationCanceledException>(() => first);
+            snapshotter.ReleaseSecond();
+            await second;
+
+            var automatic = Task.Run(() => (Task)typeof(PageCurlView)
+                .GetMethod("RefreshAutomaticSnapshotAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(view, [0L, queuedRevision])!);
+            await automatic.WaitAsync(TimeSpan.FromSeconds(2));
+            TestAssert.Equal(3, snapshotter.CaptureCount);
+            TestAssert.Same(replacement, snapshotter.LastContent!);
+        }
+        finally
+        {
+            InvokeHandlerChanged(view);
+        }
+    }
+
+    private static async Task Failed_optional_back_falls_back_without_a_stale_image()
+    {
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueImage(SKColors.Red);
+        snapshotter.EnqueueImage(SKColors.Blue);
+        var view = new PageCurlView(snapshotter)
+        {
+            FrontContent = new Grid(),
+            BackContent = new Grid(),
+            ReduceMotion = true,
+        };
+        var frame = (Grid)view.Children[0];
+        frame.WidthRequest = 400;
+        frame.HeightRequest = 500;
+        try
+        {
+            await view.RefreshSnapshotAsync();
+            var staleBack = view.Renderer.BackImage;
+            var replacement = new Grid();
+            view.BackContent = replacement;
+            snapshotter.EnqueueImage(SKColors.Green);
+            snapshotter.EnqueueFailure(new InvalidOperationException("optional back failed"));
+            await view.RefreshSnapshotAsync();
+
+            TestAssert.Same(staleBack!, view.Renderer.BackImage!);
+            TestAssert.True(view.TryTurn(PageTurnDirection.Forward),
+                "A failed optional back blocked a turn with a current front snapshot.");
+            TestAssert.Null(view.Renderer.BackImage);
+        }
+        finally
+        {
+            InvokeHandlerChanged(view);
+        }
+    }
+
+    private static async Task Hidden_layout_wait_exits_when_the_wrapper_hides()
+    {
+        var snapshotter = new FakeSnapshotter();
+        var content = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = content };
+        try
+        {
+            content.Handler = new ManualViewHandler(content);
+            view.Handler = new ManualViewHandler(view);
+            typeof(PageCurlView).GetField("_refreshQueued", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view, true);
+
+            var refresh = view.RefreshSnapshotAsync();
+            TestAssert.False(refresh.IsCompleted);
+            view.IsVisible = false;
+            await refresh.WaitAsync(TimeSpan.FromSeconds(2));
+            TestAssert.Equal(0, snapshotter.CaptureCount);
+        }
+        finally
+        {
+            view.Handler = null;
+            content.Handler = null;
+        }
+    }
+
+    private static async Task Layout_wait_terminates_for_replacement_disconnect_and_cancellation()
+    {
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueImage(SKColors.White);
+        var original = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = original };
+        try
+        {
+            original.Handler = new ManualViewHandler(original);
+            view.Handler = new ManualViewHandler(view);
+            typeof(PageCurlView).GetField("_refreshQueued", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view, true);
+
+            var replacementRefresh = view.RefreshSnapshotAsync();
+            var replacement = new Grid();
+            view.FrontContent = replacement;
+            replacement.Handler = new ManualViewHandler(replacement);
+            ((IView)replacement).Arrange(new Rect(0, 0, 4, 4));
+            typeof(PageCurlView)
+                .GetMethod("OnContentLayoutChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(view, [replacement, EventArgs.Empty]);
+            await replacementRefresh.WaitAsync(TimeSpan.FromSeconds(2));
+            TestAssert.Equal(1, snapshotter.CaptureCount);
+            TestAssert.Same(replacement, snapshotter.LastContent!);
+        }
+        finally
+        {
+            view.Handler = null;
+            original.Handler = null;
+        }
+
+        var disconnectSnapshotter = new FakeSnapshotter();
+        var disconnectContent = new Grid();
+        var disconnectView = new PageCurlView(disconnectSnapshotter) { FrontContent = disconnectContent };
+        try
+        {
+            disconnectContent.Handler = new ManualViewHandler(disconnectContent);
+            disconnectView.Handler = new ManualViewHandler(disconnectView);
+            typeof(PageCurlView).GetField("_refreshQueued", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(disconnectView, true);
+            var refresh = disconnectView.RefreshSnapshotAsync();
+            disconnectView.Handler = null;
+            await refresh.WaitAsync(TimeSpan.FromSeconds(2));
+            TestAssert.Equal(0, disconnectSnapshotter.CaptureCount);
+        }
+        finally
+        {
+            disconnectView.Handler = null;
+            disconnectContent.Handler = null;
+        }
+
+        var cancellationSnapshotter = new FakeSnapshotter();
+        var cancellationContent = new Grid();
+        var cancellationView = new PageCurlView(cancellationSnapshotter) { FrontContent = cancellationContent };
+        using var cancellation = new CancellationTokenSource();
+        try
+        {
+            cancellationContent.Handler = new ManualViewHandler(cancellationContent);
+            cancellationView.Handler = new ManualViewHandler(cancellationView);
+            typeof(PageCurlView).GetField("_refreshQueued", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(cancellationView, true);
+            var refresh = cancellationView.RefreshSnapshotAsync(cancellation.Token);
+            cancellation.Cancel();
+            await TestAssert.ThrowsAsync<OperationCanceledException>(() =>
+                refresh.WaitAsync(TimeSpan.FromSeconds(2)));
+            TestAssert.Equal(0, cancellationSnapshotter.CaptureCount);
+        }
+        finally
+        {
+            cancellationView.Handler = null;
+            cancellationContent.Handler = null;
+        }
+    }
+
+    private static async Task Hidden_layout_wait_exits_after_immediate_reentry()
+    {
+        var snapshotter = new FakeSnapshotter();
+        var content = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = content };
+        try
+        {
+            content.Handler = new ManualViewHandler(content);
+            view.Handler = new ManualViewHandler(view);
+            typeof(PageCurlView).GetField("_refreshQueued", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(view, true);
+
+            var refresh = view.RefreshSnapshotAsync();
+            TestAssert.False(refresh.IsCompleted);
+            view.IsVisible = false;
+            view.IsVisible = true;
+            await refresh.WaitAsync(TimeSpan.FromSeconds(2));
+            TestAssert.Equal(0, snapshotter.CaptureCount);
+        }
+        finally
+        {
+            view.Handler = null;
+            content.Handler = null;
+        }
     }
 
     private static void Competing_pointer_presses_remain_consumed_during_a_drag()
@@ -61,9 +428,11 @@ internal static class PageCurlViewTests
         finally { view.CancelInteraction(); }
     }
 
-    private static void Cancellation_handler_can_start_a_visible_replacement_turn()
+    private static async Task Cancellation_handler_can_start_a_visible_replacement_turn()
     {
-        var view = new PageCurlView(new FakeSnapshotter());
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueImage(SKColors.White);
+        var view = await CreateReadyPageCurlViewAsync(snapshotter);
         var frame = (Grid)view.Children[0];
         frame.WidthRequest = 400;
         frame.HeightRequest = 500;
@@ -92,9 +461,11 @@ internal static class PageCurlViewTests
         TestAssert.False(view.Renderer.IsVisible);
     }
 
-    private static void Teardown_rejects_a_turn_requested_by_the_cancellation_handler()
+    private static async Task Teardown_rejects_a_turn_requested_by_the_cancellation_handler()
     {
-        var view = new PageCurlView(new FakeSnapshotter());
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueImage(SKColors.White);
+        var view = await CreateReadyPageCurlViewAsync(snapshotter);
         var frame = (Grid)view.Children[0];
         frame.WidthRequest = 400;
         frame.HeightRequest = 500;
@@ -157,11 +528,13 @@ internal static class PageCurlViewTests
         }
     }
 
-    private static void Rejected_command_preserves_an_active_curl()
+    private static async Task Rejected_command_preserves_an_active_curl()
     {
         foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
         {
-            var view = new PageCurlView(new FakeSnapshotter());
+            var snapshotter = new FakeSnapshotter();
+            snapshotter.EnqueueImage(SKColors.White);
+            var view = await CreateReadyPageCurlViewAsync(snapshotter);
             var frame = (Grid)view.Children[0];
             frame.WidthRequest = 400;
             frame.HeightRequest = 500;
@@ -358,9 +731,12 @@ internal static class PageCurlViewTests
         TestAssert.Equal(PageContentScale.AspectFit, view.Renderer.ContentScale);
     }
 
-    private static void First_programmatic_turn_uses_the_live_page_frame()
+    private static async Task First_programmatic_turn_uses_the_live_page_frame()
     {
-        var view = new PageCurlView(new FakeSnapshotter()) { ReduceMotion = true };
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueImage(SKColors.White);
+        var view = await CreateReadyPageCurlViewAsync(snapshotter);
+        view.ReduceMotion = true;
         var frame = (Grid)view.Children[0];
         frame.WidthRequest = 400;
         frame.HeightRequest = 500;
@@ -580,10 +956,24 @@ internal static class PageCurlViewTests
             .GetMethod("OnHandlerChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(view, null);
 
+    private static async Task<PageCurlView> CreateReadyPageCurlViewAsync(FakeSnapshotter snapshotter)
+    {
+        var view = new PageCurlView(snapshotter)
+        {
+            FrontContent = new Grid(),
+        };
+        var frame = (Grid)view.Children[0];
+        frame.WidthRequest = 400;
+        frame.HeightRequest = 500;
+        await view.RefreshSnapshotAsync();
+        return view;
+    }
+
     private sealed class FakeSnapshotter : IPageContentSnapshotter
     {
         private readonly Queue<Func<SKImage>> _captures = new();
         public int CaptureCount { get; private set; }
+        public View? LastContent { get; private set; }
 
         public void EnqueueImage(SKColor color) => _captures.Enqueue(() =>
         {
@@ -598,6 +988,7 @@ internal static class PageCurlViewTests
         public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            LastContent = content;
             CaptureCount++;
             return Task.FromResult(_captures.Dequeue()());
         }
@@ -612,6 +1003,94 @@ internal static class PageCurlViewTests
             using var surface = SKSurface.Create(new SKImageInfo(4, 4));
             surface.Canvas.Clear(SKColors.White);
             return Task.FromResult(surface.Snapshot());
+        }
+    }
+
+    private sealed class SequencedSuspendedSnapshotter : IPageContentSnapshotter
+    {
+        private readonly TaskCompletionSource _firstStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<SKImage> _firstCompletion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task FirstStarted => _firstStarted.Task;
+
+        public int CaptureCount { get; private set; }
+        public View? LastContent { get; private set; }
+
+        public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
+        {
+            LastContent = content;
+            CaptureCount++;
+            if (CaptureCount == 1)
+            {
+                _firstStarted.TrySetResult();
+                return _firstCompletion.Task;
+            }
+
+            return Task.FromResult(MakeImage());
+        }
+
+        public void ReleaseFirst() => _firstCompletion.TrySetResult(MakeImage());
+
+        private static SKImage MakeImage()
+        {
+            using var surface = SKSurface.Create(new SKImageInfo(4, 4));
+            return surface.Snapshot();
+        }
+    }
+
+    private sealed class OverlappingSnapshotter : IPageContentSnapshotter
+    {
+        private readonly TaskCompletionSource _firstStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<SKImage> _firstCompletion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _secondStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<SKImage> _secondCompletion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task FirstStarted => _firstStarted.Task;
+
+        public Task SecondStarted => _secondStarted.Task;
+
+        public int CaptureCount { get; private set; }
+
+        public View? LastContent { get; private set; }
+
+        public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
+        {
+            LastContent = content;
+            CaptureCount++;
+            return CaptureCount switch
+            {
+                1 => StartFirst(),
+                2 => StartSecond(),
+                _ => Task.FromResult(MakeImage()),
+            };
+        }
+
+        public void ReleaseFirst() => _firstCompletion.TrySetResult(MakeImage());
+
+        public void ReleaseSecond() => _secondCompletion.TrySetResult(MakeImage());
+
+        private Task<SKImage> StartFirst()
+        {
+            _firstStarted.TrySetResult();
+            return _firstCompletion.Task;
+        }
+
+        private Task<SKImage> StartSecond()
+        {
+            _secondStarted.TrySetResult();
+            return _secondCompletion.Task;
+        }
+
+        private static SKImage MakeImage()
+        {
+            using var surface = SKSurface.Create(new SKImageInfo(4, 4));
+            return surface.Snapshot();
         }
     }
 
@@ -672,7 +1151,7 @@ internal static class PageCurlViewTests
         }
     }
 
-    private sealed class ManualViewHandler(PageTurnView view) : IViewHandler
+    private sealed class ManualViewHandler(IView view) : IViewHandler
     {
         public object PlatformView { get; } = new object();
 

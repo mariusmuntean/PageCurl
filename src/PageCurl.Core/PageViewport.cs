@@ -23,8 +23,8 @@ public readonly record struct PageViewportRect(Vector2 Origin, Vector2 Size)
             return default;
         }
 
-        var scale = MathF.Min(viewport.X / content.X, viewport.Y / content.Y);
-        var size = content * scale;
+        var scale = Math.Min((double)viewport.X / content.X, (double)viewport.Y / content.Y);
+        var size = new Vector2((float)(content.X * scale), (float)(content.Y * scale));
         return new((viewport - size) * 0.5f, size);
     }
 

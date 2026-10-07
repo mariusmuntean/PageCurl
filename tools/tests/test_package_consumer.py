@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from test_package_assembly import package_pair
+from package_fixtures import package_pair
 
 CONSUMER = Path(__file__).resolve().parents[1] / 'test-package-consumer.sh'
 

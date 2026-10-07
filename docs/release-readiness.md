@@ -25,6 +25,11 @@ adds window/video lifecycle and elapsed-time settling regressions, a compilable
 quick start, private security-reporting guidance, and complete package assembly
 in Verify. Its local evidence does not establish a hosted distribution pass.
 
+The [7 October runtime cleanup](validation/runtime-cleanup-2026-10-07/README.md)
+adds failing-before/passing-after coverage for numerical extremes, capture races,
+snapshot readiness and late video attachment. Its native checks retain the
+existing timing and pixel-quality requirements; hosted and hardware gates remain.
+
 Before a public or flagship-reader release:
 
 1. Retain clean hosted builds with pinned .NET, MAUI and SkiaSharp, including

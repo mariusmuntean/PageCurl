@@ -366,12 +366,10 @@ public partial class MainPage : ContentPage
         }
     }
 
-    internal async Task RefreshContentAsync(string successStatus, bool deferUntilLayout = false,
-        bool reportCancellation = false)
+    private async Task RefreshContentAsync(string successStatus, bool reportCancellation = false)
     {
         var revision = _lifecycleRevision;
         var sceneRevision = _sceneRevision;
-        if (deferUntilLayout) await Task.Yield();
         if (!CanReportResult()) return;
 
         var failed = false;
@@ -501,12 +499,9 @@ public partial class MainPage : ContentPage
     private async void OnInteractiveContentChanged(object? sender, EventArgs e)
     {
         var epoch = (_lifecycleRevision, _sceneRevision);
-        if (_interactiveRefreshEpoch != epoch)
-        {
-            _interactiveRefreshEpoch = epoch;
-            _interactiveRefreshTask = RefreshInteractiveContentAsync(epoch);
-        }
-        await _interactiveRefreshTask!;
+        if (_interactiveRefreshEpoch == epoch) return;
+        _interactiveRefreshEpoch = epoch;
+        await (_interactiveRefreshTask = RefreshInteractiveContentAsync(epoch));
     }
 
     private async Task RefreshInteractiveContentAsync((int Lifecycle, int Scene) epoch)
@@ -514,7 +509,6 @@ public partial class MainPage : ContentPage
         // Several inputs can arrive in one dispatch. Present their live updates
         // before capturing the latest state once, rather than queuing one native
         // rasterization per click. Explicit Refresh keeps its direct path.
-        await Task.Yield();
         await Task.Delay(16);
         if (_interactiveRefreshEpoch == epoch)
         {

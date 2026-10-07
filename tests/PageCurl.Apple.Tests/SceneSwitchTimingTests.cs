@@ -7,6 +7,7 @@ using PageCurl.Demo;
 using PageCurl.Maui;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
+using static PageCurl.Apple.Tests.NativeTestSupport;
 
 namespace PageCurl.Apple.Tests;
 
@@ -39,7 +40,7 @@ internal static class SceneSwitchTimingTests
             typeof(PageSpreadView).GetMethod("OnContentLayoutChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .Invoke(spread, [spread.RightContent, EventArgs.Empty]);
             var count = captures.Count;
-            var measurement = await QueueClickAsync(page, "SingleSceneButton", delay);
+            var measurement = await QueueClickAsync(page, captures, "SingleSceneButton", delay);
             results.Add($"QUEUED_SWITCH Spread->Single delay_ms={delay} queue_ms={measurement.Queue:F1} handler_ms={measurement.Handler:F1} next_dispatch_ms={measurement.Dispatch:F1} first_paint_ms={measurement.Paint:F1} handler_captures={measurement.HandlerCaptures}");
             results.Add(measurement.HandlerCaptures == 0
                 ? $"PASS pending spread cancellation avoids outgoing native capture ({delay})"
@@ -53,7 +54,7 @@ internal static class SceneSwitchTimingTests
                 : $"FAIL hidden spread performed obsolete automatic capture ({delay})");
         }
 
-        await Queued_switch_after_rendered_drag(page, results);
+        await Queued_switch_after_rendered_drag(page, captures, results);
         await Queued_switch_during_spread_capture(page, captures, results);
 
         Click(page, "ContentSceneButton");
@@ -70,7 +71,7 @@ internal static class SceneSwitchTimingTests
         captures.NextCaptureStarted = () => captureStarted.TrySetResult();
         // Queue from a worker as soon as rasterization begins. Starting a
         // stopwatch after a UI-context await would hide this queued interval.
-        var queued = QueueClickAsync(page, "SingleSceneButton", 0, captureStarted.Task);
+        var queued = QueueClickAsync(page, captures, "SingleSceneButton", 0, captureStarted.Task);
         for (var click = 0; click < 5; click++) ((IButtonController)add).SendClicked();
         var burst = await queued;
         results.Add($"QUEUED_LIVE_SWITCH clicks=5 queue_ms={burst.Queue:F1} handler_ms={burst.Handler:F1} next_dispatch_ms={burst.Dispatch:F1} first_paint_ms={burst.Paint:F1} source_captures={captures.Count - countBefore}");
@@ -99,11 +100,10 @@ internal static class SceneSwitchTimingTests
         results.Add("PASS coalesced live refresh retains current native pixels and resolution");
     }
 
-    private static async Task<ClickTiming> QueueClickAsync(MainPage page, string buttonName, int delay, Task? signal = null)
+    private static async Task<ClickTiming> QueueClickAsync(MainPage page, ObservedSnapshotter captures,
+        string buttonName, int delay, Task? signal = null)
     {
         var dispatcher = page.Dispatcher;
-        var captures = (ObservedSnapshotter)typeof(PageCurlView).GetField("_snapshotter", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(page.FindByName<PageCurlView>("ContentPageView"))!;
         var clicked = new TaskCompletionSource<ClickTiming>(TaskCreationOptions.RunContinuationsAsynchronously);
         var single = page.FindByName<PageTurnView>("SinglePageView");
         var painted = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -136,16 +136,16 @@ internal static class SceneSwitchTimingTests
                     }
                     catch (Exception exception) { clicked.TrySetException(exception); }
                 })) clicked.TrySetException(new InvalidOperationException("Scene dispatch was rejected."));
-            }).WaitAsync(TimeSpan.FromSeconds(3));
-            var timing = await clicked.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            }).WaitAsync(UiTimeout);
+            var timing = await clicked.Task.WaitAsync(UiTimeout);
             return buttonName == "SingleSceneButton"
-                ? timing with { Paint = Milliseconds(timing.Requested, await painted.Task.WaitAsync(TimeSpan.FromSeconds(3))) }
+                ? timing with { Paint = Milliseconds(timing.Requested, await painted.Task.WaitAsync(UiTimeout)) }
                 : timing;
         }
         finally { single.PaintSurface -= onPaint; }
     }
 
-    private static async Task Queued_switch_after_rendered_drag(MainPage page, List<string> results)
+    private static async Task Queued_switch_after_rendered_drag(MainPage page, ObservedSnapshotter captures, List<string> results)
     {
         var single = page.FindByName<PageTurnView>("SinglePageView");
         foreach (var delay in new[] { 0, 8, 16, 24, 40, 80 })
@@ -167,17 +167,18 @@ internal static class SceneSwitchTimingTests
                 {
                     pulled = new SKPoint(grab.X - viewport.Size.X * (.2f + frame * .15f), grab.Y + viewport.Size.Y * .1f);
                     SendTouch(single, SKTouchAction.Moved, pulled);
-                    await painted.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                    await painted.Task.WaitAsync(UiTimeout);
                 }
                 finally { single.PaintSurface -= onPaint; }
             }
             var released = Stopwatch.GetTimestamp();
             SendTouch(single, SKTouchAction.Released, pulled);
-            var measurement = await QueueClickAsync(page, destination + "SceneButton", delay);
+            var measurement = await QueueClickAsync(page, captures, destination + "SceneButton", delay);
             Require(single.Controller.Snapshot.State == PageTurnState.Idle, "A queued scene switch left the outgoing drag settling.");
             Require(measurement.Queue < 150 && measurement.Handler < 150 && measurement.Dispatch < 250,
                 $"Queued Single->{destination} switch exceeded its response budget ({delay}).");
-            await WaitUntilAsync(() => page.FindByName<Button>("NextButton").IsEnabled);
+            await WaitUntilAsync(() => page.FindByName<Button>("NextButton").IsEnabled
+                && (destination == "Spread" || SnapshotReady(page.FindByName<PageCurlView>($"{destination}PageView"))));
             var ready = Milliseconds(measurement.Requested, Stopwatch.GetTimestamp());
             results.Add($"QUEUED_DRAG_SWITCH Single->{destination} delay_ms={delay} release_to_request_ms={Milliseconds(released, measurement.Requested):F1} queue_ms={measurement.Queue:F1} handler_ms={measurement.Handler:F1} next_dispatch_ms={measurement.Dispatch:F1} navigation_ready_ms={ready:F1}");
         }
@@ -190,7 +191,7 @@ internal static class SceneSwitchTimingTests
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         captures.NextCaptureStarted = () => started.TrySetResult();
         var count = captures.Count;
-        var queued = QueueClickAsync(page, "SingleSceneButton", 0, started.Task);
+        var queued = QueueClickAsync(page, captures, "SingleSceneButton", 0, started.Task);
         Click(page, "SpreadSceneButton");
         var timing = await queued;
         var total = captures.Count - count;
@@ -208,20 +209,6 @@ internal static class SceneSwitchTimingTests
             .Invoke(view, [view, new SKTouchEventArgs(1, action, point, action != SKTouchAction.Released)]);
 
     private static double Milliseconds(long start, long end) => (end - start) * 1000d / Stopwatch.Frequency;
-    private static void Click(MainPage page, string name) => ((IButtonController)page.FindByName<Button>(name)).SendClicked();
-
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        var watch = Stopwatch.StartNew();
-        while (!condition() && watch.Elapsed < TimeSpan.FromSeconds(3)) await Task.Delay(10);
-        Require(condition(), "Scene-switch timing setup timed out.");
-    }
-
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-
     private readonly record struct ClickTiming(double Queue, double Handler, double Dispatch, int HandlerCaptures, long Requested, double Paint);
 
     private sealed class ObservedSnapshotter : IPageContentSnapshotter

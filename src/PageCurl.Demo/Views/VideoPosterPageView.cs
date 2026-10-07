@@ -100,7 +100,13 @@ internal sealed class VideoPosterPageView : ContentView, IDisposable
 
     public void SetActive(bool active)
     {
-        if (_media?.Handler is null)
+        if (_media is null)
+        {
+            return;
+        }
+
+        _media.ShouldAutoPlay = active;
+        if (_media.Handler is null)
         {
             return;
         }

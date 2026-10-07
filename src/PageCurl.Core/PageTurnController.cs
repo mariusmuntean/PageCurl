@@ -281,13 +281,14 @@ public sealed class PageTurnController
             : 0;
         if (dt > 0)
         {
-            var omega = _options.SpringFrequency;
-            var error = _progress - _targetProgress;
+            // Finite float frequencies can overflow the spring intermediates.
+            var omega = (double)_options.SpringFrequency;
+            var error = (double)_progress - _targetProgress;
             var c = _velocity + (omega * error);
-            var decay = MathF.Exp(-omega * dt);
+            var decay = Math.Exp(-omega * dt);
             var nextError = (error + (c * dt)) * decay;
-            _velocity = (_velocity - (omega * c * dt)) * decay;
-            _progress = Math.Clamp(_targetProgress + nextError, 0, 1);
+            _velocity = (float)((_velocity - (omega * c * dt)) * decay);
+            _progress = (float)Math.Clamp(_targetProgress + nextError, 0, 1);
         }
 
         if (MathF.Abs(_progress - _targetProgress) <= 0.001f && MathF.Abs(_velocity) <= 0.01f)

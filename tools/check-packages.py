@@ -30,6 +30,18 @@ def read_package_files(path):
         if required not in files:
             raise ValueError(f'Missing {required} in {Path(path).name}')
     relationships = ET.fromstring(files['_rels/.rels'])
+    content_types = ET.fromstring(files['[Content_Types].xml'])
+    for part, root, namespace, root_name, children in [
+        ('_rels/.rels', relationships, 'http://schemas.openxmlformats.org/package/2006/relationships',
+         'Relationships', {'Relationship': ('Id', 'Type', 'Target')}),
+        ('[Content_Types].xml', content_types, 'http://schemas.openxmlformats.org/package/2006/content-types',
+         'Types', {'Default': ('Extension', 'ContentType'), 'Override': ('PartName', 'ContentType')}),
+    ]:
+        attributes = {f'{{{namespace}}}{name}': required for name, required in children.items()}
+        if root.tag != f'{{{namespace}}}{root_name}' or any(
+                node.tag not in attributes or any(not (node.get(name) or '').strip() for name in attributes[node.tag])
+                for node in root):
+            raise ValueError(f'Invalid OPC part {part} in {Path(path).name}')
     manifest_type = 'http://schemas.microsoft.com/packaging/2010/07/manifest'
     properties_type = 'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties'
     if len(relationships) != 2 or {node.get('Type') for node in relationships} != {manifest_type, properties_type}:
@@ -39,8 +51,31 @@ def read_package_files(path):
         valid = target == manifests[0] if node.get('Type') == manifest_type else target.startswith(PROPERTIES)
         if node.get('TargetMode') is not None or not valid or target not in files:
             raise ValueError(f'Invalid package relationship in {Path(path).name}')
-    ET.fromstring(files['[Content_Types].xml'])
     return files
+
+
+def canonical(node):
+    if node is None:
+        return None
+    return (node.tag.split('}')[-1], tuple(sorted(node.attrib.items())), (node.text or '').strip(),
+            tuple(sorted(canonical(child) for child in node)))
+
+
+class Package:
+    def __init__(self, path):
+        self.path = Path(path)
+        self.files = read_package_files(path)
+        self.manifest = next(name for name in self.files if name.endswith('.nuspec'))
+        self.root = ET.fromstring(self.files[self.manifest])
+        self.metadata = self.root.find('{*}metadata')
+        if self.metadata is None:
+            raise ValueError(f'Missing package metadata in {self.path.name}')
+        self.package_id = self.metadata.findtext('{*}id')
+        self.version = self.metadata.findtext('{*}version')
+        self.dependencies = self.metadata.find('{*}dependencies')
+        self.identity = (self.package_id, self.version, canonical(self.metadata.find('{*}repository')))
+        self.frameworks = {name.split('/')[1] for name in self.files
+                           if name.startswith('lib/') and name.endswith(f'/{self.package_id}.dll')}
 
 
 def matches_framework(actual, expected):
@@ -52,32 +87,25 @@ def matches_framework(actual, expected):
 
 def check_package(path, frameworks):
     try:
-        files = read_package_files(path)
-        specs = [name for name in files if name.endswith('.nuspec')]
-        root = ET.fromstring(files[specs[0]])
-        for node in root.iter():
-            node.tag = node.tag.split('}')[-1]
-        metadata = root.find('metadata')
-        if metadata is None:
-            return ['Missing package metadata']
-        package_id = metadata.findtext('id')
-        version = metadata.findtext('version')
+        package = path if isinstance(path, Package) else Package(path)
+        files, metadata = package.files, package.metadata
+        package_id, version = package.package_id, package.version
         errors = []
         if package_id not in ('PageCurl.Core', 'PageCurl.Maui'):
             errors.append('Unexpected package identity')
         if not version or not version.strip():
             errors.append('Missing package version')
-        license_node = metadata.find('license')
+        license_node = metadata.find('{*}license')
         if license_node is None or license_node.get('type') != 'expression' or license_node.text != 'MIT':
             errors.append('Missing MIT expression')
-        readme = metadata.findtext('readme')
+        readme = metadata.findtext('{*}readme')
         if readme not in files or not files[readme].strip():
             errors.append('Missing packaged readme')
-        if not (metadata.findtext('description') or '').strip():
+        if not (metadata.findtext('{*}description') or '').strip():
             errors.append('Missing description')
-        if metadata.findtext('projectUrl') != 'https://mariusmuntean.github.io/PageCurl-docs/':
+        if metadata.findtext('{*}projectUrl') != 'https://mariusmuntean.github.io/PageCurl-docs/':
             errors.append('Missing documentation URL')
-        repository = metadata.find('repository')
+        repository = metadata.find('{*}repository')
         if repository is None or repository.get('type') != 'git' or repository.get('url') != 'https://github.com/mariusmuntean/PageCurl':
             errors.append('Missing repository URL')
         if repository is None or not re.fullmatch(r'[0-9a-fA-F]{40}', repository.get('commit', '')):
@@ -93,15 +121,15 @@ def check_package(path, frameworks):
                     if asset not in files or not files[asset]:
                         errors.append(f'Missing {label} for {tfm}')
                 if package_id == 'PageCurl.Maui':
-                    groups = [node for node in metadata.findall('dependencies/group') if node.get('targetFramework') == tfm]
-                    cores = [node for group in groups for node in group.findall('dependency') if node.get('id') == 'PageCurl.Core']
+                    groups = [node for node in metadata.findall('{*}dependencies/{*}group') if node.get('targetFramework') == tfm]
+                    cores = [node for group in groups for node in group.findall('{*}dependency') if node.get('id') == 'PageCurl.Core']
                     if len(groups) != 1 or len(cores) != 1:
                         errors.append(f'Missing or duplicate Core dependency for {tfm}')
                     elif cores[0].get('version') not in (version, f'[{version}]'):
                         errors.append(f'Core dependency version differs from package for {tfm}')
         return errors
     except (OSError, zipfile.BadZipFile, ET.ParseError, KeyError, ValueError) as error:
-        return [f'Invalid package {Path(path).name}: {error}']
+        return [f'Invalid package {Path(path.path if isinstance(path, Package) else path).name}: {error}']
 
 
 if __name__ == '__main__':

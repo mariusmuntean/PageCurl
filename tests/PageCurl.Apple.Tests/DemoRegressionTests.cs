@@ -9,6 +9,7 @@ using UIKit;
 using CoreGraphics;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
+using static PageCurl.Apple.Tests.NativeTestSupport;
 
 namespace PageCurl.Apple.Tests;
 
@@ -239,6 +240,8 @@ internal static class DemoRegressionTests
                     {
                         if (scene == "Spread")
                             await WaitUntilAsync(() => spread.CanTurnForward || spread.CanTurnBackward);
+                        else if (scene is "Content" or "Backside")
+                            await WaitUntilAsync(() => SnapshotReady(page.FindByName<PageCurlView>($"{scene}PageView")));
                     }
                     await Ready();
                     // Earlier suites leave different page indices. Normalize through real commands.
@@ -357,8 +360,13 @@ internal static class DemoRegressionTests
 
     private static async Task Explicit_refresh_preserves_failure_and_scene_status(MainPage page, List<string> results)
     {
-        ((IButtonController)page.FindByName<Button>("ContentSceneButton")).SendClicked();
+        Click(page, "ContentSceneButton");
+        Click(page, "InteractiveContentButton");
         var content = page.FindByName<PageCurlView>("ContentPageView");
+        await WaitUntilAsync(() => content.FrontContent?.Handler is not null
+            && content.FrontContent.Width > 0 && content.FrontContent.Height > 0
+            && !AutomaticRefreshQueued(content));
+        var live = (ContentView)content.FrontContent!;
         await content.RefreshSnapshotAsync();
         var field = typeof(PageCurlView).GetField("_snapshotter", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var original = field.GetValue(content);
@@ -367,6 +375,7 @@ internal static class DemoRegressionTests
         var previous = content.Renderer.FrontImage;
         try
         {
+            HoldAutomaticQueue(content);
             field.SetValue(content, new FailingSnapshotter());
             ((IButtonController)refresh).SendClicked();
             await WaitUntilAsync(() => refresh.IsEnabled);
@@ -374,15 +383,17 @@ internal static class DemoRegressionTests
                 ? "PASS explicit refresh reports failure and retains last frame"
                 : $"FAIL explicit refresh hid capture failure: {status.Text}");
 
-            await page.RefreshContentAsync("Live content updated", deferUntilLayout: true);
-            results.Add(status.Text == "Using last snapshot"
+            AddOne(live);
+            await InteractiveTask(page).WaitAsync(UiTimeout);
+            results.Add(status.Text == "Using last snapshot" && ReferenceEquals(previous, content.Renderer.FrontImage)
                 ? "PASS live refresh reports capture failure honestly"
                 : $"FAIL live refresh hid capture failure: {status.Text}");
 
-            var queuedLiveRefresh = page.RefreshContentAsync("Live content updated", deferUntilLayout: true);
+            AddOne(live);
+            var queuedLiveRefresh = InteractiveTask(page);
             ((IButtonController)page.FindByName<Button>("SingleSceneButton")).SendClicked();
             ((IButtonController)page.FindByName<Button>("ContentSceneButton")).SendClicked();
-            await queuedLiveRefresh;
+            await queuedLiveRefresh.WaitAsync(UiTimeout);
             results.Add(status.Text == "Ready"
                 ? "PASS queued live refresh ignores scene re-entry"
                 : $"FAIL queued live refresh changed new scene status: {status.Text}");
@@ -443,6 +454,7 @@ internal static class DemoRegressionTests
         finally
         {
             field.SetValue(content, original);
+            HoldAutomaticQueue(content, false);
         }
     }
 
@@ -482,6 +494,8 @@ internal static class DemoRegressionTests
                 var source = scenes[index];
                 var destination = scenes[(index + 1) % scenes.Length];
                 ((IButtonController)page.FindByName<Button>($"{source}SceneButton")).SendClicked();
+                if (source is "Content" or "Backside")
+                    await WaitUntilAsync(() => SnapshotReady(page.FindByName<PageCurlView>($"{source}PageView")));
                 var next = page.FindByName<Button>("NextButton");
                 var previous = page.FindByName<Button>("PreviousButton");
                 await WaitUntilAsync(() => next.IsEnabled || previous.IsEnabled);
@@ -512,13 +526,6 @@ internal static class DemoRegressionTests
             }
         }
         results.Add("PASS rapid scene switches cancel every outgoing turn");
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        var timeout = Stopwatch.StartNew();
-        while (!condition() && timeout.Elapsed < TimeSpan.FromSeconds(3)) await Task.Delay(10);
-        Require(condition(), "Timed out waiting for the UI operation.");
     }
 
     private sealed class FailingSnapshotter : IPageContentSnapshotter
@@ -566,11 +573,6 @@ internal static class DemoRegressionTests
     private static void SendTouch(PageTurnView view, SKTouchAction action, SKPoint point) =>
         typeof(PageTurnView).GetMethod("OnTouch", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!
             .Invoke(view, [view, new SKTouchEventArgs(1, action, point, action != SKTouchAction.Released)]);
-    private static void Require(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-
     private sealed class TimedSnapshotter : IPageContentSnapshotter
     {
         private readonly PageContentSnapshotter _inner = new();

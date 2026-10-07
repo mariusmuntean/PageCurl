@@ -7,40 +7,11 @@ import unittest
 import xml.etree.ElementTree as ET
 import zipfile
 
+from package_fixtures import COMMIT, package_pair, rewrite
+
 ASSEMBLER = Path(__file__).resolve().parents[1] / 'assemble-packages.py'
-COMMIT = '0123456789012345678901234567890123456789'
 FRAMEWORKS = ['net10.0', 'net10.0-android36.0', 'net10.0-ios26.0', 'net10.0-maccatalyst26.0']
 WINDOWS = 'net10.0-windows10.0.19041.0'
-
-
-def package_pair(folder, package_id, frameworks, commit=COMMIT, version='0.1.0', readme='# PageCurl'):
-    folder.mkdir(parents=True, exist_ok=True)
-    for suffix in ['nupkg', 'snupkg']:
-        path = folder / f'{package_id}.{version}.{suffix}'
-        groups = ''.join(f'<group targetFramework="{tfm}"><dependency id="PageCurl.Core" version="{version}" /></group>' for tfm in frameworks) if package_id == 'PageCurl.Maui' else ''
-        common = f'<id>{package_id}</id><version>{version}</version><description>Page turns</description><projectUrl>https://mariusmuntean.github.io/PageCurl-docs/</projectUrl><repository type="git" url="https://github.com/mariusmuntean/PageCurl" commit="{commit}" />'
-        metadata = common + ('<packageTypes><packageType name="SymbolsPackage" /></packageTypes>' if suffix == 'snupkg' else '<authors>Marius Muntean</authors><license type="expression">MIT</license><readme>README.md</readme>')
-        with zipfile.ZipFile(path, 'w') as archive:
-            archive.writestr(f'{package_id}.nuspec', f'<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd"><metadata>{metadata}<dependencies>{groups}</dependencies></metadata></package>')
-            archive.writestr('_rels/.rels', f'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/{package_id}.nuspec" Id="manifest" /><Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/nuget.psmdcp" Id="properties" /></Relationships>')
-            archive.writestr('package/services/metadata/core-properties/nuget.psmdcp', '<properties/>')
-            archive.writestr('[Content_Types].xml', '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="nuspec" ContentType="application/octet" /><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" /><Default Extension="psmdcp" ContentType="application/vnd.openxmlformats-package.core-properties+xml" /><Default Extension="dll" ContentType="application/octet" /><Default Extension="xml" ContentType="application/octet" /><Default Extension="md" ContentType="application/octet" /><Default Extension="pdb" ContentType="application/octet" /></Types>')
-            if suffix == 'nupkg':
-                archive.writestr('README.md', readme)
-            for tfm in frameworks:
-                extensions = ['pdb'] if suffix == 'snupkg' else ['dll', 'xml']
-                for extension in extensions:
-                    archive.writestr(f'lib/{tfm}/{package_id}.{extension}', f'{tfm} {extension}')
-
-
-def rewrite(path, changes):
-    with zipfile.ZipFile(path) as archive:
-        entries = {name: archive.read(name) for name in archive.namelist()}
-    entries.update(changes)
-    with zipfile.ZipFile(path, 'w') as archive:
-        for name, data in entries.items():
-            if data is not None:
-                archive.writestr(name, data)
 
 
 class PackageAssemblyTests(unittest.TestCase):

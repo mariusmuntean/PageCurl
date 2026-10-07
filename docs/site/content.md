@@ -12,9 +12,10 @@ TurnView.BacksideMode = PageBacksideMode.CustomContent;
 TurnView.BackImage = reverseSide;
 ```
 
-Keep assigned images alive. Before disposing or recycling an image set, cancel
-interaction and clear the image properties. The control never disposes your
-images. Use `ContentScale="AspectFit"` to preserve their proportions.
+Keep assigned images alive. Before disposing or recycling an image set, guard
+callbacks that can restart a turn, cancel interaction and clear the image
+properties. The control never disposes your images. Use
+`ContentScale="AspectFit"` to preserve their proportions.
 
 If `PreviousPageImage` is absent, backward turns fall back to `UnderPageImage`.
 Supply both when the neighboring pages differ.
@@ -24,6 +25,11 @@ Supply both when the neighboring pages differ.
 Set `PageCurlView.FrontContent` to a MAUI view. For a separate reverse side,
 set `BackContent` and choose `BacksideMode="CustomContent"`. Mirrored and
 solid-color modes need no second view.
+
+The control owns its captured textures. Your application owns supplied
+`UnderPageImage` and `PreviousPageImage` values, and any media or other resources
+used by the hosted views. Use the same borrowed-image cleanup rules above for
+destination images.
 
 After changing content in place, request a fresh capture:
 

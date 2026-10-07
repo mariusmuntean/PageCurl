@@ -1,4 +1,6 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui;
+using Microsoft.Maui.Graphics;
 using PageCurl.Core;
 using SkiaSharp;
 using System.Numerics;
@@ -10,10 +12,10 @@ internal static class PageSpreadViewTests
 {
     public static async Task RunAllAsync()
     {
-        await Cancellation_defers_pending_automatic_capture_and_hiding_discards_it();
+        await Refresh_waiting_for_a_turn_is_obsolete_after_hiding();
+        await Reconnect_does_not_overlap_an_unfinished_capture();
         await Pending_automatic_refresh_resumes_after_normal_completion();
         await Pending_automatic_refresh_waits_for_a_reentrant_turn();
-        await Explicit_refresh_waiting_for_a_turn_is_obsolete_after_hiding();
         await Synchronous_capture_services_queued_hiding_before_the_next_slot();
         await Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
         await Cancellation_handler_can_start_a_replacement_spread_turn();
@@ -32,6 +34,7 @@ internal static class PageSpreadViewTests
         await Refresh_requested_during_a_turn_runs_after_completion();
         await Failed_capture_keeps_the_slot_dirty_and_a_later_refresh_retries_only_it();
         await Failed_capture_reports_the_physical_sheet_back_roles();
+        await Failed_optional_sheet_backs_fall_back_for_both_directions();
         await Refresh_captures_only_slots_with_changed_content();
         await Every_content_slot_blocks_only_its_turn_until_recaptured();
         await Forward_turn_shows_the_adjacent_page_on_the_sheet_back();
@@ -40,8 +43,9 @@ internal static class PageSpreadViewTests
         Handler_teardown_restores_both_static_pages();
     }
 
-    private static async Task Cancellation_defers_pending_automatic_capture_and_hiding_discards_it()
+    private static async Task Refresh_waiting_for_a_turn_is_obsolete_after_hiding()
     {
+        foreach (var explicitRefresh in new[] { false, true })
         foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
         foreach (var reveal in new[] { false, true })
         {
@@ -50,7 +54,13 @@ internal static class PageSpreadViewTests
             try
             {
                 BeginSettlingTurn(spread, direction);
-                if (direction == PageTurnDirection.Forward) spread.RightContent = new Grid();
+                Task? refresh = null;
+                if (explicitRefresh)
+                {
+                    refresh = spread.RefreshSnapshotAsync();
+                    TestAssert.False(refresh.IsCompleted);
+                }
+                else if (direction == PageTurnDirection.Forward) spread.RightContent = new Grid();
                 else spread.LeftContent = new Grid();
                 TestAssert.Equal(4, snapshotter.CaptureCount);
 
@@ -61,7 +71,7 @@ internal static class PageSpreadViewTests
                 if (reveal) spread.IsVisible = true;
                 // Run the deferred completion continuation, as the UI dispatcher would.
                 await Task.Yield();
-                await CurrentRefreshChain(spread);
+                await (refresh ?? CurrentRefreshChain(spread));
                 TestAssert.True(snapshotter.CaptureCount == 4,
                     "The obsolete completion continuation captured a hidden or re-entered spread.");
 
@@ -71,6 +81,48 @@ internal static class PageSpreadViewTests
                 TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
             }
             finally { InvokeHandlerChanged(spread); }
+        }
+    }
+
+    private static async Task Reconnect_does_not_overlap_an_unfinished_capture()
+    {
+        var snapshotter = new ReconnectGateSnapshotter();
+        var spread = CreateSpread(snapshotter);
+        spread.IsVisible = false;
+        try
+        {
+            var first = spread.RefreshSnapshotAsync();
+            await snapshotter.FirstStarted;
+
+            InvokeHandlerChanged(spread);
+            spread.Handler = new ManualViewHandler(spread);
+            foreach (var content in new View?[]
+            {
+                spread.LeftContent,
+                spread.RightContent,
+                spread.PreviousLeftContent,
+                spread.NextRightContent,
+            })
+            {
+                content!.Handler = new ManualViewHandler(content);
+                ((IView)content).Arrange(new Rect(0, 0, 4, 4));
+            }
+
+            var reconnected = spread.RefreshSnapshotAsync();
+            await Task.Yield();
+            TestAssert.True(snapshotter.ActiveCaptures == 1,
+                "Reconnect started a second native capture before the first completed.");
+
+            snapshotter.ReleaseFirst();
+            await TestAssert.ThrowsAsync<OperationCanceledException>(() => first);
+            snapshotter.ReleaseSecond();
+            await reconnected;
+            TestAssert.True(snapshotter.CaptureCount == 5,
+                "Reconnect did not capture all four spread slots after the predecessor completed.");
+        }
+        finally
+        {
+            spread.Handler = null;
         }
     }
 
@@ -121,31 +173,6 @@ internal static class PageSpreadViewTests
             TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
         }
         finally { InvokeHandlerChanged(spread); }
-    }
-
-    private static async Task Explicit_refresh_waiting_for_a_turn_is_obsolete_after_hiding()
-    {
-        foreach (var reveal in new[] { false, true })
-        {
-            var snapshotter = new CountingSnapshotter();
-            var spread = await CreateReadySpreadAsync(snapshotter);
-            try
-            {
-                BeginSettlingTurn(spread, PageTurnDirection.Forward);
-                var refresh = spread.RefreshSnapshotAsync();
-                TestAssert.False(refresh.IsCompleted);
-                spread.CancelInteraction();
-                spread.IsVisible = false;
-                if (reveal) spread.IsVisible = true;
-                await refresh;
-                TestAssert.True(snapshotter.CaptureCount == 4,
-                    "An explicit refresh waiting on a turn captured obsolete outgoing content.");
-                spread.IsVisible = true;
-                await spread.RefreshSnapshotAsync();
-                TestAssert.Equal(8, snapshotter.CaptureCount);
-            }
-            finally { InvokeHandlerChanged(spread); }
-        }
     }
 
     private static Task CurrentRefreshChain(PageSpreadView spread) =>
@@ -288,8 +315,10 @@ internal static class PageSpreadViewTests
                 spread.SetValue(property, newContent);
                 TestAssert.Null(oldContent.Parent);
                 TestAssert.True(ReferenceEquals(host, newContent.Parent));
-                TestAssert.Equal(!forward, spread.CanTurnForward);
-                TestAssert.Equal(forward, spread.CanTurnBackward);
+                var optionalBack = ReferenceEquals(property, PageSpreadView.PreviousRightContentProperty)
+                    || ReferenceEquals(property, PageSpreadView.NextLeftContentProperty);
+                TestAssert.Equal(optionalBack || !forward, spread.CanTurnForward);
+                TestAssert.Equal(optionalBack || forward, spread.CanTurnBackward);
 
                 await DrainAsync(spread);
                 TestAssert.Equal(7, snapshotter.Count);
@@ -405,9 +434,7 @@ internal static class PageSpreadViewTests
             spread.LeftContent = new Grid();
             var pending = snapshotter.DelayNext();
             using var cancellation = new CancellationTokenSource();
-            var refresh = (Task)typeof(PageSpreadView)
-                .GetMethod("DrainSnapshotRefreshAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .Invoke(spread, [cancellation.Token])!;
+            var refresh = DrainAsync(spread, cancellation.Token);
             BeginSettlingTurn(spread, PageTurnDirection.Forward);
             var front = spread.Overlay.FrontImage!;
             if (teardown)
@@ -577,9 +604,9 @@ internal static class PageSpreadViewTests
         PreviousLeftContent = new Grid(), NextRightContent = new Grid(),
     };
 
-    private static Task DrainAsync(PageSpreadView spread) =>
+    private static Task DrainAsync(PageSpreadView spread, CancellationToken cancellationToken = default) =>
         (Task)typeof(PageSpreadView).GetMethod("DrainSnapshotRefreshAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(spread, [CancellationToken.None])!;
+            .Invoke(spread, [cancellationToken])!;
 
     private static SKImage MakeImage(int width)
     {
@@ -677,9 +704,7 @@ internal static class PageSpreadViewTests
 
         // Caller cancellation stops waiting before the serialized capture
         // finishes. Check disposal only after that internal work has ended.
-        var capture = (Task)typeof(PageSpreadView)
-            .GetField("_refreshChain", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(spread)!;
+        var capture = CurrentRefreshChain(spread);
         await TestAssert.ThrowsAsync<OperationCanceledException>(() => capture);
 
         TestAssert.NotNull(snapshotter.ReturnedImage);
@@ -709,13 +734,7 @@ internal static class PageSpreadViewTests
     {
         var snapshotter = new SequencedSnapshotter();
         snapshotter.EnqueueImages(4);
-        var spread = new PageSpreadView(snapshotter)
-        {
-            LeftContent = new Grid(),
-            RightContent = new Grid(),
-            PreviousLeftContent = new Grid(),
-            NextRightContent = new Grid(),
-        };
+        var spread = CreateSpread(snapshotter);
         await spread.RefreshSnapshotAsync();
 
         spread.RightContent = new Grid();
@@ -771,6 +790,43 @@ internal static class PageSpreadViewTests
             TestAssert.Same(replacement, failed.Content);
             TestAssert.Equal(isBackside, failed.IsBackside);
         }
+    }
+
+    private static async Task Failed_optional_sheet_backs_fall_back_for_both_directions()
+    {
+        await Failed_optional_sheet_back_falls_back(PageTurnDirection.Forward);
+        await Failed_optional_sheet_back_falls_back(PageTurnDirection.Backward);
+    }
+
+    private static async Task Failed_optional_sheet_back_falls_back(PageTurnDirection direction)
+    {
+        var snapshotter = new SequencedSnapshotter();
+        snapshotter.EnqueueImages(5);
+        var spread = CreateSpread(snapshotter);
+        var property = direction == PageTurnDirection.Forward
+            ? PageSpreadView.NextLeftContentProperty
+            : PageSpreadView.PreviousRightContentProperty;
+        spread.SetValue(property, new Grid());
+        await spread.RefreshSnapshotAsync();
+
+        var replacement = new Grid();
+        spread.SetValue(property, replacement);
+        var failure = snapshotter.EnqueueDelayedFailure();
+        var refresh = DrainAsync(spread);
+        await failure.Started;
+        failure.Fail(new InvalidOperationException("optional back failed"));
+        await refresh;
+
+        TestAssert.True(direction == PageTurnDirection.Forward
+            ? spread.CanTurnForward
+            : spread.CanTurnBackward,
+            "A failed optional sheet back blocked its turn.");
+        var prepared = (bool)typeof(PageSpreadView)
+            .GetMethod("PrepareTurn", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(spread, [direction])!;
+        TestAssert.True(prepared);
+        TestAssert.Null(spread.Overlay.BackImage);
+        spread.CancelInteraction();
     }
 
     private static async Task Refresh_captures_only_slots_with_changed_content()
@@ -882,13 +938,7 @@ internal static class PageSpreadViewTests
     private static async Task<PageSpreadView> CreateReadySpreadAsync(
         CountingSnapshotter snapshotter)
     {
-        var spread = new PageSpreadView(snapshotter)
-        {
-            LeftContent = new Grid(),
-            RightContent = new Grid(),
-            PreviousLeftContent = new Grid(),
-            NextRightContent = new Grid(),
-        };
+        var spread = CreateSpread(snapshotter);
         await spread.RefreshSnapshotAsync();
         return spread;
     }
@@ -907,6 +957,85 @@ internal static class PageSpreadViewTests
         TestAssert.True(spread.Overlay.Controller.BeginProgrammaticTurn(
             new Vector2(400, 500),
             direction));
+    }
+
+    private sealed class ReconnectGateSnapshotter : IPageContentSnapshotter
+    {
+        private readonly TaskCompletionSource _firstStarted = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<SKImage> _firstCompletion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<SKImage> _secondCompletion = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task FirstStarted => _firstStarted.Task;
+
+        public int CaptureCount { get; private set; }
+
+        public int ActiveCaptures { get; private set; }
+
+        public Task<SKImage> CaptureAsync(View content, CancellationToken cancellationToken)
+        {
+            CaptureCount++;
+            ActiveCaptures++;
+            var completion = CaptureCount switch
+            {
+                1 => _firstCompletion.Task,
+                2 => _secondCompletion.Task,
+                _ => Task.FromResult(MakeImage(4)),
+            };
+            if (CaptureCount == 1)
+            {
+                _firstStarted.TrySetResult();
+            }
+
+            return TrackAsync(completion);
+        }
+
+        public void ReleaseFirst() => _firstCompletion.TrySetResult(MakeImage(4));
+
+        public void ReleaseSecond() => _secondCompletion.TrySetResult(MakeImage(4));
+
+        private async Task<SKImage> TrackAsync(Task<SKImage> capture)
+        {
+            try
+            {
+                return await capture;
+            }
+            finally
+            {
+                ActiveCaptures--;
+            }
+        }
+    }
+
+    private sealed class ManualViewHandler(IView view) : IViewHandler
+    {
+        public object PlatformView { get; } = new object();
+
+        public IView VirtualView => view;
+
+        IElement IElementHandler.VirtualView => view;
+
+        public IMauiContext MauiContext => null!;
+
+        public bool HasContainer { get; set; }
+
+        public object? ContainerView => null;
+
+        public void SetMauiContext(IMauiContext mauiContext) { }
+
+        public void SetVirtualView(IElement view) { }
+
+        public void UpdateValue(string property) { }
+
+        public void Invoke(string command, object? args) { }
+
+        public void DisconnectHandler() { }
+
+        public Size GetDesiredSize(double widthConstraint, double heightConstraint) => Size.Zero;
+
+        public void PlatformArrange(Rect frame) { }
     }
 
     private sealed class CountingSnapshotter : IPageContentSnapshotter

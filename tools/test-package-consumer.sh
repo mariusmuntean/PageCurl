@@ -29,27 +29,34 @@ if [[ ${#core_packages[@]} -ne 1 || ${#maui_packages[@]} -ne 1 ]]; then
   printf 'Expected one Core and one MAUI package in the feed.\n' >&2
   exit 1
 fi
-python3 "$ROOT/tools/check-packages.py" "${core_packages[0]}" net10.0
-python3 "$ROOT/tools/check-packages.py" "${maui_packages[0]}" net10.0
 cp "$ROOT/tests/PageCurl.Package.Tests/Consumer.csproj" "$ROOT/tests/PageCurl.Package.Tests/Program.cs" "$SCRATCH/consumer/"
 cp "$ROOT/global.json" "$SCRATCH/global.json"
-python3 - "$SCRATCH" "${core_packages[0]}" "${maui_packages[0]}" <<'PY'
+python3 - "$ROOT" "$SCRATCH" "${core_packages[0]}" "${maui_packages[0]}" <<'PY'
+import importlib.util
 from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
 
-scratch = Path(sys.argv[1])
-identities = []
-for path in sys.argv[2:]:
-    with zipfile.ZipFile(path) as archive:
-        manifest = next(name for name in archive.namelist() if name.endswith('.nuspec'))
-        metadata = ET.fromstring(archive.read(manifest)).find('{*}metadata')
-        identities.append((metadata.findtext('{*}version'), metadata.find('{*}repository').attrib))
-if identities[0] != identities[1]:
+root, scratch = map(Path, sys.argv[1:3])
+spec = importlib.util.spec_from_file_location('check_packages', root / 'tools/check-packages.py')
+checker = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(checker)
+packages = []
+for path in sys.argv[3:]:
+    try:
+        package = checker.Package(path)
+    except (OSError, ValueError, ET.ParseError, zipfile.BadZipFile, KeyError) as error:
+        sys.exit(f'Invalid package {Path(path).name}: {error}')
+    errors = checker.check_package(package, ['net10.0'])
+    if errors:
+        sys.exit('\n'.join(errors))
+    print(f'PASS package {package.path.name}: net10.0')
+    packages.append(package)
+if packages[0].identity[1:] != packages[1].identity[1:]:
     sys.exit('Core and MAUI release identities differ')
 consumer = ET.parse(scratch / 'consumer/Consumer.csproj')
-consumer.find('.//PackageReference[@Include="PageCurl.Maui"]').set('Version', identities[1][0])
+consumer.find('.//PackageReference[@Include="PageCurl.Maui"]').set('Version', packages[1].version)
 consumer.write(scratch / 'consumer/Consumer.csproj', encoding='utf-8', xml_declaration=True)
 config = ET.Element('configuration')
 sources = ET.SubElement(config, 'packageSources')

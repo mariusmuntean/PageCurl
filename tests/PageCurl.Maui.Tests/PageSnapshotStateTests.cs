@@ -5,6 +5,7 @@ internal static class PageSnapshotStateTests
     public static void RunAll()
     {
         New_capture_cancels_the_previous_generation();
+        Reentrant_capture_keeps_the_nested_generation_current();
         Stale_results_are_disposed_without_replacing_last_good_frames();
         Front_and_back_snapshots_replace_and_dispose_independently();
         Disposing_state_cancels_capture_before_disposing_frames();
@@ -19,6 +20,26 @@ internal static class PageSnapshotStateTests
         TestAssert.True(first.Token.IsCancellationRequested);
         TestAssert.False(second.Token.IsCancellationRequested);
         TestAssert.True(second.Generation > first.Generation);
+    }
+
+    private static void Reentrant_capture_keeps_the_nested_generation_current()
+    {
+        using var state = new PageSnapshotState<TrackedSnapshot>();
+        var first = state.BeginCapture(CancellationToken.None);
+        PageSnapshotCapture nested = default;
+        using var registration = first.Token.Register(() =>
+            nested = state.BeginCapture(CancellationToken.None));
+
+        var outer = state.BeginCapture(CancellationToken.None);
+        var snapshot = new TrackedSnapshot();
+
+        TestAssert.True(nested.Generation > outer.Generation,
+            "A reentrant capture did not receive a newer generation.");
+        TestAssert.False(nested.Token.IsCancellationRequested,
+            "The reentrant capture was cancelled by the outer replacement.");
+        TestAssert.True(state.TryReplaceFront(nested.Generation, snapshot),
+            "The reentrant capture lost ownership to the outer generation.");
+        TestAssert.Same(snapshot, state.Front!);
     }
 
     private static void Stale_results_are_disposed_without_replacing_last_good_frames()

@@ -389,7 +389,6 @@ public sealed class PageSpreadView : Grid
             _handlerDisconnected = true;
             _activePointerId = null;
             _snapshotRefreshPending = false;
-            _refreshChain = Task.CompletedTask;
             Overlay.CancelInteraction();
             RestoreStaticPages();
             _currentSnapshots.Dispose();
@@ -790,8 +789,8 @@ public sealed class PageSpreadView : Grid
         // The sheet's back face is the adjacent page it lands on, so the
         // turn reads like a physical book instead of a mirrored photocopy.
         var backFace = direction == PageTurnDirection.Forward
-            ? (NextLeftContent is null ? null : _sheetBackSnapshots.Back)
-            : (PreviousRightContent is null ? null : _sheetBackSnapshots.Front);
+            ? (IsSlotReady(SnapshotSlot.NextLeft) ? _sheetBackSnapshots.Back : null)
+            : (IsSlotReady(SnapshotSlot.PreviousRight) ? _sheetBackSnapshots.Front : null);
 
         _turnFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _turnInProgress = true;
@@ -885,16 +884,15 @@ public sealed class PageSpreadView : Grid
     }
 
     private bool IsForwardReady() =>
-        IsTurnReady(SnapshotSlot.Right, SnapshotSlot.NextRight, SnapshotSlot.NextLeft);
+        IsTurnReady(SnapshotSlot.Right, SnapshotSlot.NextRight);
 
     private bool IsBackwardReady() =>
-        IsTurnReady(SnapshotSlot.Left, SnapshotSlot.PreviousLeft, SnapshotSlot.PreviousRight);
+        IsTurnReady(SnapshotSlot.Left, SnapshotSlot.PreviousLeft);
 
-    private bool IsTurnReady(SnapshotSlot front, SnapshotSlot destination, SnapshotSlot back) =>
+    private bool IsTurnReady(SnapshotSlot front, SnapshotSlot destination) =>
         !_turnInProgress
         && IsSlotReady(front)
-        && IsSlotReady(destination)
-        && (GetSlotContent(back) is null || IsSlotReady(back));
+        && IsSlotReady(destination);
 
     private bool IsSlotReady(SnapshotSlot slot)
     {

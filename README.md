@@ -12,7 +12,7 @@ Page turns for images, live MAUI views and two-page spreads. The library targets
 | Control | Content |
 | --- | --- |
 | `PageTurnView` | Caller-owned `SKImage` values |
-| `PageCurlView` | A live MAUI view, captured during turns |
+| `PageCurlView` | A live MAUI view with a cached snapshot while turning |
 | `PageSpreadView` | A two-page reader with neighboring content |
 
 Register SkiaSharp in your MAUI app:

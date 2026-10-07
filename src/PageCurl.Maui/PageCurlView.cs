@@ -23,8 +23,16 @@ public sealed class PageCurlView : Grid
     private bool _handlerDisconnected;
     private long? _activePointerId;
     private TaskCompletionSource? _interactionFinished;
+    private TaskCompletionSource? _contentLayoutChanged;
     private bool _refreshQueued;
+    private long _refreshGeneration;
+    private TaskCompletionSource? _refreshFinished;
     private long _contentRevision;
+    private long _presentationRevision;
+    private View? _frontSnapshotContent;
+    private View? _backSnapshotContent;
+    private long _frontSnapshotRevision = -1;
+    private long _backSnapshotRevision = -1;
 
     public static readonly BindableProperty FrontContentProperty = BindableProperty.Create(
         nameof(FrontContent),
@@ -223,7 +231,10 @@ public sealed class PageCurlView : Grid
 
     public bool TryTurn(PageTurnDirection direction)
     {
-        if (_handlerDisconnected || Renderer.Controller.Snapshot.State != PageTurnState.Idle)
+        if (_handlerDisconnected
+            || !IsVisible
+            || Renderer.Controller.Snapshot.State != PageTurnState.Idle
+            || !AreSnapshotsReady())
         {
             return false;
         }
@@ -245,15 +256,51 @@ public sealed class PageCurlView : Grid
 
     public async Task RefreshSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        var snapshots = _snapshots;
-        var revision = _contentRevision;
-        await WaitForInteractionAsync(cancellationToken);
-        if (!IsCurrentCapture(snapshots, revision)) return;
-        var capture = snapshots.BeginCapture(cancellationToken);
-        await CaptureContentAsync(FrontContent, snapshots, revision, capture, isBackside: false);
-        capture.Token.ThrowIfCancellationRequested();
-        await CaptureContentAsync(BackContent, snapshots, revision, capture, isBackside: true);
-        capture.Token.ThrowIfCancellationRequested();
+        _refreshGeneration++;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var previousCompletion = _refreshFinished;
+        if (previousCompletion?.Task.IsCompleted == true)
+        {
+            previousCompletion = null;
+        }
+        _refreshFinished = completion;
+        try
+        {
+            var snapshots = _snapshots;
+            var presentationRevision = _presentationRevision;
+            await WaitForInteractionAsync(cancellationToken);
+            await WaitForCurrentContentLayoutAsync(presentationRevision, cancellationToken);
+
+            if (!IsVisible
+                || _handlerDisconnected
+                || presentationRevision != _presentationRevision
+                || !IsContentReady(FrontContent)
+                || !IsContentReady(BackContent))
+            {
+                return;
+            }
+
+            var revision = _contentRevision;
+            var frontContent = FrontContent;
+            var backContent = BackContent;
+            if (!IsCurrentCapture(snapshots, revision)) return;
+            var capture = snapshots.BeginCapture(cancellationToken);
+            await CaptureContentAsync(frontContent, snapshots, revision, capture, isBackside: false);
+            capture.Token.ThrowIfCancellationRequested();
+            await CaptureContentAsync(backContent, snapshots, revision, capture, isBackside: true);
+            capture.Token.ThrowIfCancellationRequested();
+        }
+        finally
+        {
+            if (ReferenceEquals(_refreshFinished, completion))
+            {
+                _refreshFinished = previousCompletion?.Task.IsCompleted == true
+                    ? null
+                    : previousCompletion;
+            }
+
+            completion.TrySetResult();
+        }
     }
 
     public void CancelInteraction()
@@ -270,11 +317,15 @@ public sealed class PageCurlView : Grid
         {
             _handlerDisconnected = true;
             _activePointerId = null;
+            _presentationRevision++;
+            SignalContentLayoutChanged();
             Renderer.CancelInteraction();
             ShowLiveContent();
             Renderer.FrontImage = null;
             Renderer.BackImage = null;
             _snapshots.Dispose();
+            _frontSnapshotContent = null;
+            _backSnapshotContent = null;
             return;
         }
 
@@ -307,6 +358,7 @@ public sealed class PageCurlView : Grid
     {
         var view = (PageCurlView)bindable;
         view._contentRevision++;
+        view.SignalContentLayoutChanged();
         view.ReplaceHostedView(view._frontHost, oldValue as View, newValue as View);
         view.UpdatePageFrame();
         view.QueueSnapshotRefresh();
@@ -319,6 +371,7 @@ public sealed class PageCurlView : Grid
     {
         var view = (PageCurlView)bindable;
         view._contentRevision++;
+        view.SignalContentLayoutChanged();
         view.ReplaceHostedView(view._backHost, oldValue as View, newValue as View);
         view.QueueSnapshotRefresh();
     }
@@ -339,6 +392,7 @@ public sealed class PageCurlView : Grid
         {
             oldView.Loaded -= OnContentLayoutChanged;
             oldView.SizeChanged -= OnContentLayoutChanged;
+            oldView.PropertyChanged -= OnContentPropertyChanged;
             host.Children.Remove(oldView);
         }
 
@@ -346,6 +400,7 @@ public sealed class PageCurlView : Grid
         {
             newView.Loaded += OnContentLayoutChanged;
             newView.SizeChanged += OnContentLayoutChanged;
+            newView.PropertyChanged += OnContentPropertyChanged;
             host.Children.Add(newView);
         }
     }
@@ -353,7 +408,16 @@ public sealed class PageCurlView : Grid
     private void OnContentLayoutChanged(object? sender, EventArgs e)
     {
         _contentRevision++;
+        SignalContentLayoutChanged();
         QueueSnapshotRefresh();
+    }
+
+    private void OnContentPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(IsVisible))
+        {
+            OnContentLayoutChanged(sender, e);
+        }
     }
 
     protected override void OnPropertyChanged(string? propertyName = null)
@@ -362,7 +426,12 @@ public sealed class PageCurlView : Grid
         if (propertyName == IsVisibleProperty.PropertyName)
         {
             // A capture started before hiding belongs to the previous presentation.
-            if (!IsVisible) _contentRevision++;
+            if (!IsVisible)
+            {
+                _presentationRevision++;
+                _contentRevision++;
+                SignalContentLayoutChanged();
+            }
             else QueueSnapshotRefresh();
         }
     }
@@ -423,6 +492,11 @@ public sealed class PageCurlView : Grid
                 if (_activePointerId.HasValue)
                 {
                     e.Handled = true;
+                    break;
+                }
+
+                if (!IsVisible || !AreSnapshotsReady())
+                {
                     break;
                 }
 
@@ -507,11 +581,15 @@ public sealed class PageCurlView : Grid
             {
                 Renderer.BackImage = null;
                 _snapshots.ClearBack();
+                _backSnapshotContent = null;
+                _backSnapshotRevision = revision;
             }
             else
             {
                 Renderer.FrontImage = null;
                 _snapshots.ClearFront();
+                _frontSnapshotContent = null;
+                _frontSnapshotRevision = revision;
             }
 
             return;
@@ -551,10 +629,14 @@ public sealed class PageCurlView : Grid
             if (isBackside)
             {
                 Renderer.BackImage = _snapshots.Back;
+                _backSnapshotContent = content;
+                _backSnapshotRevision = revision;
             }
             else
             {
                 Renderer.FrontImage = _snapshots.Front;
+                _frontSnapshotContent = content;
+                _frontSnapshotRevision = revision;
             }
         }
         catch (OperationCanceledException) when (capture.Token.IsCancellationRequested)
@@ -603,6 +685,13 @@ public sealed class PageCurlView : Grid
 
     private void ShowRenderer()
     {
+        Renderer.BackImage = IsSnapshotReady(
+            BackContent,
+            _backSnapshotContent,
+            _backSnapshotRevision,
+            _snapshots.Back)
+            ? _snapshots.Back
+            : null;
         _frontHost.IsVisible = false;
         Renderer.IsVisible = true;
         Renderer.Opacity = 1;
@@ -638,6 +727,7 @@ public sealed class PageCurlView : Grid
     private void OnSizeChanged(object? sender, EventArgs e)
     {
         _contentRevision++;
+        SignalContentLayoutChanged();
         UpdatePageFrame();
         QueueSnapshotRefresh();
     }
@@ -659,6 +749,8 @@ public sealed class PageCurlView : Grid
     {
         if (_handlerDisconnected || Handler is null || !IsVisible || _refreshQueued) return;
         _refreshQueued = true;
+        var queuedGeneration = _refreshGeneration;
+        var queuedRevision = _contentRevision;
         await Task.Yield();
         // Coalesce automatic invalidations over one frame. Present live
         // content and service input before synchronous native rasterization.
@@ -669,15 +761,122 @@ public sealed class PageCurlView : Grid
         if (!IsContentReady(FrontContent) || !IsContentReady(BackContent)) return;
         try
         {
-            await RefreshSnapshotAsync();
+            await RefreshAutomaticSnapshotAsync(queuedGeneration, queuedRevision);
         }
         catch (OperationCanceledException)
         {
         }
     }
 
-    private static bool IsContentReady(View? content) => content is null
-        || (content.Handler is not null && content.Width > 0 && content.Height > 0);
+    private async Task RefreshAutomaticSnapshotAsync(long queuedGeneration, long queuedRevision)
+    {
+        if (queuedGeneration != _refreshGeneration)
+        {
+            if (queuedRevision == _contentRevision)
+            {
+                return;
+            }
+
+            while (_refreshFinished is { } currentRefresh)
+            {
+                await currentRefresh.Task;
+            }
+
+            if (!IsVisible || _handlerDisconnected || queuedRevision == _contentRevision)
+            {
+                return;
+            }
+
+            if (AreSnapshotsReady())
+            {
+                return;
+            }
+
+            await RefreshSnapshotAsync();
+            return;
+        }
+
+        await RefreshSnapshotAsync();
+    }
+
+    private bool IsContentReady(View? content) => content is null
+        || (content.IsVisible
+            && (Handler is null || (content.Handler is not null && content.Width > 0 && content.Height > 0)));
+
+    private bool AreSnapshotsReady() =>
+        IsSnapshotReady(FrontContent, _frontSnapshotContent, _frontSnapshotRevision, _snapshots.Front);
+
+    private bool IsSnapshotReady(
+        View? content,
+        View? snapshotContent,
+        long snapshotRevision,
+        SKImage? image) =>
+        content is not null
+        && image is not null
+        && ReferenceEquals(content, snapshotContent)
+        && snapshotRevision == _contentRevision
+        && IsContentReady(content);
+
+    private async Task WaitForContentLayoutAsync(
+        View? content,
+        long presentationRevision,
+        CancellationToken cancellationToken)
+    {
+        if (content is null || Handler is null || IsContentReady(content))
+        {
+            return;
+        }
+
+        while (Handler is not null
+            && !_handlerDisconnected
+            && IsVisible
+            && presentationRevision == _presentationRevision
+            && IsContentAttached(content)
+            && !IsContentReady(content))
+        {
+            _contentLayoutChanged ??= new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            await _contentLayoutChanged.Task.WaitAsync(cancellationToken);
+        }
+    }
+
+    private async Task WaitForCurrentContentLayoutAsync(
+        long presentationRevision,
+        CancellationToken cancellationToken)
+    {
+        while (IsVisible
+            && !_handlerDisconnected
+            && presentationRevision == _presentationRevision)
+        {
+            var front = FrontContent;
+            var back = BackContent;
+            await WaitForContentLayoutAsync(front, presentationRevision, cancellationToken);
+            await WaitForContentLayoutAsync(back, presentationRevision, cancellationToken);
+
+            if (!IsVisible || _handlerDisconnected)
+            {
+                return;
+            }
+
+            if (ReferenceEquals(front, FrontContent)
+                && ReferenceEquals(back, BackContent)
+                && IsContentReady(front)
+                && IsContentReady(back))
+            {
+                return;
+            }
+        }
+    }
+
+    private bool IsContentAttached(View content) =>
+        ReferenceEquals(content, FrontContent) || ReferenceEquals(content, BackContent);
+
+    private void SignalContentLayoutChanged()
+    {
+        var waiter = _contentLayoutChanged;
+        _contentLayoutChanged = null;
+        waiter?.TrySetResult();
+    }
 
     private Vector2 ToPagePointer(
         SKCanvasView zone,

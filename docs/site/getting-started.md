@@ -38,13 +38,18 @@ example uses an application namespace of `ReaderApp`:
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:curl="clr-namespace:PageCurl.Maui;assembly=PageCurl.Maui"
     x:Class="ReaderApp.MainPage">
-    <Grid RowDefinitions="*,Auto" Padding="16" RowSpacing="12">
+    <Grid RowDefinitions="*,Auto,Auto" Padding="16" RowSpacing="12">
         <curl:PageCurlView x:Name="Reader" PageAspectRatio="0.75" />
         <HorizontalStackLayout Grid.Row="1" Spacing="12"
                                HorizontalOptions="Center">
             <Button x:Name="PreviousButton" Text="Previous" />
             <Button x:Name="NextButton" Text="Next" />
         </HorizontalStackLayout>
+        <VerticalStackLayout x:Name="CaptureError" Grid.Row="2"
+                             IsVisible="False" Spacing="6">
+            <Label Text="Page capture failed." HorizontalTextAlignment="Center" />
+            <Button x:Name="RetryButton" Text="Retry capture" />
+        </VerticalStackLayout>
     </Grid>
 </ContentPage>
 ```
@@ -67,22 +72,29 @@ namespace ReaderApp;
 public partial class MainPage : ContentPage
 {
     private readonly PageNavigationState _navigation = new(pageCount: 3);
+    private Window? _observedWindow;
+    private bool _active;
 
     public MainPage()
     {
         InitializeComponent();
         Reader.PageTurnCompleted += (_, e) =>
         {
-            if (e.Committed && _navigation.TryCommit(e.Direction)) ShowPage();
+            if (_active && e.Committed && _navigation.TryCommit(e.Direction)) ShowPage();
         };
         PreviousButton.Clicked += (_, _) =>
         {
-            if (_navigation.CanTurnBackward) Reader.TryTurn(PageTurnDirection.Backward);
+            if (_active && _navigation.CanTurnBackward) Reader.TryTurn(PageTurnDirection.Backward);
         };
         NextButton.Clicked += (_, _) =>
         {
-            if (_navigation.CanTurnForward) Reader.TryTurn(PageTurnDirection.Forward);
+            if (_active && _navigation.CanTurnForward) Reader.TryTurn(PageTurnDirection.Forward);
         };
+        Reader.SnapshotFailed += (_, _) =>
+        {
+            if (_active) CaptureError.IsVisible = true;
+        };
+        RetryButton.Clicked += OnRetryClicked;
         ShowPage();
     }
 
@@ -101,14 +113,65 @@ public partial class MainPage : ContentPage
                 },
             },
         };
-        PreviousButton.IsEnabled = _navigation.CanTurnBackward;
-        NextButton.IsEnabled = _navigation.CanTurnForward;
+        CaptureError.IsVisible = false;
+        UpdateButtons();
+    }
+
+    private void UpdateButtons()
+    {
+        PreviousButton.IsEnabled = _active && _navigation.CanTurnBackward;
+        NextButton.IsEnabled = _active && _navigation.CanTurnForward;
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        ObserveWindow(Window);
+        SetActive(true);
     }
 
     protected override void OnDisappearing()
     {
-        Reader.CancelInteraction();
+        ObserveWindow(null);
+        SetActive(false);
         base.OnDisappearing();
+    }
+
+    private void ObserveWindow(Window? window)
+    {
+        if (_observedWindow is not null)
+        {
+            _observedWindow.Stopped -= OnWindowStopped;
+            _observedWindow.Resumed -= OnWindowResumed;
+        }
+        _observedWindow = window;
+        if (window is not null)
+        {
+            window.Stopped += OnWindowStopped;
+            window.Resumed += OnWindowResumed;
+        }
+    }
+
+    private void OnWindowStopped(object? sender, EventArgs e) => SetActive(false);
+    private void OnWindowResumed(object? sender, EventArgs e) => SetActive(true);
+
+    private void SetActive(bool active)
+    {
+        _active = active;
+        if (!active) Reader.CancelInteraction();
+        Reader.IsVisible = active;
+        if (active) CaptureError.IsVisible = false;
+        UpdateButtons();
+    }
+
+    private async void OnRetryClicked(object? sender, EventArgs e)
+    {
+        if (!_active || !RetryButton.IsEnabled) return;
+        RetryButton.IsEnabled = false;
+        CaptureError.IsVisible = false;
+        try { await Reader.RefreshSnapshotAsync(); }
+        catch (OperationCanceledException) { }
+        finally { RetryButton.IsEnabled = true; }
     }
 }
 ```
@@ -116,8 +179,13 @@ public partial class MainPage : ContentPage
 Gestures and buttons reach the same completion handler. `TryCommit` keeps the
 model in range, including a gesture at either endpoint. `TryTurn` returns
 `false` when the control cannot start a command; leave the model unchanged.
-Call commands after layout and snapshot capture, and handle `SnapshotFailed`
-when capture fails.
+Buttons reflect page boundaries; a current snapshot must also be available
+before a turn starts. Automatic capture follows layout. `SnapshotFailed` shows
+the retry control, and retry awaits capture without changing navigation.
+
+The active flag prevents completion callbacks from changing an inactive page.
+Stopping or leaving the page cancels the turn before hiding the control;
+showing it again requests a fresh capture. Leaving also detaches window events.
 
 This example replaces the live page after completion. To reveal destination
 images beneath it during a turn, supply `UnderPageImage` for forward turns and

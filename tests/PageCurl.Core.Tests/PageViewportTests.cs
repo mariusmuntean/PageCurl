@@ -10,6 +10,7 @@ internal static class PageViewportTests
         Aspect_fit_centers_a_portrait_page_without_distorting_it();
         Aspect_fit_uses_the_full_viewport_when_ratios_match();
         Invalid_sizes_return_an_empty_viewport();
+        Finite_extreme_sizes_fit_without_overflow_or_underflow();
     }
 
     private static void Aspect_fit_centers_a_portrait_page_without_distorting_it()
@@ -35,5 +36,29 @@ internal static class PageViewportTests
         TestAssert.Equal(Vector2.Zero, result.Origin);
         TestAssert.Equal(Vector2.Zero, result.Size);
         TestAssert.False(result.IsValid);
+    }
+
+    private static void Finite_extreme_sizes_fit_without_overflow_or_underflow()
+    {
+        var cases = new[]
+        {
+            (Viewport: new Vector2(400, 300), Content: new Vector2(float.Epsilon),
+                Origin: new Vector2(50, 0), Size: new Vector2(300)),
+            (Viewport: new Vector2(400, 300), Content: new Vector2(float.MaxValue),
+                Origin: new Vector2(50, 0), Size: new Vector2(300)),
+            (Viewport: new Vector2(float.MaxValue), Content: new Vector2(0.5f),
+                Origin: Vector2.Zero, Size: new Vector2(float.MaxValue)),
+            (Viewport: new Vector2(float.MaxValue), Content: new Vector2(float.Epsilon),
+                Origin: Vector2.Zero, Size: new Vector2(float.MaxValue)),
+            (Viewport: new Vector2(float.Epsilon), Content: new Vector2(float.MaxValue),
+                Origin: Vector2.Zero, Size: new Vector2(float.Epsilon)),
+        };
+        foreach (var item in cases)
+        {
+            var result = PageViewportRect.AspectFit(item.Viewport, item.Content);
+            TestAssert.True(result.IsValid, $"Finite content {item.Content} did not fit viewport {item.Viewport}.");
+            TestAssert.Equal(item.Origin, result.Origin);
+            TestAssert.Equal(item.Size, result.Size);
+        }
     }
 }
