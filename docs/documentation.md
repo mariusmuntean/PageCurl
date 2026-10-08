@@ -8,6 +8,11 @@ Edit guides in `docs/site/`. Core and MAUI XML documentation comes from the
 built assemblies; DocFX generates the API signatures. The pinned tool manifest
 keeps local and hosted builds on the same version.
 
+Screenshots must show the behavior the guide explains, using the documented
+sample itself. A page-turn example needs a visible curl; an empty resting page
+does not demonstrate it. Inspect the final image at its displayed size before
+publishing, including readable text, navigation and the rendered sheet.
+
 Run `bash tools/build-docs.sh` from the repository root. The script builds the
 neutral assemblies, runs DocFX with warnings as errors, then checks local links,
 anchors and publication boundaries. Output goes to `.artifacts/site`.
