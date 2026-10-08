@@ -3,6 +3,11 @@
 You need a .NET 10 MAUI application and the workload for your target platform.
 The repository pins the SDK and workload set in `global.json`.
 
+The complete example below renders this live page on Mac Catalyst. It starts
+on page 1 of 3, with Previous disabled and Next enabled:
+
+<img src="images/quick-start-maccatalyst.png" alt="Mac Catalyst rendering of the quick-start example: a cream page labeled Page 1 of 3, with Previous disabled and Next enabled below it." width="480" style="max-width:100%;height:auto">
+
 ## Reference the library
 
 The source repository currently requires access. From your application's
