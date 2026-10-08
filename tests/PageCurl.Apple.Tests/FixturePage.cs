@@ -90,6 +90,7 @@ public sealed class FixturePage : ContentPage
             await InteractiveRefreshTests.RunAsync(window, _results);
             await SceneSwitchTimingTests.RunAsync(window, _results);
             await DemoRegressionTests.RunAsync(window, _results);
+            await ReaderExampleTests.RunAsync(window, _results);
         }
         catch (Exception exception) { _results.Add("FAIL demo " + exception); }
         if (!_results.Any(line => line.StartsWith("FAIL", StringComparison.Ordinal)))

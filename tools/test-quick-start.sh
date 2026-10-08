@@ -9,19 +9,15 @@ SCRATCH="$(cd "$SCRATCH" && pwd -P)"
 cp "$ROOT/global.json" "$ROOT/Directory.Build.props" "$SCRATCH/"
 python3 - "$ROOT" "$SCRATCH" <<'PY'
 from pathlib import Path
-import re
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
 root, scratch = map(Path, sys.argv[1:])
-guide = (root / 'docs/site/getting-started.md').read_text()
-xml = re.findall(r'```xml\n(.*?)\n```', guide, re.S)
-code = [block for block in re.findall(r'```csharp\n(.*?)\n```', guide, re.S)
-        if 'public partial class MainPage' in block]
-if len(xml) != 1 or len(code) != 1:
-    sys.exit('Expected one documented MainPage XAML and code-behind example')
-(scratch / 'MainPage.xaml').write_text(xml[0] + '\n')
-(scratch / 'MainPage.xaml.cs').write_text(code[0] + '\n')
+for directory, guide in (('quick-start', 'getting-started.md'), ('reader', 'spreads.md')):
+    output = scratch / directory
+    subprocess.run([sys.executable, str(root / 'tools/extract-doc-example.py'),
+                    str(root / 'docs/site' / guide), str(output)], check=True)
 project = ET.Element('Project', Sdk='Microsoft.NET.Sdk')
 properties = ET.SubElement(project, 'PropertyGroup')
 for name, value in {'TargetFramework': 'net10.0', 'UseMaui': 'true',
@@ -31,7 +27,10 @@ for name, value in {'TargetFramework': 'net10.0', 'UseMaui': 'true',
 items = ET.SubElement(project, 'ItemGroup')
 ET.SubElement(items, 'ProjectReference', Include=str(root / 'src/PageCurl.Maui/PageCurl.Maui.csproj'))
 ET.SubElement(items, 'PackageReference', Include='Microsoft.Maui.Controls', Version='$(MauiVersion)')
-ET.ElementTree(project).write(scratch / 'QuickStart.csproj', encoding='utf-8', xml_declaration=True)
+for directory in ('quick-start', 'reader'):
+    ET.ElementTree(project).write(scratch / directory / 'Example.csproj', encoding='utf-8', xml_declaration=True)
 PY
-"$DOTNET" build "$SCRATCH/QuickStart.csproj" -c Release -f net10.0 -p:TargetFrameworks=net10.0 -m:1 -nr:false
-printf 'PASS documented quick start: unchanged XAML and code-behind compile\n'
+for example in quick-start reader; do
+    "$DOTNET" build "$SCRATCH/$example/Example.csproj" -c Release -f net10.0 -p:TargetFrameworks=net10.0 -m:1 -nr:false
+done
+printf 'PASS documented quick start and reader: unchanged XAML and code-behind compile\n'

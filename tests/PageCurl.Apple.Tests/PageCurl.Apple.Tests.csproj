@@ -12,6 +12,7 @@
     <ApplicationId>de.marius.PageCurlRegressionTests</ApplicationId>
     <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>
     <_AppBundleName>$(AssemblyName)</_AppBundleName>
+    <ReaderExampleDirectory>$(BaseIntermediateOutputPath)reader-example/</ReaderExampleDirectory>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/PageCurl.Core/PageCurl.Core.csproj" />
@@ -22,8 +23,15 @@
     <MauiXaml Include="../../src/PageCurl.Demo/Resources/Styles/*.xaml" Link="Resources/Styles/%(Filename)%(Extension)" />
     <MauiImage Include="../../src/PageCurl.Demo/Resources/Images/**" Link="Resources/Images/%(Filename)%(Extension)" />
     <MauiAsset Include="../../src/PageCurl.Demo/Resources/Raw/**" LogicalName="%(Filename)%(Extension)" />
+    <Compile Include="$(ReaderExampleDirectory)ReaderPage.xaml.cs" Link="ReaderExample/ReaderPage.xaml.cs" />
+    <MauiXaml Include="$(ReaderExampleDirectory)ReaderPage.xaml" Link="ReaderExample/ReaderPage.xaml" />
     <PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
   </ItemGroup>
+  <Target Name="ExtractReaderExample" BeforeTargets="PrepareForBuild"
+          Inputs="../../docs/site/spreads.md;../../tools/extract-doc-example.py"
+          Outputs="$(ReaderExampleDirectory)ReaderPage.xaml;$(ReaderExampleDirectory)ReaderPage.xaml.cs">
+    <Exec Command="python3 &quot;$(MSBuildThisFileDirectory)../../tools/extract-doc-example.py&quot; &quot;$(MSBuildThisFileDirectory)../../docs/site/spreads.md&quot; &quot;$(ReaderExampleDirectory)&quot;" />
+  </Target>
 </Project>

@@ -12,7 +12,7 @@ for current commands and explicit platform targets.
 | Public control API | R04/R09: settings, forwarding, retained state and reduced motion | `PublicApiTests` in the neutral MAUI runner |
 | Snapshot/lifecycle | R06–R08: ownership, revisions, failure and cancellation | Neutral runner on one pumped UI thread |
 | Package consumer | R12: transitive packages and representative consumer calls | `tools/test-package-consumer.sh`: external project, mapped local feed, empty package cache |
-| Quick start | Examples aligned with the public API | `tools/test-quick-start.sh` compiles unchanged guide examples in a temporary neutral MAUI project |
+| Documented examples | Examples aligned with the public API | `tools/test-quick-start.sh` extracts unchanged quick-start and reader examples into separate temporary neutral MAUI projects |
 | Native Apple fixture | R02/R06/R08/R10: pixels, mesh submission, layout and linked demo commands | Mac Catalyst assertion host with bounded `tools/run-native-fixture.py` |
 | Computer control | R04/R05/R08/R10: pointer routing, accessibility and visible layout | AX-based replay, screenshot-based drags and visual inspection |
 
@@ -94,6 +94,21 @@ checks exercise the shipping configuration. Microsoft also recommends
 [Release builds for profiling](https://learn.microsoft.com/en-us/dotnet/maui/fundamentals/profiling?view=net-maui-10.0).
 
 ## Visual and device checks
+
+The native fixture compiles the exact five-page reader recipe from
+`docs/site/spreads.md`. It covers snapshot readiness, distinct slot views,
+animated navigation, rapid commands, both boundaries, odd-page mapping, gesture
+commit/rollback, window/page lifecycle, failed capture, retry overlap and compact
+layout. Text-fit checks cover 600, 390 and 320-point widths without shrinking
+fonts; scrolled text must match the turning sheet's native pixels. A deferred
+UI continuation tests an old retry completing during a new activation's pending
+retry, before recovery can mask the result.
+Native label/ancestor flags also reject page text hidden by accessible container
+grouping; this does not replace screen-reader usability checks.
+The shared extractor rejects missing or ambiguous examples and preserves
+unchanged output files; fixture and quick-start compilation cannot drift from the
+guide. Reader preview mode (`PAGECURL_READER_PREVIEW=1`) opens that same recipe for
+visual inspection; it does not execute or certify the assertion suite.
 
 Reserve computer control for actual pointer routing, accessibility-tree
 inspection and visible rendering/layout behavior that automated assertions
@@ -177,6 +192,7 @@ publishing](documentation.md).
 
 ## Completed validation records
 
+- [Small reader example](validation/reader-example-2026-10-08/README.md): exact guide compilation, native journeys, phone text fit and scroll snapshot agreement.
 - [Motion preview](validation/motion-preview-2026-10-08/README.md): unlocked native recording, media guards and visual review.
 - [Microsoft guidance](validation/microsoft-guidance-2026-10-07/README.md): analyzer enforcement, strict package APIs and Release native assertions.
 - [Runtime cleanup](validation/runtime-cleanup-2026-10-07/README.md): numerical edges, capture races, readiness and native video.

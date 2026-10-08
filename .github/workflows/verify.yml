@@ -31,7 +31,7 @@ jobs:
           bash tools/check-workflow-projects.sh
           python3 -m unittest discover -s tools/tests -p 'test_*.py'
           node --test tests/computer-control/pagecurl-checks.test.js
-      - name: Compile documented quick start
+      - name: Compile documented examples
         run: bash tools/test-quick-start.sh
       - name: Verify isolated public package consumer
         run: bash tools/test-package-consumer.sh

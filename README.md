@@ -31,6 +31,8 @@ builder.UseMauiApp<App>().UseSkiaSharp();
 Reference `src/PageCurl.Maui/PageCurl.Maui.csproj`, or pack Core and MAUI into a
 local NuGet feed. Published NuGet.org consumption remains a release gate.
 The [quick start](docs/site/getting-started.md) covers XAML setup and navigation;
+the [small reader example](docs/site/spreads.md#small-reader-example) adds a complete
+five-page book with capture readiness, retry and an odd final page;
 the [API reference](https://mariusmuntean.github.io/PageCurl-docs/api-index.html)
 lists public signatures.
 

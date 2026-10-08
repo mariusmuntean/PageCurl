@@ -25,6 +25,8 @@ Playback runs at normal speed. [Download the preview](images/pagecurl-preview.mp
 
 Start with the [quick start](getting-started.md), then read the
 [runtime rules](runtime.md) before connecting a page model.
+The [small reader example](spreads.md#small-reader-example) supplies a complete
+five-page recipe with navigation, capture retry and the odd last page.
 
 ## Current release status
 

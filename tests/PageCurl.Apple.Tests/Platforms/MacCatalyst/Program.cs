@@ -21,7 +21,10 @@ public sealed class TestDelegate : MauiUIApplicationDelegate
 
 public sealed class TestApp : PageCurl.Demo.App
 {
-    protected override Window CreateWindow(IActivationState? activationState) => new(new FixturePage());
+    protected override Window CreateWindow(IActivationState? activationState) =>
+        Environment.GetEnvironmentVariable("PAGECURL_READER_PREVIEW") is not null
+            ? new Window(new ReaderApp.ReaderPage()) { Title = "Small reader", Width = 1000, Height = 800 }
+            : new Window(new FixturePage());
 }
 
 [Register("FixtureSceneDelegate")]
