@@ -7,6 +7,12 @@ Page turns for images, live MAUI views and two-page spreads. The library targets
 [Quick start](docs/site/getting-started.md) · [Runtime rules](docs/site/runtime.md) ·
 [Platform support](docs/compatibility.md)
 
+[![Watch the PageCurl native demo](docs/site/images/pagecurl-preview.jpg)](docs/site/images/pagecurl-preview.mp4)
+
+[Watch the 20-second preview](docs/site/images/pagecurl-preview.mp4): drag and
+snap-back, a spread turn, live content and a scene switch. Recorded from the
+Mac Catalyst demo at normal speed.
+
 ## Choose a control
 
 | Control | Content |

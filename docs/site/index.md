@@ -4,6 +4,17 @@ PageCurl.Maui adds page turns to .NET MAUI applications. Use it for images,
 live views or a two-page reader. Pages curl from an edge or pinned corner;
 buttons and gestures share the same completion event.
 
+## Motion preview
+
+<video controls preload="none" playsinline width="1280" style="max-width:100%;height:auto" poster="images/pagecurl-preview.jpg" aria-label="PageCurl native demo: drag and snap-back, a spread turn, live content and a scene switch">
+  <source src="images/pagecurl-preview.mp4" type="video/mp4">
+  <a href="images/pagecurl-preview.mp4">Watch the PageCurl native demo.</a>
+</video>
+
+The 20-second Mac Catalyst recording shows a committed drag and snap-back,
+a spread turn, a live counter update, and switching scenes during a turn.
+Playback runs at normal speed. [Download the preview](images/pagecurl-preview.mp4).
+
 ## Choose a control
 
 | Control | Use it for | Content ownership |

@@ -9,6 +9,20 @@ spec.loader.exec_module(module)
 
 
 class DocumentationTests(unittest.TestCase):
+    def test_video_source_and_poster_links_must_exist(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'index.html').write_text('<video poster="missing.jpg"><source src="missing.mp4"></video>')
+            self.assertEqual(len(module.check_site(root)), 2)
+
+    def test_accepts_local_video_and_poster(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'index.html').write_text('<video controls preload="none" poster="preview.jpg"><source src="preview.mp4"></video>')
+            (root / 'preview.jpg').write_bytes(b'poster fixture')
+            (root / 'preview.mp4').write_bytes(b'video fixture')
+            self.assertEqual(module.check_site(root), [])
+
     def test_accepts_relative_links_and_encoded_anchors(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

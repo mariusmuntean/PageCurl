@@ -28,6 +28,20 @@ public sealed class FixturePage : ContentPage
     {
         if (_started) return;
         _started = true;
+        if (Environment.GetEnvironmentVariable("PAGECURL_PREVIEW_DIR") is { } signals)
+        {
+            try
+            {
+                await MotionPreview.RunAsync(Window!, signals);
+                Environment.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                File.WriteAllText(Path.Combine(signals, "error"), exception.ToString());
+                Environment.Exit(1);
+            }
+            return;
+        }
         await Task.Delay(300);
         try
         {

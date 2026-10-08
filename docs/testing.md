@@ -122,6 +122,23 @@ stops recording, removes temporary movies and shuts down simulators it boots,
 also on failure. Existing simulator appearance and boot state are preserved.
 Fixture passes do not satisfy physical-device or unavailable interaction gates.
 
+## Motion preview
+
+`tools/record-motion-preview.sh` records the linked demo in the native assertion
+host. It needs an unlocked Mac, macOS 15 or later, screen-recording access,
+the pinned MAUI toolchain, and `ffmpeg`/`ffprobe`. Set `PAGECURL_DOTNET` to an
+explicit workload-enabled CLI if needed. The script records only its own app
+window, without audio or a cursor, and closes that app on success or failure.
+
+The sequence checks committed drag, snap-back, spread navigation, a live counter
+update and cancellation when switching scenes during a turn. Input runs at
+normal speed through the demo's handlers. This is a presentation asset, not
+pointer-routing or performance certification. Media checks decode sampled frames
+and reject short, frozen or audio-bearing clips before replacing the published
+movie and poster. Visual review still establishes presentation quality. Capture
+and application logs stay under `.artifacts/motion-preview/`; the web assets live under
+`docs/site/images/`.
+
 ## Distribution and documentation
 
 Product builds pin the .NET 10 analyzer rules. Core uses Microsoft's
@@ -160,6 +177,7 @@ publishing](documentation.md).
 
 ## Completed validation records
 
+- [Motion preview](validation/motion-preview-2026-10-08/README.md): unlocked native recording, media guards and visual review.
 - [Microsoft guidance](validation/microsoft-guidance-2026-10-07/README.md): analyzer enforcement, strict package APIs and Release native assertions.
 - [Runtime cleanup](validation/runtime-cleanup-2026-10-07/README.md): numerical edges, capture races, readiness and native video.
 - [Requirements](validation/requirements-2026-10-05/README.md): failures, fixes, repeated runs and visible observations.
