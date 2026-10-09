@@ -3,9 +3,9 @@
 You need a .NET 10 MAUI application and the workload for your target platform.
 The repository pins the SDK and workload set in `global.json`.
 
-The complete example below, running on Mac Catalyst during a drag:
+The complete example below, running on an iPhone simulator during a drag:
 
-<img src="images/quick-start-curl-maccatalyst.png" alt="The quick-start sample on Mac Catalyst: Page 1 of 3 curling from the right edge, with a curved sheet and shaded backside." width="480" style="max-width:100%;height:auto;background:#fff">
+<img src="images/quick-start-curl-ios.png" alt="The complete quick-start sample on iPhone: Page 1 of 3 curling from the right edge, with the shaded backside and Previous/Next buttons visible." width="360" style="max-width:100%;height:auto;background:#fff">
 
 ## Reference the library
 

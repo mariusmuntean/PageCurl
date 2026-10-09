@@ -57,6 +57,10 @@ output with old registrar symbols. Cleaning only the iOS Release target and
 rebuilding resolved it. Apple builds report one machine-specific warning about
 the deprecated Xamarin Settings.plist file; no Xcode validation override was used.
 
+The linked light/dark screenshots record the compact initial layout and theme
+contrast on that build. They do not demonstrate an active turn or certify
+gesture behavior.
+
 ## Cleanup and remaining gates
 
 Test apps were stopped. The Android emulator and newly booted iOS simulator

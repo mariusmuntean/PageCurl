@@ -56,7 +56,9 @@ attempts did not reach the compact breakpoint through this interface; no new
 compact computer-control pass is claimed. Compact Options routing and live-page
 layout are covered by the native assertion host instead.
 
-[Final sample screenshot](sample.jpg) was captured from the final rebuilt app.
+[Desktop layout screenshot](sample.jpg) was captured from the final rebuilt app.
+It records the wide layout, scene selector and scrollable Options panel at rest;
+use the [motion preview](../../site/index.md) to inspect a turning sheet.
 
 VoiceOver/TalkBack, hardware input, video playback and physical-device release
 gates were not certified by this pass. The [testing strategy](../../testing.md)

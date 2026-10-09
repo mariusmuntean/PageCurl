@@ -56,6 +56,11 @@ reference the library and register SkiaSharp. Add these two files to your MAUI
 application, using your application's namespace in both `x:Class` and code.
 To open it, return `new Window(new ReaderPage())` from your app's `CreateWindow`.
 
+The recipe running on an iPad simulator during a forward turn: page 1 stays
+on the left, page 2 curls, page 3 is on its backside and page 4 is underneath.
+
+<img src="images/reader-curl-ios.png" alt="The five-page reader on iPad: the first page stays flat, the right sheet curls to reveal the next spread, with the page counter and Previous/Next controls visible." width="768" style="max-width:100%;height:auto">
+
 `ReaderPage.xaml`:
 
 ```xml
