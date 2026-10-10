@@ -38,9 +38,6 @@ def check_site(root):
     for file, page in pages.items():
         for link in page.links:
             url = urlsplit(link)
-            if url.netloc == 'github.com' and (url.path == '/mariusmuntean/PageCurl'
-                                                 or url.path.startswith('/mariusmuntean/PageCurl/')):
-                errors.append(f'{file.name}: Private source link: {link}')
             if url.scheme or url.netloc or not link or link.startswith('javascript:'):
                 continue
             path = unquote(url.path)

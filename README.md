@@ -21,6 +21,16 @@ Mac Catalyst demo at normal speed.
 | `PageCurlView` | A live MAUI view with a cached snapshot while turning |
 | `PageSpreadView` | A two-page reader with neighboring content |
 
+## Install
+
+From your MAUI application's directory:
+
+```bash
+dotnet add package PageCurl.Maui --version 0.1.0
+```
+
+`PageCurl.Core` comes transitively with the MAUI package.
+
 Register SkiaSharp in your MAUI app:
 
 ```csharp
@@ -28,8 +38,8 @@ using SkiaSharp.Views.Maui.Controls.Hosting;
 builder.UseMauiApp<App>().UseSkiaSharp();
 ```
 
-Reference `src/PageCurl.Maui/PageCurl.Maui.csproj`, or pack Core and MAUI into a
-local NuGet feed. Published NuGet.org consumption remains a release gate.
+To develop against the source, reference
+`src/PageCurl.Maui/PageCurl.Maui.csproj` from a local checkout.
 The [quick start](docs/site/getting-started.md) covers XAML setup and navigation;
 the [small reader example](docs/site/spreads.md#small-reader-example) adds a complete
 five-page book with capture readiness, retry and an odd final page;
@@ -70,7 +80,7 @@ Build the documentation with `bash tools/build-docs.sh`; publish the validated
 site with `bash tools/publish-docs.sh`. See the [documentation guide](docs/documentation.md).
 
 The 0.x API may change before 1.0. Hardware performance, screen-reader passes,
-Windows runtime behavior, signing and NuGet publication remain
+Windows runtime behavior and signing remain
 [release gates](docs/release-readiness.md). Build coverage alone does not close them.
 
 [MIT license](LICENSE) · [Support and issue reporting](SUPPORT.md) ·

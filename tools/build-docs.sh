@@ -14,7 +14,7 @@ for folder in (Path('docs/site/api'), Path('.artifacts/site'), Path('.artifacts/
     if folder.exists():
         shutil.rmtree(folder)
 # DocFX reads Source Link data from adjacent PDBs, including cross-assembly
-# references. Publish signatures and XML docs without private source URLs.
+# references. Keep metadata inputs limited to assembly signatures and XML docs.
 inputs = Path('.artifacts/docs-input')
 inputs.mkdir(parents=True)
 for source in Path('src/PageCurl.Maui/bin/Release/net10.0').iterdir():

@@ -2,8 +2,13 @@
 
 PageCurl.Maui provides controls for image, live-content and two-page spread
 turns. The 0.x release line may introduce breaking API changes before 1.0.
-Package metadata currently uses version 0.1.0; published NuGet.org consumption
-remains unverified.
+Install version 0.1.0 from your MAUI application's directory:
+
+```bash
+dotnet add package PageCurl.Maui --version 0.1.0
+```
+
+The MAUI package includes `PageCurl.Core` transitively.
 
 The target baseline is .NET 10, .NET MAUI 10, and
 SkiaSharp.Views.Maui.Controls 4.150.1. The minimum platform targets are
@@ -13,9 +18,9 @@ physical-device or screen-reader pass.
 
 ## Report a problem
 
-Use the source repository's issue tracker for bugs and feature requests. The
-source repository and tracker currently require access. Search existing issues
-and the [runtime rules](docs/runtime-contracts.md) before opening a report.
+Use [GitHub issues](https://github.com/mariusmuntean/PageCurl/issues) for bugs and
+feature requests. Search existing issues and the
+[runtime rules](docs/runtime-contracts.md) before opening a report.
 
 When reporting an issue, include the package version, target framework,
 operating-system version, device or simulator model, reproduction steps, and

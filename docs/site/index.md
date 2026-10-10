@@ -30,15 +30,16 @@ five-page recipe with navigation, capture retry and the odd last page.
 
 ## Current release status
 
-Package metadata currently uses 0.1.0 and targets .NET 10 and MAUI 10.
+The 0.1.0 packages target .NET 10 and MAUI 10.
 Public APIs may change before 1.0.
 Use the [platform matrix](platforms.md) to distinguish build coverage from
-runtime and hardware validation. Packages have a local consumption test;
-this guide does not assume that a package has been published on NuGet.org.
+runtime and hardware validation. See the [quick start](getting-started.md)
+for package installation and a working example.
 
 The sample includes Single, Spread, Content and Backside scenes, a live counter,
 local video, anchor choices, reduced motion and page-turn commands.
 
-The source repository and its issue tracker currently require access. See
-[contributing and validation](contributing.md) if you have repository access.
+Browse the [source](https://github.com/mariusmuntean/PageCurl) or
+[report an issue](https://github.com/mariusmuntean/PageCurl/issues).
+See [contributing and validation](contributing.md) to build and test locally.
 [MIT license](https://github.com/mariusmuntean/PageCurl-docs/blob/main/LICENSE)

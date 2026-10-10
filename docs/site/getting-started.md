@@ -7,18 +7,25 @@ The complete example below, running on an iPhone simulator during a drag:
 
 <img src="images/quick-start-curl-ios.png" alt="The complete quick-start sample on iPhone: Page 1 of 3 curling from the right edge, with the shaded backside and Previous/Next buttons visible." width="360" style="max-width:100%;height:auto;background:#fff">
 
-## Reference the library
+## Install the library
 
-The source repository currently requires access. From your application's
-directory, add a reference to your local checkout:
+From your MAUI application's directory:
+
+```bash
+dotnet add package PageCurl.Maui --version 0.1.0
+```
+
+The package includes `PageCurl.Core` transitively. The 0.x API may change
+before 1.0.
+
+To develop against the [source](https://github.com/mariusmuntean/PageCurl), use a
+project reference to your local checkout instead:
 
 ```bash
 dotnet add ReaderApp.csproj reference ../PageCurl/src/PageCurl.Maui/PageCurl.Maui.csproj
 ```
 
-Replace the project names and relative path with yours. The MAUI project
-references Core, so your application needs only the MAUI reference. You can
-also consume locally packed packages; NuGet.org consumption remains unverified.
+Replace the project names and relative path with yours.
 
 ## Register SkiaSharp
 

@@ -179,6 +179,12 @@ signed inputs and stale output directories. Validated output is renamed from a
 sibling temporary directory as one tree. Signing follows assembly. Inspection
 requires platform assemblies, XML documentation and the Core dependency.
 
+The Windows job also builds a separate app from its packed MAUI and Core
+packages using an empty cache. It registers SkiaSharp, references Core
+transitively and requires the app's WinUI resource index. This catches packaging
+errors that a project-reference build can miss; it does not establish Windows
+runtime behavior.
+
 Verify runs pinned `actionlint`. Run the same check before pushing workflow changes:
 
 ```bash
@@ -187,7 +193,7 @@ go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck= -pyflakes
 
 Script syntax and reference checks complement validation of GitHub expressions.
 The documentation build treats DocFX warnings as errors and checks local links,
-anchors, private source links and publication boundaries. See [documentation
+anchors, local build paths and publication boundaries. See [documentation
 publishing](documentation.md).
 
 ## Completed validation records

@@ -1,14 +1,7 @@
 # Security reporting
 
 Keep suspected vulnerabilities and exploit details out of public bug reports.
-Use GitHub's **Security → Report a vulnerability** action on the source
-repository when it is available. Repository collaborators can also use a
-private contact channel already shared by the maintainer.
-
-If you cannot access a private reporting route, open an issue requesting one.
-Include only a request for private contact; omit exploit steps, sensitive
-content and attachments until a private channel is available. The source
-repository and its tracker currently require access.
+[submit a private security report](https://github.com/mariusmuntean/PageCurl/security/advisories/new).
 
 In a private report, include:
 
@@ -17,6 +10,6 @@ In a private report, include:
 - A small reproduction, with credentials and personal content removed.
 - Any workaround you have tested.
 
-The project has a 0.x API and no verified public NuGet release. Check the
+The 0.x API may change before 1.0. Check the
 [compatibility matrix](docs/compatibility.md) for the target baseline and
 recorded evidence.

@@ -56,8 +56,20 @@ class DocumentationTests(unittest.TestCase):
             (root / 'manifest.json').write_text('{"source_base_path": "/Users/person/private"}')
             self.assertTrue(any('Local build path' in error for error in module.check_site(root)))
 
-    def test_rejects_unavailable_private_source_links(self):
+    def test_accepts_public_source_and_reporting_links(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            (root / 'index.html').write_text('<a href="https://github.com/mariusmuntean/PageCurl/blob/main/a.cs">Source</a>')
-            self.assertTrue(any('Private source link' in error for error in module.check_site(root)))
+            (root / 'index.html').write_text(
+                '<a href="https://github.com/mariusmuntean/PageCurl">Repository</a>'
+                '<a href="https://github.com/mariusmuntean/PageCurl/blob/master/README.md">Source</a>'
+                '<a href="https://github.com/mariusmuntean/PageCurl/issues">Issues</a>'
+                '<a href="https://github.com/mariusmuntean/PageCurl/security/advisories/new">Security</a>')
+            self.assertEqual(module.check_site(root), [])
+
+    def test_does_not_publish_validation_records(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'index.html').write_text('<h1>Docs</h1>')
+            (root / 'validation').mkdir()
+            (root / 'validation' / 'results.html').write_text('<h1>Internal validation</h1>')
+            self.assertIn('Unexpected publication', module.check_site(root)[0])

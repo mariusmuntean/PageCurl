@@ -8,7 +8,8 @@ and the public API understandable to a MAUI application developer.
 
 1. Read the [requirements](docs/requirements.md), relevant usage guide and
    [runtime rules](docs/runtime-contracts.md). For a larger API or behavior
-   change, discuss the use case in an issue before implementation.
+   change, discuss the use case in a [GitHub issue](https://github.com/mariusmuntean/PageCurl/issues)
+   before implementation.
 2. Create a focused branch from the repository's default branch (for example,
    `feature/geometry-shadow`).
 3. Make the smallest change that solves the problem. Add a deterministic

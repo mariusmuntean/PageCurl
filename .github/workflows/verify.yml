@@ -126,6 +126,32 @@ jobs:
           $package = Get-ChildItem .artifacts/packages/PageCurl.Maui.*.nupkg | Select-Object -First 1
           python tools/check-packages.py $package.FullName net10.0-windows
 
+      - name: Pack Core for the Windows package consumer
+        run: dotnet pack src/PageCurl.Core/PageCurl.Core.csproj -c Release --output .artifacts/windows-consumer-feed -m:1 -nr:false
+      - name: Build isolated Windows package consumer
+        shell: pwsh
+        run: |
+          $packages = @(Get-ChildItem .artifacts/packages/PageCurl.Maui.*.nupkg)
+          if ($packages.Count -ne 1) { throw 'Expected one Windows MAUI package.' }
+          $package = $packages[0]
+          $version = $package.BaseName.Substring('PageCurl.Maui.'.Length)
+          Copy-Item $package.FullName .artifacts/windows-consumer-feed/
+          $env:PAGECURL_PACKAGE_FEED = (Resolve-Path .artifacts/windows-consumer-feed).Path
+          $consumerRoot = Join-Path $env:RUNNER_TEMP 'pagecurl-windows-consumer'
+          New-Item -ItemType Directory -Path $consumerRoot -Force | Out-Null
+          Copy-Item tests/PageCurl.Package.Windows.Tests/* $consumerRoot -Recurse
+          Copy-Item global.json $consumerRoot
+          $project = Join-Path $consumerRoot 'Consumer.csproj'
+          $config = Join-Path $consumerRoot 'NuGet.Config'
+          $cache = Join-Path $env:RUNNER_TEMP 'pagecurl-windows-package-cache'
+          dotnet restore $project --configfile $config --packages $cache --no-cache -p:Configuration=Release -p:PageCurlVersion=$version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build $project -c Release -f net10.0-windows10.0.19041.0 -p:PageCurlVersion=$version --no-restore -m:1 -nr:false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $pri = Get-Item (Join-Path $consumerRoot 'bin/Release/net10.0-windows10.0.19041.0/win-x64/Consumer.pri') -ErrorAction Stop
+          if ($pri.Length -eq 0) { throw 'Windows consumer PRI is empty.' }
+          Write-Host 'PASS Windows package consumer: transitive Core, SkiaSharp registration and WinUI PRI generation'
+
       - name: Retain Windows package inputs
         uses: actions/upload-artifact@v7
         with:

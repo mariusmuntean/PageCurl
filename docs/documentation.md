@@ -2,7 +2,6 @@
 
 The public site is <https://mariusmuntean.github.io/PageCurl-docs/>.
 Its static files live in the public `mariusmuntean/PageCurl-docs` repository.
-The current account plan cannot host Pages from the private source repository.
 
 Edit guides in `docs/site/`. Core and MAUI XML documentation comes from the
 built assemblies; DocFX generates the API signatures. The pinned tool manifest
@@ -26,7 +25,7 @@ repository; that repository's Pages workflow handles deployment. It creates no
 feature branch or access token. Check the resulting Pages run before claiming
 that publication completed.
 
-The private repository's Documentation workflow validates each change and
+The source repository's Documentation workflow validates each change and
 retains the site artifact. It cannot push to the separate documentation
 repository with its repository-scoped token. Cross-repository automation would
 require an explicitly configured credential; none is stored by these scripts.

@@ -5,6 +5,12 @@ Page turns for images, live .NET MAUI views and two-page spreads.
 transitively. Core contains platform-independent interaction, navigation and
 page geometry and can also be used on its own.
 
+Install from your MAUI application's directory:
+
+```bash
+dotnet add package PageCurl.Maui --version 0.1.0
+```
+
 | Control | Content |
 | --- | --- |
 | `PageTurnView` | Caller-owned `SKImage` values |
@@ -31,7 +37,7 @@ lists the public surface.
 Minimum targets are Android API 24, iOS 17, Mac Catalyst 17 and Windows
 10.0.17763. See the [compatibility matrix](https://github.com/mariusmuntean/PageCurl/blob/master/docs/compatibility.md)
 for tested platform coverage. Physical-device performance, screen-reader
-certification and published NuGet.org consumption remain
+certification, Windows runtime validation and store signing remain
 [release gates](https://github.com/mariusmuntean/PageCurl/blob/master/docs/release-readiness.md).
 The 0.x API may change before 1.0.
 

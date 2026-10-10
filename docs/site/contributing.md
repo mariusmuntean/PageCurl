@@ -29,13 +29,13 @@ The pinned local tool manifest selects DocFX. Output goes to `.artifacts/site`.
 Serve that directory to inspect the site before publishing.
 Run `bash tools/publish-docs.sh` to rebuild and publish it to the public
 `PageCurl-docs` repository. Its Pages workflow deploys those static files.
-The source repository uses a GitHub plan that cannot host Pages from a private
-repository; publication therefore uses your existing GitHub credentials. The site includes
+Publication uses your existing GitHub credentials. The site includes
 these curated guides and generated public API signatures. Historical logs,
 plans and device identifiers stay in the repository.
 
 ## Report an issue
 
+Use the [source repository's issue tracker](https://github.com/mariusmuntean/PageCurl/issues).
 Include the package/commit version, target framework, OS and device model,
 reproduction steps, and the complete first build or runtime error. For visual
 issues, include a small sample and a screenshot of the active turn.
