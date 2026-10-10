@@ -34,6 +34,8 @@ internal static class ReaderExampleTests
         var slots = new[] { book.LeftContent, book.RightContent, book.NextLeftContent, book.NextRightContent };
         Require(slots.Distinct().Count() == slots.Length, "Reader reuses a view in multiple occupied slots.");
         results.Add("PASS reader initial readiness, distinct views and first boundary");
+        using (var baseline = new UILabel { Text = "Reader accessibility probe" })
+            results.Add($"READER_ACCESSIBILITY baseline_element={baseline.IsAccessibilityElement} baseline_label={baseline.AccessibilityLabel ?? "<null>"}");
         foreach (var content in new[] { book.LeftContent, book.RightContent }.OfType<Grid>())
         {
             var text = (VerticalStackLayout)content.Children.OfType<ScrollView>().Single().Content;
@@ -41,7 +43,7 @@ internal static class ReaderExampleTests
             {
                 var native = (UIView)label.Handler!.PlatformView!;
                 Require(native.IsAccessibilityElement && native.AccessibilityLabel == label.Text,
-                    "Reader page text has no native accessible label.");
+                    $"Reader page text has no native accessible label: text={label.Text}, type={native.GetType().Name}, element={native.IsAccessibilityElement}, label={native.AccessibilityLabel ?? "<null>"}.");
                 for (var parent = native.Superview; parent is not null; parent = parent.Superview)
                     Require(!parent.IsAccessibilityElement && !parent.AccessibilityElementsHidden
                         && !parent.Hidden && parent.Alpha > 0, "Reader container hides its accessible page text.");
