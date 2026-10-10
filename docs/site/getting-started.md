@@ -9,8 +9,7 @@ The complete example below, running on an iPhone simulator during a drag:
 
 ## Install the library
 
-NuGet publication is pending; use the source reference below until it finishes.
-The first package version will use this command from your MAUI application's directory:
+Install from your MAUI application's directory:
 
 ```bash
 dotnet add package PageCurl.Maui --version 0.1.0

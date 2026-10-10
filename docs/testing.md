@@ -106,7 +106,11 @@ fonts; scrolled text must match the turning sheet's native pixels. A deferred
 UI continuation tests an old retry completing during a new activation's pending
 retry, before recovery can mask the result.
 Native label/ancestor flags also reject page text hidden by accessible container
-grouping; this does not replace screen-reader usability checks.
+grouping. Before these assertions, the fixture queries its own native AX tree
+on a worker, with bounded messaging and traversal, and logs a plain UIKit label
+baseline. This initializes accessibility on a fresh hosted Mac without changing
+system settings. The original reader-label and ancestor assertions remain
+mandatory; this does not replace screen-reader usability checks.
 The shared extractor rejects missing or ambiguous examples and preserves
 unchanged output files; fixture and quick-start compilation cannot drift from the
 guide. Reader preview mode (`PAGECURL_READER_PREVIEW=1`) opens that same recipe for
@@ -200,6 +204,7 @@ publishing](documentation.md).
 
 ## Completed validation records
 
+- [Public release](validation/public-release-2026-10-10/README.md): complete hosted distribution, Windows consumer and fresh NuGet.org consumption.
 - [Small reader example](validation/reader-example-2026-10-08/README.md): exact guide compilation, native journeys, phone text fit and scroll snapshot agreement.
 - [Motion preview](validation/motion-preview-2026-10-08/README.md): unlocked native recording, media guards and visual review.
 - [Microsoft guidance](validation/microsoft-guidance-2026-10-07/README.md): analyzer enforcement, strict package APIs and Release native assertions.

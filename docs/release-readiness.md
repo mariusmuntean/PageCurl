@@ -1,69 +1,54 @@
 # Release readiness
 
-The core behavior and public MAUI surface are implemented. This repository has
-local build, simulator, and deterministic test evidence, but it does not yet
-establish production readiness on representative hardware.
+The core behavior and public MAUI surface are implemented. The hosted
+[Verify run on 10 October](https://github.com/mariusmuntean/PageCurl/actions/runs/38048455583)
+passed all four jobs for `9e759e0`: Core and neutral MAUI tests, documented
+examples, Android/iOS simulator/Mac Catalyst/Windows Release builds, 119 native
+PASS outcomes, package checks and isolated consumers. The distribution job
+assembled and validated Core/MAUI packages and symbols with all five MAUI
+frameworks. The external Windows consumer also built with a fresh package cache,
+transitive Core, SkiaSharp registration and WinUI PRI generation.
 
-The hosted [Verify run on 5 October](https://github.com/mariusmuntean/PageCurl/actions/runs/37343487227)
-passed Android, iOS simulator, Mac Catalyst and Windows builds, package checks,
-neutral package consumption and native Mac Catalyst assertions. The showcase has recorded
-computer-control journeys. These support public discussion of the implementation
-and demonstrated behavior; avoid claims of universal device performance or
-completed screen-reader certification.
+The source repository and issue tracker are public, and the
+[private security-reporting route](../SECURITY.md) is available. Core and MAUI
+0.1.0 are published on NuGet.org with symbols. A fresh external consumer restored
+and ran using NuGet.org as its only source; published payloads match the reviewed
+distribution. See the
+[10 October release record](validation/public-release-2026-10-10/README.md).
 
 The [7 October Verify run](https://github.com/mariusmuntean/PageCurl/actions/runs/37581805987)
-for `ea0ea61` did not start its jobs because of the account's billing or spending
-limit. The Documentation run was blocked for the same reason. Later changes
-therefore need a fresh hosted pass once the account restriction is resolved.
+was blocked before execution by an account billing or spending limit. That is
+historical evidence; the completed 10 October run supersedes the hosted-build
+and distribution blocker.
 
-The [6 October hardening record](validation/production-hardening-2026-10-06/README.md)
-adds interruption and teardown regressions, cancellable layout waits and full
-native command journeys in both layouts. These are local checks; the final
-changes still need a hosted Verify pass and the hardware gates below.
+Earlier records cover [lifecycle hardening](validation/production-hardening-2026-10-06/README.md),
+[rapid scene switching](validation/scene-switch-performance-2026-10-06/README.md),
+[package assembly](validation/public-launch-review-2026-10-06/README.md),
+[runtime cleanup](validation/runtime-cleanup-2026-10-07/README.md) and
+[Microsoft guidance](validation/microsoft-guidance-2026-10-07/README.md).
+Use their dates and scope when assessing their local evidence.
 
-The [rapid-switch performance record](validation/scene-switch-performance-2026-10-06/README.md)
-reproduces the timing-sensitive scene lag and records reduced dispatch latency,
-obsolete-capture suppression and unchanged rendering/snapshot quality contracts.
+The library's first public package release is complete. Future releases need
+the same complete distribution and fresh remote-consumer checks, plus API
+compatibility checks against the published baseline.
 
-The [public launch review](validation/public-launch-review-2026-10-06/README.md)
-adds window/video lifecycle and elapsed-time settling regressions, a compilable
-quick start, private security-reporting guidance, and complete package assembly
-in Verify. Its local evidence does not establish a hosted distribution pass.
+Representative application and device validation remains open:
 
-The [7 October runtime cleanup](validation/runtime-cleanup-2026-10-07/README.md)
-adds failing-before/passing-after coverage for numerical extremes, capture races,
-snapshot readiness and late video attachment. Its native checks retain the
-existing timing and pixel-quality requirements; hosted and hardware gates remain.
+- Run platform smoke paths on supported OS versions, including Windows runtime
+  and iOS gesture interaction with a working SimulatorKit/device path.
+- Profile drag and settling on low-end Android and physical iOS hardware for
+  frame pacing, allocations, texture lifetime, memory growth, thermal behavior
+  and long runs.
+- Complete visual review for edges, tangent seams, shading, texture scaling,
+  dark mode, rotation, safe areas, large pages, reduced motion, compact mobile
+  layout and resizable desktop windows.
+- Run VoiceOver and TalkBack journeys for scene selection, reader text,
+  Previous/Next, anchors, threshold, haptics, reduced motion and the options sheet.
+  Native accessibility assertions do not establish screen-reader certification.
 
-The [Microsoft guidance review](validation/microsoft-guidance-2026-10-07/README.md)
-adds pinned analyzer enforcement, strict framework API checks during packing,
-and Release native assertions with the demo's XAML source generation.
-
-Before a public or flagship-reader release:
-
-1. Retain clean hosted builds with pinned .NET, MAUI and SkiaSharp, including
-   the Windows build and native package asset checks; extend
-   the current unsigned build evidence to distributable Android/iOS packages.
-2. Run the core suite and platform smoke paths on supported OS versions.
-3. Profile drag and settling on low-end Android and current physical iOS
-   hardware. Check frame pacing, allocations, texture lifetime, memory growth,
-   thermal behavior, and long runs.
-4. Complete visual review for edges, tangent seams, shading, texture scaling,
-   dark mode, rotation, safe areas, large pages, reduced motion, compact mobile
-   layout, and resizable desktop windows.
-5. Run VoiceOver and TalkBack passes for scene selection, the interactive page,
-   Previous/Next, edge/corner anchors, threshold, haptics, reduced motion, and
-   the options sheet.
-6. Validate signing, archives, store packaging, API compatibility against a
-   published baseline, and package publication before distribution. Native
-   packages packed on one host contain that host's selected targets; assemble
-   and verify a complete distribution before publishing a cross-platform package.
-   Verify now retains unsigned host inputs, assembles the complete Core/MAUI
-   packages and symbols, and restores an isolated consumer from that distribution.
-   Retain a fresh hosted pass of that job before signing or publication.
-7. Make the source/tracker publicly accessible and confirm a private security
-   reporting route. Publish packages only after reviewing the complete artifacts
-   and validating consumption from NuGet.org.
+Signed demo or store app releases additionally require Android/iOS signing,
+archives and store packaging. The unsigned builds and NuGet library distribution
+do not establish those app release gates or universal device performance.
 
 The documentation site has a warning-free build, generated API reference and
 checks for local links, anchors and publication boundaries. See

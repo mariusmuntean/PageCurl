@@ -23,15 +23,15 @@ Mac Catalyst demo at normal speed.
 
 ## Install
 
-NuGet publication is pending. Until it finishes, use a project reference to
-`src/PageCurl.Maui/PageCurl.Maui.csproj` from a local checkout.
-The first package version will use this command from your MAUI application's directory:
+Install from your MAUI application's directory:
 
 ```bash
 dotnet add package PageCurl.Maui --version 0.1.0
 ```
 
 `PageCurl.Core` comes transitively with the MAUI package.
+To develop against source, reference `src/PageCurl.Maui/PageCurl.Maui.csproj`
+from a local checkout instead.
 
 Register SkiaSharp in your MAUI app:
 
