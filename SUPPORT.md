@@ -2,11 +2,8 @@
 
 PageCurl.Maui provides controls for image, live-content and two-page spread
 turns. The 0.x release line may introduce breaking API changes before 1.0.
-Install version 0.1.0 from your MAUI application's directory:
-
-```bash
-dotnet add package PageCurl.Maui --version 0.1.0
-```
+NuGet publication of 0.1.0 is pending. Use the
+[quick start](docs/site/getting-started.md) for source setup and package installation.
 
 The MAUI package includes `PageCurl.Core` transitively.
 

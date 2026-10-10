@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using CoreFoundation;
@@ -38,10 +39,8 @@ internal static class ReaderExampleTests
         results.Add("PASS reader initial readiness, distinct views and first boundary");
         using (var baseline = new UILabel { Text = "Reader accessibility probe" })
         {
-            var accessibilityError = await QueryOwnAccessibilityAsync();
-            results.Add($"READER_ACCESSIBILITY query_error={accessibilityError} baseline_element={baseline.IsAccessibilityElement} baseline_label={baseline.AccessibilityLabel ?? "<null>"}");
-            Require(baseline.IsAccessibilityElement && baseline.AccessibilityLabel == baseline.Text,
-                "Native fixture accessibility is unavailable for a plain UIKit label.");
+            results.AddRange(await ReadOwnAccessibilityAsync().WaitAsync(UiTimeout));
+            results.Add($"READER_ACCESSIBILITY baseline_element={baseline.IsAccessibilityElement} baseline_label={baseline.AccessibilityLabel ?? "<null>"}");
         }
         foreach (var content in new[] { book.LeftContent, book.RightContent }.OfType<Grid>())
         {
@@ -227,24 +226,63 @@ internal static class ReaderExampleTests
         await WaitUntilAsync(() => book.Overlay.Controller.Snapshot.State == PageTurnState.Idle);
     }
 
-    private static Task<int> QueryOwnAccessibilityAsync() => Task.Run(() =>
+    private const string AccessibilityFramework = "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices";
+
+    private static Task<List<string>> ReadOwnAccessibilityAsync() => Task.Run(() =>
     {
-        // Request this app's native accessibility tree before checking label defaults.
-        // Keep the UI thread free to answer the request and bound native messaging.
+        // Keep the UI thread free to answer bounded queries of this app only.
+        var entries = new List<string>();
+        var watch = Stopwatch.StartNew();
         var application = AXUIElementCreateApplication(Environment.ProcessId);
         try
         {
-            var error = AXUIElementSetMessagingTimeout(application, 1);
-            if (error != 0) return error;
-            using var attribute = new CFString("AXChildren");
-            error = AXUIElementCopyAttributeValue(application, attribute.Handle, out var children);
-            if (children != 0) CFRelease(children);
-            return error;
+            Visit(application, 0);
+            return entries;
         }
-        finally { if (application != 0) CFRelease(application); }
+        finally { CFRelease(application); }
+
+        void Visit(nint element, int depth)
+        {
+            Require(depth < 32 && entries.Count < 256 && watch.Elapsed < UiTimeout,
+                "Accessibility tree exceeds the fixture bounds.");
+            entries.Add($"READER_AX depth={depth} role={Text(element, "AXRole")} title={Text(element, "AXTitle")} value={Text(element, "AXValue")} description={Text(element, "AXDescription")}");
+            var children = Copy(element, "AXChildren");
+            if (children == 0) return;
+            try
+            {
+                var count = CFArrayGetCount(children);
+                Require(count <= 256, "Too many accessibility children.");
+                for (nint index = 0; index < count; index++)
+                    Visit(CFArrayGetValueAtIndex(children, index), depth + 1);
+            }
+            finally { CFRelease(children); }
+        }
+
+        string? Text(nint element, string name)
+        {
+            var value = Copy(element, name);
+            if (value == 0) return null;
+            try { return CFType.GetTypeID(value) == CFString.GetTypeID() ? CFString.FromHandle(value) : null; }
+            finally { CFRelease(value); }
+        }
+
+        nint Copy(nint element, string name)
+        {
+            var remaining = (UiTimeout - watch.Elapsed).TotalSeconds;
+            Require(remaining > 0, "Accessibility tree query timed out.");
+            Require(AXUIElementSetMessagingTimeout(element, (float)Math.Min(1, remaining)) == 0,
+                "Cannot bound accessibility queries.");
+            using var attribute = new CFString(name);
+            var error = AXUIElementCopyAttributeValue(element, attribute.Handle, out var value);
+            if (error == 0) return value;
+            if (value != 0) CFRelease(value);
+            // Optional attributes can be unsupported or have no value.
+            if (error is not (-25205 or -25212))
+                entries.Add($"READER_AX_ERROR attribute={name} error={error}");
+            return 0;
+        }
     });
 
-    private const string AccessibilityFramework = "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices";
     [DllImport(AccessibilityFramework)]
     private static extern nint AXUIElementCreateApplication(int processId);
     [DllImport(AccessibilityFramework)]
@@ -253,6 +291,10 @@ internal static class ReaderExampleTests
     private static extern int AXUIElementCopyAttributeValue(nint element, nint attribute, out nint value);
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     private static extern void CFRelease(nint value);
+    [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    private static extern nint CFArrayGetCount(nint array);
+    [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    private static extern nint CFArrayGetValueAtIndex(nint array, nint index);
 
     private sealed class DeferredContext(SynchronizationContext ui) : SynchronizationContext
     {
