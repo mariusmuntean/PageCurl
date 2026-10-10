@@ -6,7 +6,7 @@ import warnings
 import xml.etree.ElementTree as ET
 import zipfile
 
-from package_fixtures import package, rewrite
+from package_fixtures import package, package_icon, rewrite
 
 spec = importlib.util.spec_from_file_location('check_packages', Path(__file__).parents[1] / 'check-packages.py')
 module = importlib.util.module_from_spec(spec)
@@ -33,6 +33,22 @@ class PackageTests(unittest.TestCase):
 
     def test_requires_core_dependency_for_each_framework(self):
         self.assertTrue(any('Core dependency' in error for error in self.check(['net10.0'], ['net10.0'], missing_core=True)))
+
+    def test_requires_square_png_package_icon(self):
+        self.assertEqual(self.check(['net10.0'], ['net10.0'], package_id='PageCurl.Core'), [])
+        self.assertIn('Missing package icon', self.check(['net10.0'], ['net10.0'], include_icon=False))
+        self.assertIn('Missing package icon',
+                      self.check(['net10.0'], ['net10.0'], package_id='PageCurl.Core', include_icon=False))
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'test.nupkg'
+            package(path, ['net10.0'])
+            rewrite(path, {'pagecurl-icon.png': b'not a png'})
+            self.assertIn('Invalid package icon PNG', module.check_package(path, ['net10.0']))
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'test.nupkg'
+            package(path, ['net10.0'])
+            rewrite(path, {'pagecurl-icon.png': package_icon(512, 256)})
+            self.assertIn('Invalid package icon PNG', module.check_package(path, ['net10.0']))
 
 
     def test_rejects_invalid_platform_suffix(self):

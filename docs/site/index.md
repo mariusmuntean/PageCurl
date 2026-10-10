@@ -1,5 +1,7 @@
 # PageCurl.Maui
 
+![PageCurl icon](images/logo.svg)
+
 PageCurl.Maui adds page turns to .NET MAUI applications. Use it for images,
 live views or a two-page reader. Pages curl from an edge or pinned corner;
 buttons and gestures share the same completion event.

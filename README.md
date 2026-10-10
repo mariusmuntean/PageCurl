@@ -1,5 +1,7 @@
 # PageCurl.Maui
 
+![PageCurl icon](docs/site/images/logo.svg)
+
 Page turns for images, live MAUI views and two-page spreads. The library targets
 .NET 10 and MAUI 10, with a platform-independent interaction and geometry layer.
 

@@ -103,6 +103,17 @@ def check_package(path, frameworks):
             errors.append('Missing packaged readme')
         if not (metadata.findtext('{*}description') or '').strip():
             errors.append('Missing description')
+        if package_id in ('PageCurl.Core', 'PageCurl.Maui'):
+            icon = metadata.findtext('{*}icon')
+            if not icon or icon not in files:
+                errors.append('Missing package icon')
+            else:
+                image = files[icon]
+                if (len(image) > 1_000_000 or len(image) < 24
+                        or image[:8] != b'\x89PNG\r\n\x1a\n' or image[12:16] != b'IHDR'
+                        or int.from_bytes(image[16:20], 'big') == 0
+                        or int.from_bytes(image[16:20], 'big') != int.from_bytes(image[20:24], 'big')):
+                    errors.append('Invalid package icon PNG')
         if metadata.findtext('{*}projectUrl') != 'https://mariusmuntean.github.io/PageCurl-docs/':
             errors.append('Missing documentation URL')
         repository = metadata.find('{*}repository')

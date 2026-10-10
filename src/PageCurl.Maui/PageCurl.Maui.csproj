@@ -20,6 +20,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>PageCurl.Maui</PackageId>
     <Title>PageCurl.Maui</Title>
+    <PackageIcon>pagecurl-icon.png</PackageIcon>
     <Description>Interactive stiff-paper page turns for images, live .NET MAUI views and two-page spreads.</Description>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
@@ -37,6 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="../../docs/site/images/pagecurl-icon.png"
+          Pack="true"
+          PackagePath="pagecurl-icon.png"
+          Visible="false" />
     <None Include="../../docs/package-readme.md" Pack="true" PackagePath="README.md" />
     <None Include="../../LICENSE" Pack="true" PackagePath="LICENSE" />
   </ItemGroup>

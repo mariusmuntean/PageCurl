@@ -8,9 +8,14 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>10.0-recommended</AnalysisLevel>
     <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageIcon>pagecurl-icon.png</PackageIcon>
     <Description>Platform-independent page-turn interaction, navigation and developable page geometry.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../../docs/site/images/pagecurl-icon.png"
+          Pack="true"
+          PackagePath="pagecurl-icon.png"
+          Visible="false" />
     <None Include="../../docs/package-readme.md" Pack="true" PackagePath="README.md" />
     <None Include="../../LICENSE" Pack="true" PackagePath="LICENSE" />
   </ItemGroup>

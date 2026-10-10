@@ -1,5 +1,7 @@
 # PageCurl
 
+![PageCurl icon](https://raw.githubusercontent.com/mariusmuntean/PageCurl/master/docs/site/images/pagecurl-icon.png)
+
 Page turns for images, live .NET MAUI views and two-page spreads.
 `PageCurl.Maui` targets .NET 10 / MAUI 10 and references `PageCurl.Core`
 transitively. Core contains platform-independent interaction, navigation and

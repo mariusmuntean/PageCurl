@@ -176,6 +176,7 @@ MAUI also requires equal public APIs and parameter names across compatible
 frameworks in each host's package. Android's generated resource class is internal;
 it is not part of the controls' public contract. Cross-version compatibility
 against a published baseline remains a release gate.
+Package inspection also checks the published icon metadata and square PNG asset.
 
 The distribution job combines unsigned macOS/Windows inputs, requires all five
 frameworks and matching package/symbol/release identities, then restores an
