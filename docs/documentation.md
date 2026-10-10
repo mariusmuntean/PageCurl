@@ -7,6 +7,30 @@ Edit guides in `docs/site/`. Core and MAUI XML documentation comes from the
 built assemblies; DocFX generates the API signatures. The pinned tool manifest
 keeps local and hosted builds on the same version.
 
+## Branding assets
+
+`docs/site/images/logo.svg` is the apricot paper-monogram source. The README,
+documentation header, homepage and favicon use this vector mark. The demo also
+links it as its app icon and splash screen, with an apricot (`#F8CB98`) background.
+Apple targets select the generated icon set with the
+[AppIcon build property](https://learn.microsoft.com/en-us/dotnet/ios/building-apps/build-properties#appicon);
+Android's manifest references both the regular and round launcher icons.
+`docs/site/images/pagecurl-icon.png` is its 512 by 512 export for both NuGet
+packages, package readmes and the demo header.
+
+After editing the vector, regenerate the PNG with
+`rsvg-convert -w 512 -h 512 -o docs/site/images/pagecurl-icon.png docs/site/images/logo.svg`.
+Keep the logo embedded in `social-preview.svg` synchronized too; export it with
+`rsvg-convert -o docs/site/images/social-preview.png docs/site/images/social-preview.svg`.
+The 1280 by 640 social preview is uploaded in the source repository's
+**Settings → General → Social preview**. GitHub stores that selection separately
+from the files in Git. It does not change the owner's personal avatar.
+
+Published NuGet versions retain the icon embedded in their original packages;
+the new icon is included when a new package version is published.
+
+## Publishing
+
 Screenshots must show the behavior the guide explains, using the documented
 sample itself. A page-turn example needs a visible curl; an empty resting page
 does not demonstrate it. Inspect the final image at its displayed size before

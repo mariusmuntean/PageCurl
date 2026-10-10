@@ -1,6 +1,6 @@
 # PageCurl
 
-![PageCurl icon](https://raw.githubusercontent.com/mariusmuntean/PageCurl/master/docs/site/images/pagecurl-icon.png)
+<img src="https://raw.githubusercontent.com/mariusmuntean/PageCurl/master/docs/site/images/pagecurl-icon.png" alt="PageCurl logo" width="96" height="96">
 
 Page turns for images, live .NET MAUI views and two-page spreads.
 `PageCurl.Maui` targets .NET 10 / MAUI 10 and references `PageCurl.Core`

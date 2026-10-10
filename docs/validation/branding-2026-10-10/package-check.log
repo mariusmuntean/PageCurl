@@ -1,0 +1,4 @@
+  Successfully created package '/Users/marius/Projects/PageCurl/.artifacts/logo-packages/PageCurl.Maui.0.1.0.nupkg'.
+  Successfully created package '/Users/marius/Projects/PageCurl/.artifacts/logo-packages/PageCurl.Maui.0.1.0.snupkg'.
+PASS package PageCurl.Core.0.1.0.nupkg: net10.0
+PASS package PageCurl.Maui.0.1.0.nupkg: net10.0

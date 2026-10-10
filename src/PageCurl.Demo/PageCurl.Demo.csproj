@@ -16,6 +16,7 @@
     <MauiXamlInflator>SourceGen</MauiXamlInflator>
     <ApplicationTitle>Page Curl Demo</ApplicationTitle>
     <ApplicationId>de.marius.PageCurlDemo</ApplicationId>
+    <AppIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">appicon</AppIcon>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
@@ -36,7 +37,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#19384A" BaseSize="96,96" />
+    <MauiIcon Include="../../docs/site/images/logo.svg" Link="Resources/AppIcon/appicon.svg" Color="#F8CB98" />
+    <MauiSplashScreen Include="../../docs/site/images/logo.svg" Link="Resources/Splash/splash.svg" Color="#F8CB98" BaseSize="96,96" />
+    <MauiImage Include="../../docs/site/images/pagecurl-icon.png" Link="Resources/Images/pagecurl_brand.png" />
     <MauiImage Include="Resources/Images/**" />
     <MauiAsset Include="Resources/Raw/**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>

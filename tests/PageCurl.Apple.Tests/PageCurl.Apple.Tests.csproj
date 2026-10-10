@@ -22,6 +22,7 @@
     <MauiXaml Include="../../src/PageCurl.Demo/*.xaml" Link="Demo/%(Filename)%(Extension)" />
     <MauiXaml Include="../../src/PageCurl.Demo/Resources/Styles/*.xaml" Link="Resources/Styles/%(Filename)%(Extension)" />
     <MauiImage Include="../../src/PageCurl.Demo/Resources/Images/**" Link="Resources/Images/%(Filename)%(Extension)" />
+    <MauiImage Include="../../docs/site/images/pagecurl-icon.png" Link="Resources/Images/pagecurl_brand.png" />
     <MauiAsset Include="../../src/PageCurl.Demo/Resources/Raw/**" LogicalName="%(Filename)%(Extension)" />
     <Compile Include="$(ReaderExampleDirectory)ReaderPage.xaml.cs" Link="ReaderExample/ReaderPage.xaml.cs" />
     <MauiXaml Include="$(ReaderExampleDirectory)ReaderPage.xaml" Link="ReaderExample/ReaderPage.xaml" />

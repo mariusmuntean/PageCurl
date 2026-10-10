@@ -7,10 +7,13 @@
     SafeAreaEdges="All">
     <Grid x:Name="RootGrid" Padding="18,16" RowDefinitions="Auto,*,Auto" RowSpacing="14">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-            <VerticalStackLayout Spacing="1">
-                <Label Text="PAGECURL.MAUI" Style="{StaticResource Eyebrow}" />
-                <Label x:Name="SceneTitleLabel" Text="One page" FontSize="24" FontAttributes="Bold" />
-            </VerticalStackLayout>
+            <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                <Image Source="pagecurl_brand.png" WidthRequest="40" HeightRequest="40" Aspect="AspectFit" VerticalOptions="Center" AutomationProperties.IsInAccessibleTree="False" />
+                <VerticalStackLayout Spacing="1">
+                    <Label Text="PAGECURL.MAUI" Style="{StaticResource Eyebrow}" />
+                    <Label x:Name="SceneTitleLabel" Text="One page" FontSize="24" FontAttributes="Bold" />
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
             <VerticalStackLayout Grid.Column="1" Spacing="1" HorizontalOptions="End" VerticalOptions="Center">
                 <Label x:Name="PageCounterLabel" Text="01 / 08" FontSize="14" FontAttributes="Bold" HorizontalTextAlignment="End" />
                 <Label x:Name="StatusLabel" Text="Ready" Style="{StaticResource QuietText}" HorizontalTextAlignment="End" />

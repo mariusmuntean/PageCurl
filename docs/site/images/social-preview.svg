@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <rect width="1280" height="640" fill="#FFF7ED"/>
+  <svg x="96" y="156" width="328" height="328" viewBox="0 0 100 100"><defs>
+<linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFBF2"/><stop offset="1" stop-color="#F4EADB"/></linearGradient>
+<linearGradient id="ember" x1="0.12" y1="0.1" x2="0.85" y2="0.95"><stop stop-color="#FFB85C"/><stop offset="0.58" stop-color="#FF963F"/><stop offset="1" stop-color="#E87432"/></linearGradient>
+<linearGradient id="inner" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#C85C27"/><stop offset="1" stop-color="#FFB85C"/></linearGradient>
+</defs><rect width="100" height="100" rx="22" fill="#F8CB98"/><path d="M27 80V24Q27 15 36 15H55C74 15 85 27 85 41C85 60 69 69 49 65V80Z" fill="#CD915C" transform="translate(2 3)"/>
+<path d="M25 79V24Q25 14 35 14H55C71 14 82 24 82 39C82 55 69 62 46 60V79Z" fill="url(#paper)"/>
+<path d="M46 32V60C65 65 80 56 82 43C82 29 72 18 59 15C68 23 70 35 63 41C59 45 52 45 46 43Z" fill="url(#ember)"/>
+<path d="M46 32V43C52 45 59 45 63 41C68 37 68 31 66 27C58 27 51 29 46 32Z" fill="#F8CB98"/></svg>
+  <g font-family="Helvetica,Arial,sans-serif" fill="#563C2E">
+    <text x="480" y="286" font-size="72" font-weight="700" letter-spacing="-2">PageCurl</text>
+    <text x="484" y="342" font-size="26" fill="#8B6B56">Page turns for .NET MAUI</text>
+    <text x="484" y="398" font-size="21" fill="#8B6B56">Images · Live views · Two-page spreads</text>
+  </g>
+</svg>

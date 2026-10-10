@@ -1,0 +1,6 @@
+PASS maccatalyst compiled app-icon metadata: {'CFBundleIconFile': 'appicon', 'CFBundleIconName': 'appicon'}
+PASS ios compiled app-icon metadata: {'CFBundleIcons': {'CFBundlePrimaryIcon': {'CFBundleIconFiles': ['appicon60x60'], 'CFBundleIconName': 'appicon'}}, 'CFBundleIcons~ipad': {'CFBundlePrimaryIcon': {'CFBundleIconFiles': ['appicon60x60', 'appicon76x76'], 'CFBundleIconName': 'appicon'}}}
+PASS Android launcher and round-icon metadata
+PASS package icon and readme: PageCurl.Maui.0.1.0.nupkg
+PASS package icon and readme: PageCurl.Core.0.1.0.nupkg
+PASS generated documentation branding
