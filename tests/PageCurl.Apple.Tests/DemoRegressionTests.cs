@@ -236,10 +236,14 @@ internal static class DemoRegressionTests
                     var next = page.FindByName<Button>(compact ? "MobileNextButton" : "NextButton");
                     var counter = page.FindByName<Label>("PageCounterLabel");
                     var spread = page.FindByName<PageSpreadView>("SpreadPageView");
+                    var counters = scene == "Spread"
+                        ? new[] { "01–02 / 08", "03–04 / 08", "05–06 / 08", "07–08 / 08" }
+                        : new[] { "01 / 08", "02 / 08", "03 / 08", "04 / 08", "05 / 08", "06 / 08", "07 / 08", "08 / 08" };
                     async Task Ready()
                     {
                         if (scene == "Spread")
-                            await WaitUntilAsync(() => spread.CanTurnForward || spread.CanTurnBackward);
+                            await WaitUntilAsync(() => (counter.Text == counters[0] || spread.CanTurnBackward)
+                                && (counter.Text == counters[^1] || spread.CanTurnForward));
                         else if (scene is "Content" or "Backside")
                             await WaitUntilAsync(() => SnapshotReady(page.FindByName<PageCurlView>($"{scene}PageView")));
                     }
@@ -251,9 +255,6 @@ internal static class DemoRegressionTests
                         await Ready();
                     }
                     Require(!previous.IsEnabled && next.IsEnabled, $"{scene}: first boundary buttons");
-                    var counters = scene == "Spread"
-                        ? new[] { "01–02 / 08", "03–04 / 08", "05–06 / 08", "07–08 / 08" }
-                        : new[] { "01 / 08", "02 / 08", "03 / 08", "04 / 08", "05 / 08", "06 / 08", "07 / 08", "08 / 08" };
                     Require(counter.Text == counters[0], $"{scene}: first counter was {counter.Text}");
                     for (var step = 1; step < counters.Length; step++)
                     {

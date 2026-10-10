@@ -56,7 +56,9 @@ check fresh, obsolete and chained animation timers.
 the linked demo handlers. It runs first-to-last-to-first navigation in all four
 scenes through both wide and compact buttons, plus animated forward/backward
 turns. Counters, completion status, endpoint buttons and both layouts must agree;
-commands stay disabled during animation. Capture-boundary failures exercise
+commands stay disabled during animation. Spread journeys wait for each direction
+available at the current boundary; readiness in the other direction is insufficient.
+Capture-boundary failures exercise
 refresh, replacement/re-entry and resource teardown. Other assertions cover
 snapshot color/alpha, custom-back landing orientation, shrinking meshes, native
 hit targets, a 250 by 333 page, compact Options at 600 by 750, and light/dark
