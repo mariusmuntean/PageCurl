@@ -23,7 +23,9 @@ Mac Catalyst demo at normal speed.
 
 ## Install
 
-From your MAUI application's directory:
+NuGet publication is pending. Until it finishes, use a project reference to
+`src/PageCurl.Maui/PageCurl.Maui.csproj` from a local checkout.
+The first package version will use this command from your MAUI application's directory:
 
 ```bash
 dotnet add package PageCurl.Maui --version 0.1.0
@@ -38,8 +40,6 @@ using SkiaSharp.Views.Maui.Controls.Hosting;
 builder.UseMauiApp<App>().UseSkiaSharp();
 ```
 
-To develop against the source, reference
-`src/PageCurl.Maui/PageCurl.Maui.csproj` from a local checkout.
 The [quick start](docs/site/getting-started.md) covers XAML setup and navigation;
 the [small reader example](docs/site/spreads.md#small-reader-example) adds a complete
 five-page book with capture readiness, retry and an odd final page;

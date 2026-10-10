@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using CoreFoundation;
 using Microsoft.Maui.Controls;
 using PageCurl.Core;
 using PageCurl.Maui;
@@ -35,7 +37,12 @@ internal static class ReaderExampleTests
         Require(slots.Distinct().Count() == slots.Length, "Reader reuses a view in multiple occupied slots.");
         results.Add("PASS reader initial readiness, distinct views and first boundary");
         using (var baseline = new UILabel { Text = "Reader accessibility probe" })
-            results.Add($"READER_ACCESSIBILITY baseline_element={baseline.IsAccessibilityElement} baseline_label={baseline.AccessibilityLabel ?? "<null>"}");
+        {
+            var accessibilityError = await QueryOwnAccessibilityAsync();
+            results.Add($"READER_ACCESSIBILITY query_error={accessibilityError} baseline_element={baseline.IsAccessibilityElement} baseline_label={baseline.AccessibilityLabel ?? "<null>"}");
+            Require(baseline.IsAccessibilityElement && baseline.AccessibilityLabel == baseline.Text,
+                "Native fixture accessibility is unavailable for a plain UIKit label.");
+        }
         foreach (var content in new[] { book.LeftContent, book.RightContent }.OfType<Grid>())
         {
             var text = (VerticalStackLayout)content.Children.OfType<ScrollView>().Single().Content;
@@ -219,6 +226,33 @@ internal static class ReaderExampleTests
         Send(SKTouchAction.Released, pulled);
         await WaitUntilAsync(() => book.Overlay.Controller.Snapshot.State == PageTurnState.Idle);
     }
+
+    private static Task<int> QueryOwnAccessibilityAsync() => Task.Run(() =>
+    {
+        // Request this app's native accessibility tree before checking label defaults.
+        // Keep the UI thread free to answer the request and bound native messaging.
+        var application = AXUIElementCreateApplication(Environment.ProcessId);
+        try
+        {
+            var error = AXUIElementSetMessagingTimeout(application, 1);
+            if (error != 0) return error;
+            using var attribute = new CFString("AXChildren");
+            error = AXUIElementCopyAttributeValue(application, attribute.Handle, out var children);
+            if (children != 0) CFRelease(children);
+            return error;
+        }
+        finally { if (application != 0) CFRelease(application); }
+    });
+
+    private const string AccessibilityFramework = "/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices";
+    [DllImport(AccessibilityFramework)]
+    private static extern nint AXUIElementCreateApplication(int processId);
+    [DllImport(AccessibilityFramework)]
+    private static extern int AXUIElementSetMessagingTimeout(nint element, float timeout);
+    [DllImport(AccessibilityFramework)]
+    private static extern int AXUIElementCopyAttributeValue(nint element, nint attribute, out nint value);
+    [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    private static extern void CFRelease(nint value);
 
     private sealed class DeferredContext(SynchronizationContext ui) : SynchronizationContext
     {

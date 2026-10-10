@@ -30,7 +30,7 @@ five-page recipe with navigation, capture retry and the odd last page.
 
 ## Current release status
 
-The 0.1.0 packages target .NET 10 and MAUI 10.
+Version 0.1.0 targets .NET 10 and MAUI 10; NuGet publication is pending.
 Public APIs may change before 1.0.
 Use the [platform matrix](platforms.md) to distinguish build coverage from
 runtime and hardware validation. See the [quick start](getting-started.md)

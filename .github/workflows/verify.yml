@@ -63,6 +63,18 @@ jobs:
           dotnet build src/PageCurl.Maui/PageCurl.Maui.csproj -c Release -f net10.0 -p:TargetFrameworks=net10.0 --no-restore
       - name: Run neutral MAUI tests
         run: dotnet run --project tests/PageCurl.Maui.Tests/PageCurl.Maui.Tests.csproj -c Release -f net10.0
+      - name: Build native regression fixture
+        run: dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
+      - name: Run native regression assertions
+        run: python3 tools/run-native-fixture.py tests/PageCurl.Apple.Tests/bin/Release/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Apple.Tests.app/Contents/MacOS/PageCurl.Apple.Tests
+      - name: Retain native assertion evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-assertions
+          path: .artifacts/native-tests.log
+          include-hidden-files: true
+          if-no-files-found: warn
       - name: Build iOS simulator demo
         run: dotnet build src/PageCurl.Demo/PageCurl.Demo.csproj -c Release -f net10.0-ios -p:RuntimeIdentifier=iossimulator-arm64
       - name: Build Android demo
@@ -83,18 +95,6 @@ jobs:
           path: .artifacts/packages/*.*nupkg
           include-hidden-files: true
           if-no-files-found: error
-      - name: Build native regression fixture
-        run: dotnet build tests/PageCurl.Apple.Tests/PageCurl.Apple.Tests.csproj -c Release -f net10.0-maccatalyst -p:RuntimeIdentifier=maccatalyst-arm64
-      - name: Run native regression assertions
-        run: python3 tools/run-native-fixture.py tests/PageCurl.Apple.Tests/bin/Release/net10.0-maccatalyst/maccatalyst-arm64/PageCurl.Apple.Tests.app/Contents/MacOS/PageCurl.Apple.Tests
-      - name: Retain native assertion evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: native-assertions
-          path: .artifacts/native-tests.log
-          include-hidden-files: true
-          if-no-files-found: warn
 
   windows:
     runs-on: windows-latest
