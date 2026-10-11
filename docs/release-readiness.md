@@ -1,6 +1,12 @@
 # Release readiness
 
-The core behavior and public MAUI surface are implemented. The hosted
+The core behavior and public MAUI surface are implemented. Version 0.1.1 is
+published on GitHub with complete packages and symbols; NuGet upload awaits
+renewed account sign-in. Its hosted verification passed all four jobs and
+122 native assertions, and both packages passed API compatibility against
+0.1.0. See the [0.1.1 publication record](validation/release-0.1.1-2026-10-11/README.md).
+
+The earlier 0.1.0 evidence follows. The hosted
 [Verify run on 10 October](https://github.com/mariusmuntean/PageCurl/actions/runs/38048455583)
 passed all four jobs for `9e759e0`: Core and neutral MAUI tests, documented
 examples, Android/iOS simulator/Mac Catalyst/Windows Release builds, 119 native
