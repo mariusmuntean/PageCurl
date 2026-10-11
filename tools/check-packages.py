@@ -101,6 +101,8 @@ def check_package(path, frameworks):
         readme = metadata.findtext('{*}readme')
         if readme not in files or not files[readme].strip():
             errors.append('Missing packaged readme')
+        elif re.search(rb'<\s*/?\s*img\b', files[readme], re.IGNORECASE):
+            errors.append('Packaged readme contains HTML unsupported by NuGet.org')
         if not (metadata.findtext('{*}description') or '').strip():
             errors.append('Missing description')
         if package_id in ('PageCurl.Core', 'PageCurl.Maui'):

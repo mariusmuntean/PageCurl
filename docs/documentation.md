@@ -20,7 +20,9 @@ Apple targets select the generated icon set with the
 [AppIcon build property](https://learn.microsoft.com/en-us/dotnet/ios/building-apps/build-properties#appicon);
 Android's manifest references both the regular and round launcher icons.
 `docs/site/images/pagecurl-icon.png` is its 512 by 512 export for both NuGet
-packages, package readmes and the demo header.
+packages and the demo header. The NuGet README uses Markdown only; the listing
+header already displays the package icon. HTML image tags are escaped as text
+by NuGet.org and are rejected by the package checker.
 
 After editing the vector, regenerate the PNG with
 `rsvg-convert -w 512 -h 512 -o docs/site/images/pagecurl-icon.png docs/site/images/logo.svg`.

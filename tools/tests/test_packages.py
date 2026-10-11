@@ -24,6 +24,15 @@ class PackageTests(unittest.TestCase):
         for namespaced in (False, True):
             self.assertEqual(self.check(['net10.0', 'net10.0-ios27.0'], ['net10.0', 'net10.0-ios'], namespaced=namespaced), [])
 
+    def test_rejects_html_image_in_packaged_readme(self):
+        readme = '# PageCurl\n\n<img src="https://example.com/logo.png" width="96">'
+        self.assertIn('Packaged readme contains HTML unsupported by NuGet.org',
+                      self.check(['net10.0'], ['net10.0'], readme=readme))
+
+    def test_accepts_markdown_image_in_packaged_readme(self):
+        readme = '# PageCurl\n\n![Logo](https://example.com/logo.png)'
+        self.assertEqual(self.check(['net10.0'], ['net10.0'], readme=readme), [])
+
     def test_requires_neutral_asset_separately(self):
         self.assertIn('Missing framework net10.0', self.check(['net10.0-ios27.0'], ['net10.0']))
 

@@ -1,7 +1,5 @@
 # PageCurl
 
-<img src="https://raw.githubusercontent.com/mariusmuntean/PageCurl/master/docs/site/images/pagecurl-icon.png" alt="PageCurl logo" width="96" height="96">
-
 Page turns for images, live .NET MAUI views and two-page spreads.
 `PageCurl.Maui` targets .NET 10 / MAUI 10 and references `PageCurl.Core`
 transitively. Core contains platform-independent interaction, navigation and
@@ -10,7 +8,7 @@ page geometry and can also be used on its own.
 Install from your MAUI application's directory:
 
 ```bash
-dotnet add package PageCurl.Maui --version 0.1.1
+dotnet add package PageCurl.Maui --version 0.1.2
 ```
 
 | Control | Content |
