@@ -1,8 +1,9 @@
 # Release readiness
 
 The core behavior and public MAUI surface are implemented. Version 0.1.1 is
-published on GitHub with complete packages and symbols; NuGet upload awaits
-renewed account sign-in. Its hosted verification passed all four jobs and
+published on NuGet.org and GitHub with complete packages and symbols. A fresh
+external consumer restored and ran from NuGet.org alone; published package and
+symbol payloads match the validated distribution. Its hosted verification passed all four jobs and
 122 native assertions, and both packages passed API compatibility against
 0.1.0. See the [0.1.1 publication record](validation/release-0.1.1-2026-10-11/README.md).
 

@@ -6,8 +6,10 @@ from the [holistic review](../holistic-review-2026-10-10/README.md).
 The release tag and packages identify source commit
 [`598aa10`](https://github.com/mariusmuntean/PageCurl/commit/598aa10b0275c0adb3b02ed26fb8226a3929c92d).
 Core/MAUI packages and symbols are attached to the GitHub release.
-NuGet.org upload remains pending renewed account sign-in; 0.1.0 remains the
-published NuGet version. The updated documentation and preview are live.
+Both [Core 0.1.1](https://www.nuget.org/packages/PageCurl.Core/0.1.1) and
+[MAUI 0.1.1](https://www.nuget.org/packages/PageCurl.Maui/0.1.1) are published on
+NuGet.org, together with their symbols. The updated documentation and preview
+are live.
 
 ## Completed evidence
 
@@ -29,7 +31,11 @@ published NuGet version. The updated documentation and preview are live.
 - Documentation built without warnings/errors. [Pages deployment](https://github.com/mariusmuntean/PageCurl-docs/actions/runs/38127663612)
   completed; live HTML confirms current release status and preview references.
 
-NuGet remote consumption and published-payload comparison are pending upload.
+An external project outside the repository restored using an empty cache,
+no project references and NuGet.org as its only configured source, then passed
+its Release command/mesh checks. Restored metadata confirms the remote source
+for Core and MAUI. All four downloaded package/symbol ZIP payloads match the
+reviewed distribution, excluding NuGet's added repository signature.
 Physical-device performance, full VoiceOver/TalkBack journeys, Windows runtime
 and iOS automated HID coverage remain open. This release does not certify
 signed demo apps or store packaging.
