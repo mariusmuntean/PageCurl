@@ -32,11 +32,12 @@ five-page recipe with navigation, capture retry and the odd last page.
 
 ## Current release status
 
-Version 0.1.1 is prepared for NuGet.org and targets .NET 10 and MAUI 10.
+Version 0.1.0 is available on NuGet.org and targets .NET 10 and MAUI 10.
+Version 0.1.1 is prepared and awaits NuGet publication.
 Public APIs may change before 1.0.
 The guides and preview follow current source. The latest constructor-setting,
 spread-readiness and resize/padding fixes are included in version 0.1.1;
-the previous 0.1.0 package retains its original behavior.
+use a source checkout to try them until publication completes.
 Use the [platform matrix](platforms.md) to distinguish build coverage from
 runtime and hardware validation. See the [quick start](getting-started.md)
 for package installation and a working example.
