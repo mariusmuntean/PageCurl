@@ -37,7 +37,7 @@ from a local checkout instead.
 
 The guides and preview follow the current source. Constructor-setting,
 spread-readiness and resize/padding fixes in the [latest review](docs/validation/holistic-review-2026-10-10/README.md)
-are prepared for version 0.1.1, which awaits NuGet publication.
+are available in the [0.1.1 GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.1); NuGet publication is pending.
 
 Register SkiaSharp in your MAUI app:
 
