@@ -39,7 +39,7 @@
                 BackgroundColor="{AppThemeBinding Light={StaticResource StageLight}, Dark={StaticResource StageDark}}"
                 StrokeThickness="0"
                 StrokeShape="RoundRectangle 12">
-                <Grid x:Name="StageHost" Padding="10" SizeChanged="OnStageSizeChanged">
+                <Grid x:Name="StageHost" Padding="10">
                     <curl:PageTurnView
                         x:Name="SinglePageView"
                         ContentScale="AspectFit"

@@ -7,11 +7,37 @@ internal static class PublicApiTests
 {
     public static void RunAll()
     {
+        Constructor_preserves_supplied_interaction_options();
         Invalid_enum_values_do_not_change_the_control_or_renderer();
         Non_finite_dim_factors_are_rejected_before_publication();
         Finite_dim_factors_are_clamped_consistently();
         Invalid_numeric_options_preserve_the_last_valid_configuration();
         Reduced_motion_pointer_cancellation_completes_once_without_settling();
+    }
+
+    private static void Constructor_preserves_supplied_interaction_options()
+    {
+        var options = new PageCurlOptions
+        {
+            PageChangeThreshold = .3f,
+            FlickEnabled = false,
+            FlickVelocityThreshold = 2f,
+        };
+        var view = new PageTurnView(options);
+
+        TestAssert.Equal(.3f, view.PageChangeThreshold);
+        TestAssert.False(view.FlickEnabled);
+        TestAssert.Equal(2f, view.FlickVelocityThreshold);
+        TestAssert.Equal(.3f, options.PageChangeThreshold);
+        TestAssert.False(options.FlickEnabled);
+        TestAssert.Equal(2f, options.FlickVelocityThreshold);
+
+        view.PageChangeThreshold = .4f;
+        view.FlickEnabled = true;
+        view.FlickVelocityThreshold = 3f;
+        TestAssert.Equal(.4f, options.PageChangeThreshold);
+        TestAssert.True(options.FlickEnabled);
+        TestAssert.Equal(3f, options.FlickVelocityThreshold);
     }
 
     private static void Invalid_enum_values_do_not_change_the_control_or_renderer()

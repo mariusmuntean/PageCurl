@@ -232,6 +232,7 @@ internal static class ReaderExampleTests
     {
         // Keep the UI thread free to answer bounded queries of this app only.
         var entries = new List<string>();
+        var elements = new List<nint>();
         var watch = Stopwatch.StartNew();
         var application = AXUIElementCreateApplication(Environment.ProcessId);
         try
@@ -239,13 +240,23 @@ internal static class ReaderExampleTests
             Visit(application, 0);
             return entries;
         }
-        finally { CFRelease(application); }
+        catch (Exception exception)
+        {
+            throw new InvalidOperationException($"Accessibility traversal failed. Partial trail:\n{string.Join("\n", entries)}", exception);
+        }
+        finally
+        {
+            foreach (var element in elements) CFRelease(element);
+            CFRelease(application);
+        }
 
         void Visit(nint element, int depth)
         {
             Require(depth < 32 && entries.Count < 256 && watch.Elapsed < UiTimeout,
-                "Accessibility tree exceeds the fixture bounds.");
-            entries.Add($"READER_AX depth={depth} role={Text(element, "AXRole")} title={Text(element, "AXTitle")} value={Text(element, "AXValue")} description={Text(element, "AXDescription")}");
+                $"Accessibility tree exceeds the fixture bounds: depth={depth}, entries={entries.Count}, elapsed_ms={watch.Elapsed.TotalMilliseconds:F1}.");
+            var repeated = elements.FindIndex(previous => CFEqual(previous, element));
+            elements.Add(CFRetain(element));
+            entries.Add($"READER_AX depth={depth} repeated_index={repeated} role={Text(element, "AXRole")} title={Text(element, "AXTitle")} value={Text(element, "AXValue")} description={Text(element, "AXDescription")}");
             var children = Copy(element, "AXChildren");
             if (children == 0) return;
             try
@@ -291,6 +302,11 @@ internal static class ReaderExampleTests
     private static extern int AXUIElementCopyAttributeValue(nint element, nint attribute, out nint value);
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     private static extern void CFRelease(nint value);
+    [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    private static extern nint CFRetain(nint value);
+    [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool CFEqual(nint left, nint right);
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
     private static extern nint CFArrayGetCount(nint array);
     [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]

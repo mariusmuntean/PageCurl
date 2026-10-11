@@ -86,6 +86,7 @@ public sealed class FixturePage : ContentPage
         {
             var window = Window!;
             NativeMeshTests.Run(_results);
+            await DemoResizeTests.RunAsync(window, _results);
             await DemoWindowLifecycleTests.RunAsync(window, _results);
             await InteractiveRefreshTests.RunAsync(window, _results);
             await SceneSwitchTimingTests.RunAsync(window, _results);

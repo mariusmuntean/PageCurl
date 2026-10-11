@@ -201,9 +201,12 @@ public sealed class PageTurnView : SKGLView
         _backTexturePoints = new SKPoint[_meshBuffer.BackVertices.Length];
         _backColors = new SKColor[_meshBuffer.BackVertices.Length];
 
-        PageChangeThreshold = options.PageChangeThreshold;
-        FlickEnabled = options.FlickEnabled;
-        FlickVelocityThreshold = options.FlickVelocityThreshold;
+        var pageChangeThreshold = options.PageChangeThreshold;
+        var flickEnabled = options.FlickEnabled;
+        var flickVelocityThreshold = options.FlickVelocityThreshold;
+        PageChangeThreshold = pageChangeThreshold;
+        FlickEnabled = flickEnabled;
+        FlickVelocityThreshold = flickVelocityThreshold;
 
         EnableTouchEvents = true;
         AttachViewHandlers();

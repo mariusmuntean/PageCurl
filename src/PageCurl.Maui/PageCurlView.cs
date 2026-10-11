@@ -1,6 +1,7 @@
 using System.Numerics;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Layouts;
 using PageCurl.Core;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
@@ -665,8 +666,13 @@ public sealed class PageCurlView : Grid
     }
 
     private void UpdatePageFrame()
+        => UpdatePageFrame(Width, Height);
+
+    private void UpdatePageFrame(double width, double height)
     {
-        var viewport = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+        var viewport = new Vector2(
+            (float)Math.Max(width - Padding.HorizontalThickness, 0),
+            (float)Math.Max(height - Padding.VerticalThickness, 0));
         if (viewport.X <= 0 || viewport.Y <= 0)
         {
             return;
@@ -681,6 +687,20 @@ public sealed class PageCurlView : Grid
         _pageFrame.WidthRequest = page.Size.X;
         _pageFrame.HeightRequest = page.Size.Y;
         Renderer.PageAspectRatio = page.Size.X / page.Size.Y;
+    }
+
+    protected override ILayoutManager CreateLayoutManager() => new PageFrameLayoutManager(this);
+
+    private sealed class PageFrameLayoutManager(PageCurlView owner) : GridLayoutManager(owner)
+    {
+        public override Size ArrangeChildren(Rect bounds)
+        {
+            // Fit and remeasure against this arrange pass. SizeChanged runs
+            // during parent layout, where request invalidations can be lost.
+            owner.UpdatePageFrame(bounds.Width, bounds.Height);
+            base.Measure(bounds.Width, bounds.Height);
+            return base.ArrangeChildren(bounds);
+        }
     }
 
     private void ShowRenderer()

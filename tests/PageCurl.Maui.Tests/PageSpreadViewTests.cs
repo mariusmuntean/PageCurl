@@ -12,6 +12,10 @@ internal static class PageSpreadViewTests
 {
     public static async Task RunAllAsync()
     {
+        await Dirty_layout_snapshots_block_turns_until_recaptured();
+        await Readiness_callback_cannot_use_other_dirty_direction();
+        await Hiding_callback_cannot_start_a_spread_turn();
+        await Hidden_refreshed_spread_rejects_turns_in_both_directions();
         await Refresh_waiting_for_a_turn_is_obsolete_after_hiding();
         await Reconnect_does_not_overlap_an_unfinished_capture();
         await Pending_automatic_refresh_resumes_after_normal_completion();
@@ -41,6 +45,151 @@ internal static class PageSpreadViewTests
         await Backward_turn_shows_the_adjacent_page_on_the_sheet_back();
         Overlay_surface_preserves_the_stationary_page();
         Handler_teardown_restores_both_static_pages();
+    }
+
+    private static async Task Dirty_layout_snapshots_block_turns_until_recaptured()
+    {
+        foreach (var handler in new[] { "OnContentLayoutChanged", "OnSizeChanged", "OnLoaded" })
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        {
+            var snapshotter = new CountingSnapshotter();
+            var spread = await CreateReadySpreadAsync(snapshotter);
+            try
+            {
+                spread.ReduceMotion = true;
+                ((IView)spread.Overlay).Arrange(new Rect(0, 0, 400, 500));
+                var completions = 0;
+                spread.PageTurnCompleted += (_, _) => completions++;
+                var content = direction == PageTurnDirection.Forward ? spread.RightContent : spread.LeftContent;
+                typeof(PageSpreadView).GetMethod(handler, BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(spread, [handler == "OnContentLayoutChanged" ? content : spread, EventArgs.Empty]);
+
+                TestAssert.False(direction == PageTurnDirection.Forward ? spread.CanTurnForward : spread.CanTurnBackward,
+                    $"{handler} left dirty snapshots available for a turn.");
+                TestAssert.Equal(handler == "OnContentLayoutChanged",
+                    direction == PageTurnDirection.Forward ? spread.CanTurnBackward : spread.CanTurnForward);
+                TestAssert.False(direction == PageTurnDirection.Forward ? spread.TryTurnForward() : spread.TryTurnBackward(),
+                    $"{handler} accepted a turn with dirty snapshots.");
+                TestAssert.Equal(0, completions);
+                TestAssert.Equal(PageTurnState.Idle, spread.Overlay.Controller.Snapshot.State);
+                TestAssert.Null(spread.Overlay.FrontImage);
+
+                await DrainAsync(spread);
+                TestAssert.Equal(handler == "OnContentLayoutChanged" ? 5 : 8, snapshotter.CaptureCount);
+                TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+                TestAssert.True(direction == PageTurnDirection.Forward ? spread.TryTurnForward() : spread.TryTurnBackward());
+                TestAssert.Equal(1, completions);
+            }
+            finally { InvokeHandlerChanged(spread); }
+        }
+    }
+
+    private static async Task Readiness_callback_cannot_use_other_dirty_direction()
+    {
+        var spread = await CreateReadySpreadAsync(new CountingSnapshotter());
+        try
+        {
+            spread.ReduceMotion = true;
+            ((IView)spread.Overlay).Arrange(new Rect(0, 0, 400, 500));
+            bool? accepted = null;
+            var completions = 0;
+            spread.PageTurnCompleted += (_, _) => completions++;
+            spread.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(PageSpreadView.CanTurnForward) && !spread.CanTurnForward)
+                    accepted = spread.TryTurnBackward();
+            };
+
+            typeof(PageSpreadView).GetMethod("OnSizeChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(spread, [spread, EventArgs.Empty]);
+
+            TestAssert.True(accepted == false, "A readiness callback started the other direction with dirty snapshots.");
+            TestAssert.Equal(0, completions);
+            TestAssert.Equal(PageTurnState.Idle, spread.Overlay.Controller.Snapshot.State);
+            TestAssert.Null(spread.Overlay.FrontImage);
+            TestAssert.False(spread.CanTurnForward || spread.CanTurnBackward);
+            await DrainAsync(spread);
+            TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+        }
+        finally { InvokeHandlerChanged(spread); }
+    }
+
+    private static async Task Hiding_callback_cannot_start_a_spread_turn()
+    {
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        {
+            var spread = await CreateReadySpreadAsync(new CountingSnapshotter());
+            try
+            {
+                spread.ReduceMotion = true;
+                ((IView)spread.Overlay).Arrange(new Rect(0, 0, 400, 500));
+                var completions = 0;
+                bool? accepted = null;
+                spread.PageTurnCompleted += (_, _) => completions++;
+                spread.PropertyChanged += (_, args) =>
+                {
+                    if (args.PropertyName == nameof(PageSpreadView.IsVisible) && !spread.IsVisible)
+                    {
+                        accepted = direction == PageTurnDirection.Forward
+                            ? spread.TryTurnForward()
+                            : spread.TryTurnBackward();
+                    }
+                };
+
+                spread.IsVisible = false;
+
+                TestAssert.True(accepted == false,
+                    "A visibility callback started a turn while the spread was hiding.");
+                TestAssert.Equal(0, completions);
+                TestAssert.Equal(PageTurnState.Idle, spread.Overlay.Controller.Snapshot.State);
+                TestAssert.Null(spread.Overlay.FrontImage);
+                TestAssert.Equal(0d, spread.Overlay.Opacity);
+                TestAssert.False(spread.CanTurnForward || spread.CanTurnBackward);
+            }
+            finally { InvokeHandlerChanged(spread); }
+        }
+    }
+
+    private static async Task Hidden_refreshed_spread_rejects_turns_in_both_directions()
+    {
+        foreach (var direction in new[] { PageTurnDirection.Forward, PageTurnDirection.Backward })
+        {
+            var snapshotter = new CountingSnapshotter();
+            var spread = await CreateReadySpreadAsync(snapshotter);
+            try
+            {
+                spread.ReduceMotion = true;
+                ((IView)spread.Overlay).Arrange(new Rect(0, 0, 400, 500));
+                var completions = 0;
+                spread.PageTurnCompleted += (_, _) => completions++;
+                bool TryTurn() => direction == PageTurnDirection.Forward
+                    ? spread.TryTurnForward()
+                    : spread.TryTurnBackward();
+
+                TestAssert.True(TryTurn(), "The visible spread must support this turn.");
+                TestAssert.Equal(1, completions);
+                spread.IsVisible = false;
+                await spread.RefreshSnapshotAsync();
+                TestAssert.Equal(8, snapshotter.CaptureCount);
+
+                TestAssert.False(spread.CanTurnForward || spread.CanTurnBackward,
+                    "An explicit hidden refresh published navigation readiness.");
+                TestAssert.False(TryTurn(), "A hidden refreshed spread accepted a turn.");
+                TestAssert.Equal(1, completions);
+                TestAssert.Equal(PageTurnState.Idle, spread.Overlay.Controller.Snapshot.State);
+                TestAssert.Null(spread.Overlay.FrontImage);
+                TestAssert.Equal(0d, spread.Overlay.Opacity);
+
+                spread.IsVisible = true;
+                await DrainAsync(spread);
+                TestAssert.Equal(8, snapshotter.CaptureCount);
+                TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward,
+                    "Revealing current snapshots did not restore navigation readiness.");
+                TestAssert.True(TryTurn(), "The revealed spread did not regain turn availability.");
+                TestAssert.Equal(2, completions);
+            }
+            finally { InvokeHandlerChanged(spread); }
+        }
     }
 
     private static async Task Refresh_waiting_for_a_turn_is_obsolete_after_hiding()

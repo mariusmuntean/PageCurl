@@ -26,6 +26,10 @@ Set `PageCurlView.FrontContent` to a MAUI view. For a separate reverse side,
 set `BackContent` and choose `BacksideMode="CustomContent"`. Mirrored and
 solid-color modes need no second view.
 
+`PageAspectRatio` fits the live page within the control's available space,
+including its `Padding`. Resizing preserves that frame's proportions for both
+the live view and its turning snapshot. Spreads fit two pages using the same rule.
+
 The control owns its captured textures. Your application owns supplied
 `UnderPageImage` and `PreviousPageImage` values, and any media or other resources
 used by the hosted views. Use the same borrowed-image cleanup rules above for
@@ -58,3 +62,7 @@ bundled clip and still image; the library itself has no media-player dependency.
 Use labeled navigation buttons as an alternative to gestures. Update the model
 from `PageTurnCompleted` for both paths. See the [API reference](api-index.md) for the
 properties exposed by each control.
+
+When constructing `PageTurnView` with `PageCurlOptions`, the supplied threshold
+and flick settings are preserved together. The view retains that options instance;
+later interaction-property changes update it.

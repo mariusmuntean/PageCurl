@@ -36,6 +36,11 @@ owned captures and caller-owned images through replacement, active turns and
 teardown, including missing optional backs and failures in all six spread slots.
 Spread checks cover dirty-slot coalescing, explicit in-place refresh, directional
 readiness, adjacent-page backs, transparent overlays and renderer visibility.
+Hidden spreads reject commands even inside visibility callbacks; revealing a
+spread restores readiness when its snapshots are already current. Constructor
+checks preserve nondefault interaction settings supplied together.
+Content, size and load invalidation disable affected spread directions before
+recapture; readiness callbacks cannot start a turn with dirty snapshots.
 Readiness regressions reject replaced snapshots, retain optional-back fallback,
 and protect explicit captures from delayed automatic refreshes without losing
 later edits. Native-layout waits cover cancellation, replacement, disconnect
@@ -62,7 +67,11 @@ Capture-boundary failures exercise
 refresh, replacement/re-entry and resource teardown. Other assertions cover
 snapshot color/alpha, custom-back landing orientation, shrinking meshes, native
 hit targets, a 250 by 333 page, compact Options at 600 by 750, and light/dark
-option-heading contrast of at least 4.5:1.
+option-heading contrast of at least 4.5:1. Live-page and spread resize regressions constrain
+the native demo root from wide to compact and back, checking stage padding,
+page aspect ratio, asymmetric wrapper padding and managed/native dimensions; live checks also cover
+counter/action bounds and captured action pixels. This checks
+native layout under changing constraints; it does not synthesize OS window resizing.
 
 Window stop/resume notifications must cancel turns without changing navigation,
 restore commands, pause video and resume only an active video scene.
@@ -153,7 +162,8 @@ window, without audio or a cursor, and closes that app on success or failure.
 
 The sequence checks committed drag, snap-back, spread navigation, a live counter
 update and cancellation when switching scenes during a turn. Input runs at
-normal speed through the demo's handlers. This is a presentation asset, not
+normal speed through the demo's handlers. Spread frame geometry must fit before
+and after its recorded turn. This is a presentation asset, not
 pointer-routing or performance certification. Media checks decode sampled frames
 and reject short, frozen or audio-bearing clips before replacing the published
 movie and poster. Visual review still establishes presentation quality. Capture
@@ -205,6 +215,7 @@ publishing](documentation.md).
 
 ## Completed validation records
 
+- [Holistic review](validation/holistic-review-2026-10-10/README.md): constructor settings, hidden spread commands, native resizing and aligned presentation evidence.
 - [Public release](validation/public-release-2026-10-10/README.md): complete hosted distribution, Windows consumer and fresh NuGet.org consumption.
 - [Small reader example](validation/reader-example-2026-10-08/README.md): exact guide compilation, native journeys, phone text fit and scroll snapshot agreement.
 - [Motion preview](validation/motion-preview-2026-10-08/README.md): unlocked native recording, media guards and visual review.

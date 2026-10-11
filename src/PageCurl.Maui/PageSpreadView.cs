@@ -1,6 +1,7 @@
 using System.Numerics;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Layouts;
 using PageCurl.Core;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
@@ -361,7 +362,6 @@ public sealed class PageSpreadView : Grid
     {
         cancellationToken.ThrowIfCancellationRequested();
         MarkAllSnapshotsDirty();
-        UpdateNavigationAvailability();
         return DrainSnapshotRefreshAsync(cancellationToken);
     }
 
@@ -395,7 +395,6 @@ public sealed class PageSpreadView : Grid
             _destinationSnapshots.Dispose();
             _sheetBackSnapshots.Dispose();
             MarkAllSnapshotsDirty();
-            UpdateNavigationAvailability();
             return;
         }
 
@@ -636,6 +635,7 @@ public sealed class PageSpreadView : Grid
             _snapshotRevision[slot]++;
             _snapshotDirty[slot] = true;
         }
+        UpdateNavigationAvailability();
         QueueSnapshotRefresh();
     }
 
@@ -649,9 +649,12 @@ public sealed class PageSpreadView : Grid
                 _lifecycleRevision++;
                 NotifyContentLayoutChanged();
                 MarkAllSnapshotsDirty();
-                UpdateNavigationAvailability();
             }
-            else QueueSnapshotRefresh();
+            else
+            {
+                UpdateNavigationAvailability();
+                QueueSnapshotRefresh();
+            }
         }
     }
 
@@ -768,9 +771,9 @@ public sealed class PageSpreadView : Grid
 
     private bool PrepareTurn(PageTurnDirection direction)
     {
-        if (_handlerDisconnected || _turnInProgress
-            || (direction == PageTurnDirection.Forward && !CanTurnForward)
-            || (direction == PageTurnDirection.Backward && !CanTurnBackward))
+        if (!IsVisible || _handlerDisconnected || _turnInProgress
+            || (direction == PageTurnDirection.Forward && !IsForwardReady())
+            || (direction == PageTurnDirection.Backward && !IsBackwardReady()))
         {
             return false;
         }
@@ -890,7 +893,8 @@ public sealed class PageSpreadView : Grid
         IsTurnReady(SnapshotSlot.Left, SnapshotSlot.PreviousLeft);
 
     private bool IsTurnReady(SnapshotSlot front, SnapshotSlot destination) =>
-        !_turnInProgress
+        IsVisible
+        && !_turnInProgress
         && IsSlotReady(front)
         && IsSlotReady(destination);
 
@@ -906,8 +910,13 @@ public sealed class PageSpreadView : Grid
     }
 
     private void UpdateSpreadFrame()
+        => UpdateSpreadFrame(Width, Height);
+
+    private void UpdateSpreadFrame(double width, double height)
     {
-        var viewport = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+        var viewport = new Vector2(
+            (float)Math.Max(width - Padding.HorizontalThickness, 0),
+            (float)Math.Max(height - Padding.VerticalThickness, 0));
         if (viewport.X <= 0 || viewport.Y <= 0)
         {
             return;
@@ -920,6 +929,18 @@ public sealed class PageSpreadView : Grid
             fallbackAspectRatio: 1.5f);
         _spreadFrame.WidthRequest = spread.Size.X;
         _spreadFrame.HeightRequest = spread.Size.Y;
+    }
+
+    protected override ILayoutManager CreateLayoutManager() => new SpreadFrameLayoutManager(this);
+
+    private sealed class SpreadFrameLayoutManager(PageSpreadView owner) : GridLayoutManager(owner)
+    {
+        public override Size ArrangeChildren(Rect bounds)
+        {
+            owner.UpdateSpreadFrame(bounds.Width, bounds.Height);
+            base.Measure(bounds.Width, bounds.Height);
+            return base.ArrangeChildren(bounds);
+        }
     }
 
     private Vector2 ToPagePointer(
@@ -1032,6 +1053,7 @@ public sealed class PageSpreadView : Grid
             _snapshotRevision[slot]++;
             _snapshotDirty[slot] = true;
         }
+        UpdateNavigationAvailability();
     }
 
     private enum SnapshotSlot

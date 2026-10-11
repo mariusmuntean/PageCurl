@@ -424,22 +424,6 @@ public partial class MainPage : ContentPage
     private void OnPageSizeChanged(object? sender, EventArgs e) =>
         UpdateResponsiveLayout(Width);
 
-    private void OnStageSizeChanged(object? sender, EventArgs e)
-    {
-        var width = Math.Max(StageHost.Width - StageHost.Padding.HorizontalThickness, 0);
-        var height = Math.Max(StageHost.Height - StageHost.Padding.VerticalThickness, 0);
-        if (width <= 0 || height <= 0)
-        {
-            return;
-        }
-
-        foreach (var view in new View[] { SpreadPageView, ContentPageView, BacksidePageView })
-        {
-            view.WidthRequest = width;
-            view.HeightRequest = height;
-        }
-    }
-
     private void UpdateResponsiveLayout(double width)
     {
         if (width <= 0)

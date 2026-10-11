@@ -23,6 +23,9 @@
 - Invalid enum and non-finite setting assignments leave the last valid value
   intact. Finite backside dim factors clamp to 0–1. Binding rejection follows
   MAUI semantics and does not promise an exception for every invalid assignment.
+- `PageTurnView(PageCurlOptions)` preserves the supplied threshold and flick
+  settings together. Its `Options` and controller share that options instance;
+  changing the view's interaction properties updates it.
 - Call `CancelInteraction()` before removing or recycling the view. It immediately
   rolls back and releases pointer ownership; it does not leave a hidden animation. On teardown,
   cancel interaction, clear image properties, unsubscribe events, and only then
@@ -45,6 +48,10 @@
 - Keep page content attached and laid out before capture. The wrapper captures
   after load and size changes; call `RefreshSnapshotAsync()` when a counter,
   image, animation, or video preview changes while idle.
+- The live page fits inside the current layout bounds and wrapper padding at its configured aspect ratio.
+  Resizing remeasures the page during arrangement so its native content and
+  turning snapshots stay within the same page frame. Spreads apply the same
+  fitting rule to their combined two-page frame.
 - Automatic load and layout refreshes coalesce invalidations for one frame (16 ms), allowing
   live content and input to present before native rasterization. Explicit
   `RefreshSnapshotAsync()` does not add this scheduling delay. Layout readiness,
@@ -90,8 +97,12 @@
   face. Omitted back-face content falls back to the configured
   `BacksideMode`. Both paths raise one `PageTurnCompleted` event.
 - `CanTurnForward` and `CanTurnBackward` include content and snapshot readiness,
-  and remain false while a sheet settles. Update the content model only after a
-  committed completion.
+  and remain false while hidden or while a sheet settles. Hidden commands are
+  rejected even from visibility-change callbacks. Revealing current snapshots
+  restores readiness without requiring another explicit refresh. Layout and
+  content invalidation disable affected directions until current snapshots
+  publish; commands also recheck readiness inside change callbacks. Update the
+  content model only after a committed completion.
 - Public `RefreshSnapshotAsync` invalidates every slot so changes inside an
   existing content view are captured. Automatic property and layout refreshes
   serialize behind the running capture and drain only dirty slots.

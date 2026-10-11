@@ -7,6 +7,10 @@ Edit guides in `docs/site/`. Core and MAUI XML documentation comes from the
 built assemblies; DocFX generates the API signatures. The pinned tool manifest
 keeps local and hosted builds on the same version.
 
+Guides and preview media follow the current source. When source fixes await a
+package release, state that beside the installation instructions and current
+release status so users can choose the published package or a source checkout.
+
 ## Branding assets
 
 `docs/site/images/logo.svg` is the apricot paper-monogram source. The README,

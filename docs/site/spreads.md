@@ -32,7 +32,10 @@ fallback. Required front and destination captures still determine readiness.
 ## Commands and boundaries
 
 Use `TryTurnForward()` and `TryTurnBackward()`. Enable buttons from
-`CanTurnForward` and `CanTurnBackward`; these include snapshot readiness.
+`CanTurnForward` and `CanTurnBackward`; these include visibility and snapshot
+readiness and remain false during a turn. A hidden spread rejects commands even
+if an explicit refresh has prepared its snapshots. Revealing it restores
+readiness; no extra explicit refresh is required.
 Use `PageSpreadNavigationState` to decide whether a neighboring spread exists.
 Update the six content slots from a committed `PageTurnCompleted` event.
 

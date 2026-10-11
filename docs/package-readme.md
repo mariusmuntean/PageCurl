@@ -10,7 +10,7 @@ page geometry and can also be used on its own.
 Install from your MAUI application's directory:
 
 ```bash
-dotnet add package PageCurl.Maui --version 0.1.0
+dotnet add package PageCurl.Maui --version 0.1.1
 ```
 
 | Control | Content |

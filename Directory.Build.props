@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Keep package references aligned with the .NET 10 MAUI workload. -->
     <MauiVersion>10.0.110</MauiVersion>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>0.1.1</VersionPrefix>
     <Version>$(VersionPrefix)</Version>
     <Authors>Marius Muntean</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

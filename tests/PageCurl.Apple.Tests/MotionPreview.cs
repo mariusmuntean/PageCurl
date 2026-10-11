@@ -42,11 +42,12 @@ internal static class MotionPreview
 
         Click(page, "SpreadSceneButton");
         var spread = page.FindByName<PageSpreadView>("SpreadPageView");
-        await WaitUntilAsync(() => spread.CanTurnForward);
+        await WaitUntilAsync(() => spread.CanTurnForward && IsFittedSpread(spread));
         await Task.Delay(1200);
         Click(page, "NextButton");
         await WaitUntilAsync(() => page.FindByName<Label>("StatusLabel").Text == "Turn complete");
         Require(page.FindByName<Label>("PageCounterLabel").Text == "03–04 / 08", "Preview spread did not complete.");
+        await WaitUntilAsync(() => spread.CanTurnForward && IsFittedSpread(spread));
         await Task.Delay(1700);
 
         Click(page, "ContentSceneButton");
@@ -73,6 +74,15 @@ internal static class MotionPreview
         File.WriteAllText(Path.Combine(signals, "done"), "PASS native motion preview");
         // Keep the recorded window alive until the recorder has flushed its file.
         await WaitForSignalAsync(signals, "finish");
+    }
+
+    private static bool IsFittedSpread(PageSpreadView spread)
+    {
+        var frame = (Grid)spread.Children[0];
+        return frame.Width > 0 && frame.Height > 0
+            && Math.Abs(frame.Width / frame.Height - spread.PageAspectRatio * 2) < .002
+            && frame.Bounds.Left >= -1 && frame.Bounds.Top >= -1
+            && frame.Bounds.Right <= spread.Width + 1 && frame.Bounds.Bottom <= spread.Height + 1;
     }
 
     private static async Task DragAsync(PageTurnView view, float distance)
