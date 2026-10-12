@@ -1,11 +1,14 @@
 # Release readiness
 
-The core behavior and public MAUI surface are implemented. Version 0.1.1 is
-published on NuGet.org and GitHub with complete packages and symbols. A fresh
-external consumer restored and ran from NuGet.org alone; published package and
-symbol payloads match the validated distribution. Its hosted verification passed all four jobs and
-122 native assertions, and both packages passed API compatibility against
-0.1.0. See the [0.1.1 publication record](validation/release-0.1.1-2026-10-11/README.md).
+The core behavior and public MAUI surface are implemented. Version 0.1.2 is
+published on NuGet.org and GitHub with complete packages and symbols. It corrects
+NuGet README formatting and leaves library behavior unchanged from 0.1.1.
+A fresh external consumer restored and ran from NuGet.org alone; downloaded
+package and symbol payloads match the validated distribution. Its hosted
+verification passed all four jobs and 122 native assertions, and both packages
+passed API compatibility against 0.1.1. See the
+[README correction record](validation/readme-rendering-2026-10-11/README.md) and
+[0.1.1 behavior-fix release](validation/release-0.1.1-2026-10-11/README.md).
 
 The earlier 0.1.0 evidence follows. The hosted
 [Verify run on 10 October](https://github.com/mariusmuntean/PageCurl/actions/runs/38048455583)

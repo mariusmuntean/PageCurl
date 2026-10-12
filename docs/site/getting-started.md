@@ -12,7 +12,7 @@ The complete example below, running on an iPhone simulator during a drag:
 Install from your MAUI application's directory:
 
 ```bash
-dotnet add package PageCurl.Maui --version 0.1.1
+dotnet add package PageCurl.Maui --version 0.1.2
 ```
 
 The package includes `PageCurl.Core` transitively. The 0.x API may change

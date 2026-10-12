@@ -5,12 +5,13 @@ The package targets the .NET 10/MAUI 10 line and pins
 this repository, not a promise that every application renderer behaves the
 same on every device.
 
-Version 0.1.1 also passed all four [hosted Verify jobs](https://github.com/mariusmuntean/PageCurl/actions/runs/38127006005),
+Version 0.1.2 passed all four [hosted Verify jobs](https://github.com/mariusmuntean/PageCurl/actions/runs/38177441732),
 including 122 native assertions and complete distribution checks. Its packages
-passed backward API compatibility against 0.1.0 and are attached to the
-[GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.1).
-Both 0.1.1 packages and symbols are also published on NuGet.org. A fresh
-external consumer passed, and remote payloads match the reviewed distribution; see the [publication record](validation/release-0.1.1-2026-10-11/README.md).
+passed backward API compatibility against 0.1.1 and are attached to the
+[GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.2).
+Both 0.1.2 packages and symbols are published on NuGet.org. A fresh external
+consumer passed, and downloaded payloads match the reviewed distribution; see the
+[README correction record](validation/readme-rendering-2026-10-11/README.md).
 
 The matrix includes the completed
 [10 October Verify run](https://github.com/mariusmuntean/PageCurl/actions/runs/38048455583)

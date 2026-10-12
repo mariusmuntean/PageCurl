@@ -1,4 +1,4 @@
-# NuGet README rendering correction — 11 October 2026
+# NuGet README rendering correction — 11–12 October 2026
 
 The 0.1.1 NuGet listings displayed the package README's HTML `img` tag as text.
 NuGet.org supports Markdown and escapes raw HTML; embedded READMEs are immutable.
@@ -12,7 +12,11 @@ public API or demo behavior changed from 0.1.1.
 [The GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.2)
 contains complete packages and symbols from
 [`45d61e8`](https://github.com/mariusmuntean/PageCurl/commit/45d61e87c47b30d3a7e5009cee62dc7cde81edd3).
-NuGet preview, upload and fresh remote consumption await renewed account sign-in.
+Both [Core](https://www.nuget.org/packages/PageCurl.Core/0.1.2) and
+[MAUI](https://www.nuget.org/packages/PageCurl.Maui/0.1.2) packages and symbols
+are published on NuGet.org. The NuGet upload previews showed the corrected
+README before submission; the latest public MAUI listing now shows 0.1.2,
+its package icon and description without the raw HTML image tag.
 
 ## Completed evidence
 
@@ -27,6 +31,12 @@ NuGet preview, upload and fresh remote consumption await renewed account sign-in
 - APICompat 10.0.401 found no breaking changes against fresh published 0.1.1
   baselines for Core and all five MAUI frameworks, including parameter names.
 - Both actual release package READMEs contain no HTML image tag and reference 0.1.2.
+
+A fresh external project restored and ran from NuGet.org alone with an empty
+cache and no project references. Restored metadata confirms remote Core and MAUI
+0.1.2. All four downloaded package/symbol payloads match the reviewed distribution,
+excluding NuGet's added repository signature. The actual packaged README contains
+no HTML image tag.
 
 Historical 0.1.0 and 0.1.1 listings retain their embedded READMEs. The correction
 applies to 0.1.2 and the latest-version listing after indexing. Existing hardware,

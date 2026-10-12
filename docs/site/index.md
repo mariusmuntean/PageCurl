@@ -32,11 +32,10 @@ five-page recipe with navigation, capture retry and the odd last page.
 
 ## Current release status
 
-Version 0.1.1 is available on NuGet.org and targets .NET 10 and MAUI 10.
+Version 0.1.2 is available on NuGet.org and targets .NET 10 and MAUI 10.
 Complete packages and symbols are also attached to the
-[GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.1).
-The [0.1.2 GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.2)
-corrects NuGet README formatting; NuGet publication is pending.
+[GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.2).
+Version 0.1.2 corrects NuGet README formatting; library behavior is unchanged from 0.1.1.
 Public APIs may change before 1.0.
 The guides and preview follow current source. The latest constructor-setting,
 spread-readiness and resize/padding fixes are included in version 0.1.1;

@@ -28,7 +28,7 @@ Mac Catalyst demo at normal speed.
 Install from your MAUI application's directory:
 
 ```bash
-dotnet add package PageCurl.Maui --version 0.1.1
+dotnet add package PageCurl.Maui --version 0.1.2
 ```
 
 `PageCurl.Core` comes transitively with the MAUI package.
@@ -39,7 +39,7 @@ The guides and preview follow the current source. Constructor-setting,
 spread-readiness and resize/padding fixes in the [latest review](docs/validation/holistic-review-2026-10-10/README.md)
 are included in [version 0.1.1](https://www.nuget.org/packages/PageCurl.Maui/0.1.1).
 The [0.1.2 GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.2)
-corrects NuGet README formatting; NuGet upload awaits sign-in.
+corrects NuGet README formatting and is also [published on NuGet.org](https://www.nuget.org/packages/PageCurl.Maui/0.1.2).
 
 Register SkiaSharp in your MAUI app:
 
