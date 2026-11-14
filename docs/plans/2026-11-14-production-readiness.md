@@ -17,7 +17,7 @@ demo, then docs (must describe final behaviour).
 | F3 | Maui | Null `Color` values crash painting | F2 (same file) | done ebc3b9b |
 | F4 | Maui | Snapshot refresh is not fault tolerant | F3 | done bd52084 |
 | F5 | Maui | Android snapshot does a PNG round trip | – | done bd4828b (not device-verified) |
-| F6 | Maui | Duplicated helpers across the two live-content views | F2–F4 | pending |
+| F6 | Maui | Duplicated helpers across the two live-content views | F2–F4 | done b9db5eb |
 | F7 | Demo | Hard-coded page counts, unguarded `async void` | F4 | pending |
 | F8 | Docs | Contradictions and release-note noise | F1–F7 | pending |
 
