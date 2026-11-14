@@ -488,7 +488,7 @@ public sealed class PageSpreadView : Grid
         // Neutral/custom snapshotters without a native handler remain usable.
         while (Handler is not null && !_handlerDisconnected && lifecycleRevision == _lifecycleRevision
             && GetSlotContent(slot) is { } content
-            && (content.Handler is null || content.Width <= 0 || content.Height <= 0))
+            && !LiveContentHelpers.IsArranged(content))
         {
             _contentLayoutChanged ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             await _contentLayoutChanged.Task.WaitAsync(cancellationToken);
@@ -950,13 +950,9 @@ public sealed class PageSpreadView : Grid
         PageTurnDirection direction,
         out Vector2 pageSize)
     {
-        var zoneCanvas = zone.CanvasSize;
-        var localX = zoneCanvas.Width > 0
-            ? location.X * (float)(Math.Max(zone.Width, 1) / zoneCanvas.Width)
-            : location.X;
-        var localY = zoneCanvas.Height > 0
-            ? location.Y * (float)(Math.Max(zone.Height, 1) / zoneCanvas.Height)
-            : location.Y;
+        var local = LiveContentHelpers.ToZoneLocal(zone, location);
+        var localX = local.X;
+        var localY = local.Y;
         var halfWidth = Math.Max(_spreadFrame.Width * 0.5, 1);
         var frameHeight = Math.Max(_spreadFrame.Height, 1);
         pageSize = Overlay.LastContentViewport.IsValid
@@ -1015,7 +1011,7 @@ public sealed class PageSpreadView : Grid
         for (var slot = 0; slot < SlotCount; slot++)
         {
             var content = GetSlotContent((SnapshotSlot)slot);
-            if (content is not null && (content.Handler is null || content.Width <= 0 || content.Height <= 0)) return;
+            if (content is not null && !LiveContentHelpers.IsArranged(content)) return;
         }
 
         try

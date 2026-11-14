@@ -824,7 +824,7 @@ public sealed class PageCurlView : Grid
 
     private bool IsContentReady(View? content) => content is null
         || (content.IsVisible
-            && (Handler is null || (content.Handler is not null && content.Width > 0 && content.Height > 0)));
+            && (Handler is null || LiveContentHelpers.IsArranged(content)));
 
     private bool AreSnapshotsReady() =>
         IsSnapshotReady(FrontContent, _frontSnapshotContent, _frontSnapshotRevision, _snapshots.Front);
@@ -906,15 +906,9 @@ public sealed class PageCurlView : Grid
         SKPoint location,
         out Vector2 pageSize)
     {
-        var zoneCanvas = zone.CanvasSize;
-        var zoneWidth = Math.Max(zone.Width, 1);
-        var zoneHeight = Math.Max(zone.Height, 1);
-        var localX = zoneCanvas.Width > 0
-            ? location.X * (float)(zoneWidth / zoneCanvas.Width)
-            : location.X;
-        var localY = zoneCanvas.Height > 0
-            ? location.Y * (float)(zoneHeight / zoneCanvas.Height)
-            : location.Y;
+        var local = LiveContentHelpers.ToZoneLocal(zone, location);
+        var localX = local.X;
+        var localY = local.Y;
         var frameWidth = Math.Max(_pageFrame.Width, 1);
         var frameHeight = Math.Max(_pageFrame.Height, 1);
         pageSize = Renderer.LastContentViewport.IsValid
