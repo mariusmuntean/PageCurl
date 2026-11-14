@@ -123,6 +123,7 @@ public sealed class PageTurnView : SKGLView
         typeof(Color),
         typeof(PageTurnView),
         Colors.White,
+        validateValue: PropertyValidation.IsColor,
         propertyChanged: OnVisualPropertyChanged);
 
     public static readonly BindableProperty BacksideDimFactorProperty = BindableProperty.Create(
@@ -147,6 +148,7 @@ public sealed class PageTurnView : SKGLView
         typeof(Color),
         typeof(PageTurnView),
         Color.FromArgb("#EBEBEB"),
+        validateValue: PropertyValidation.IsColor,
         propertyChanged: OnVisualPropertyChanged);
 
     private readonly PageCurlOptions _options;

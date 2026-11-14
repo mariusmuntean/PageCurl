@@ -13,6 +13,7 @@ internal static class PageCurlViewTests
 {
     public static async Task RunAllAsync()
     {
+        Null_page_colours_are_rejected();
         await Replaced_front_snapshot_blocks_commands_and_touch_until_recaptured();
         await Explicit_refresh_survives_a_queued_automatic_refresh();
         await Content_invalidated_during_explicit_refresh_is_not_lost_by_automatic_coalescing();
@@ -1242,4 +1243,27 @@ internal static class PageCurlViewTests
 
         public void PlatformArrange(Rect frame) { }
     }
+
+    private static void Null_page_colours_are_rejected()
+    {
+        var turn = new PageTurnView();
+        AssertRejectsNull(turn, PageTurnView.BacksideColorProperty);
+        AssertRejectsNull(turn, PageTurnView.SurfaceColorProperty);
+        AssertRejectsNull(new PageCurlView(new FakeSnapshotter()), PageCurlView.BacksideColorProperty);
+    }
+
+    internal static void AssertRejectsNull(BindableObject bindable, BindableProperty property)
+    {
+        bindable.SetValue(property, Colors.Red);
+        try
+        {
+            bindable.SetValue(property, null);
+        }
+        catch (ArgumentException)
+        {
+        }
+
+        TestAssert.Equal(Colors.Red, (Color)bindable.GetValue(property));
+    }
+
 }

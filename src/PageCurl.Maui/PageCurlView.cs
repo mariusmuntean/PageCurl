@@ -80,7 +80,8 @@ public sealed class PageCurlView : Grid
 
     public static readonly BindableProperty BacksideColorProperty = ForwardedProperty(
         nameof(BacksideColor),
-        Colors.White);
+        Colors.White,
+        static value => value is not null);
 
     public static readonly BindableProperty BacksideDimFactorProperty = BindableProperty.Create(
         nameof(BacksideDimFactor),

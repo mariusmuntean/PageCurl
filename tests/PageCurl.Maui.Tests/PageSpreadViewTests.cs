@@ -12,6 +12,7 @@ internal static class PageSpreadViewTests
 {
     public static async Task RunAllAsync()
     {
+        Null_backside_colour_is_rejected();
         await Dirty_layout_snapshots_block_turns_until_recaptured();
         await Readiness_callback_cannot_use_other_dirty_direction();
         await Hiding_callback_cannot_start_a_spread_turn();
@@ -1278,5 +1279,11 @@ internal static class PageSpreadViewTests
         }
 
         public void Fail(Exception exception) => _completion.SetException(exception);
+    }
+
+    private static void Null_backside_colour_is_rejected()
+    {
+        var spread = new PageSpreadView(new CountingSnapshotter());
+        PageCurlViewTests.AssertRejectsNull(spread, PageSpreadView.BacksideColorProperty);
     }
 }

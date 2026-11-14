@@ -127,6 +127,7 @@ public sealed class PageSpreadView : Grid
         typeof(Color),
         typeof(PageSpreadView),
         Colors.White,
+        validateValue: PropertyValidation.IsColor,
         propertyChanged: OnPresentationChanged);
 
     public static readonly BindableProperty BacksideDimFactorProperty = BindableProperty.Create(
