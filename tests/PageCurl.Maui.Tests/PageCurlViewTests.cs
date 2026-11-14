@@ -37,6 +37,7 @@ internal static class PageCurlViewTests
         await Active_curl_defers_snapshot_replacement();
         await Front_and_back_content_are_captured_independently();
         await Failed_refresh_keeps_the_last_good_snapshot();
+        await Throwing_failure_handler_does_not_crash_automatic_refresh();
         await Final_cancelled_capture_propagates_and_disposes_returned_image();
         Caller_images_survive_replacement_cancellation_and_teardown();
         Cancellation_finishes_before_a_view_is_hidden();
@@ -133,6 +134,47 @@ internal static class PageCurlViewTests
         finally
         {
             InvokeHandlerChanged(view);
+        }
+    }
+
+    private static async Task Throwing_failure_handler_does_not_crash_automatic_refresh()
+    {
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueFailure(new InvalidOperationException("capture failed"));
+        var content = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = content };
+        var throwing = true;
+        view.SnapshotFailed += (_, _) =>
+        {
+            if (throwing) throw new InvalidOperationException("subscriber failed");
+        };
+        try
+        {
+            content.Handler = new ManualViewHandler(content);
+            ((IView)content).Arrange(new Rect(0, 0, 4, 4));
+            view.Handler = new ManualViewHandler(view);
+
+            // The queued automatic refresh must swallow the subscriber failure.
+            for (var attempt = 0; attempt < 200 && snapshotter.CaptureCount == 0; attempt++)
+            {
+                await Task.Delay(5);
+            }
+            await Task.Yield();
+            await Task.Yield();
+            TestAssert.Equal(1, snapshotter.CaptureCount);
+
+            // Explicit refresh still surfaces it, and a later refresh succeeds.
+            snapshotter.EnqueueFailure(new InvalidOperationException("capture failed"));
+            await TestAssert.ThrowsAsync<InvalidOperationException>(() => view.RefreshSnapshotAsync());
+            throwing = false;
+            snapshotter.EnqueueImage(SKColors.White);
+            await view.RefreshSnapshotAsync();
+            TestAssert.Equal(3, snapshotter.CaptureCount);
+        }
+        finally
+        {
+            view.Handler = null;
+            content.Handler = null;
         }
     }
 

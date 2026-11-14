@@ -784,8 +784,10 @@ public sealed class PageCurlView : Grid
         {
             await RefreshAutomaticSnapshotAsync(queuedGeneration, queuedRevision);
         }
-        catch (OperationCanceledException)
+        catch (Exception)
         {
+            // Background refresh must never crash the app. Capture failures
+            // are reported through SnapshotFailed; explicit refresh surfaces them.
         }
     }
 

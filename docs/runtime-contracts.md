@@ -78,7 +78,9 @@
   until that capture completes. A provider that never completes can block later
   refreshes, including after hide/reveal.
 - `SnapshotFailed` reports the content and exception. The wrapper keeps the
-  last good frame. A missing native video layer needs an app-supplied poster.
+  last good frame. Automatic refreshes never throw; explicit
+  `RefreshSnapshotAsync` surfaces failures, including handler exceptions, and a
+  failed refresh never fails later ones. A missing native video layer needs an app-supplied poster.
   For spreads, `IsBackside` identifies the previous-right and next-left sheet
   backs; current and under-page destinations report `false`.
 - Gesture start never waits for capture. Edge and corner activation zones use

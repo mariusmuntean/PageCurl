@@ -413,13 +413,13 @@ public sealed class PageSpreadView : Grid
 
     private async Task RefreshAfterAsync(Task previous, int lifecycleRevision, CancellationToken cancellationToken)
     {
-        // A cancelled predecessor must not cancel the requests queued
-        // behind it.
+        // A cancelled or faulted predecessor must not fail the requests
+        // queued behind it; its own caller observes that outcome.
         try
         {
             await previous;
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception)
         {
         }
 
@@ -1022,8 +1022,10 @@ public sealed class PageSpreadView : Grid
         {
             await DrainSnapshotRefreshAsync();
         }
-        catch (OperationCanceledException)
+        catch (Exception)
         {
+            // Background refresh must never crash the app. Capture failures
+            // are reported through SnapshotFailed; explicit refresh surfaces them.
         }
     }
 
@@ -1042,8 +1044,10 @@ public sealed class PageSpreadView : Grid
         {
             await DrainSnapshotRefreshAsync();
         }
-        catch (OperationCanceledException)
+        catch (Exception)
         {
+            // Background refresh must never crash the app. Capture failures
+            // are reported through SnapshotFailed; explicit refresh surfaces them.
         }
     }
 
