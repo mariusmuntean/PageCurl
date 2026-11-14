@@ -30,7 +30,8 @@ the renderer-level properties and events needed by the higher controls:
 - threshold-transition events
 - explicit interaction methods used by composite controls
 
-`LockedEdge` and `PageCurlOptions.SnapThreshold` remain compatibility facades.
+`LockedEdge` and `PageCurlOptions.SnapThreshold` remain legacy compatibility
+facades; prefer `LockedAnchor` and `PageChangeThreshold`.
 
 ### `PageCurlView`
 

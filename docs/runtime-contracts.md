@@ -20,8 +20,8 @@
 - Commands rejected during an active turn preserve its presentation. A new
   pointer press cannot replace a settling turn; competing presses during an
   owned drag remain consumed without changing the owner.
-- Invalid enum and non-finite setting assignments leave the last valid value
-  intact. Finite backside dim factors clamp to 0–1. Binding rejection follows
+- Invalid enum, non-finite and null `BacksideColor`/`SurfaceColor` setting
+  assignments leave the last valid value intact. Finite backside dim factors clamp to 0–1. Binding rejection follows
   MAUI semantics and does not promise an exception for every invalid assignment.
 - `PageTurnView(PageCurlOptions)` preserves the supplied threshold and flick
   settings together. Its `Options` and controller share that options instance;
