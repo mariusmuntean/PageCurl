@@ -19,7 +19,7 @@ demo, then docs (must describe final behaviour).
 | F5 | Maui | Android snapshot does a PNG round trip | – | done bd4828b (not device-verified) |
 | F6 | Maui | Duplicated helpers across the two live-content views | F2–F4 | done b9db5eb |
 | F7 | Demo | Hard-coded page counts, unguarded `async void` | F4 | done 8ef371c |
-| F8 | Docs | Contradictions and release-note noise | F1–F7 | pending |
+| F8 | Docs | Contradictions and release-note noise | F1–F7 | done 65428b8 |
 
 ## Findings
 
