@@ -15,7 +15,7 @@ demo, then docs (must describe final behaviour).
 | F1 | Core | Turn direction comes from pointer half, not the selected free edge | – | done a11e407 |
 | F2 | Maui | `PageTurnView` hit-testing and unit inconsistencies | F1 | done 76fad1d |
 | F3 | Maui | Null `Color` values crash painting | F2 (same file) | done ebc3b9b |
-| F4 | Maui | Snapshot refresh is not fault tolerant | F3 | pending |
+| F4 | Maui | Snapshot refresh is not fault tolerant | F3 | done bd52084 |
 | F5 | Maui | Android snapshot does a PNG round trip | – | pending |
 | F6 | Maui | Duplicated helpers across the two live-content views | F2–F4 | pending |
 | F7 | Demo | Hard-coded page counts, unguarded `async void` | F4 | pending |
