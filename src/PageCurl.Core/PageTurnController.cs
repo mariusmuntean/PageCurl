@@ -497,6 +497,14 @@ public sealed class PageTurnController
     {
         _freeEdge = freeEdge;
         _hingeEdge = _lockedEdge == PageEdge.Auto ? Opposite(freeEdge) : _lockedEdge;
+        if (freeEdge == PageEdge.Right)
+        {
+            _direction = PageTurnDirection.Forward;
+        }
+        else if (freeEdge == PageEdge.Left)
+        {
+            _direction = PageTurnDirection.Backward;
+        }
     }
 
     private static PageEdge SelectNearestEdge(Vector2 pointer, Vector2 pageSize)
