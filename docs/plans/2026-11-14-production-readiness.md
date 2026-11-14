@@ -12,8 +12,8 @@ demo, then docs (must describe final behaviour).
 
 | # | Area | Finding | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| F1 | Core | Turn direction comes from pointer half, not the selected free edge | – | pending |
-| F2 | Maui | `PageTurnView` hit-testing and unit inconsistencies | F1 | pending |
+| F1 | Core | Turn direction comes from pointer half, not the selected free edge | – | done a11e407 |
+| F2 | Maui | `PageTurnView` hit-testing and unit inconsistencies | F1 | done 76fad1d |
 | F3 | Maui | Null `Color` values crash painting | F2 (same file) | pending |
 | F4 | Maui | Snapshot refresh is not fault tolerant | F3 | pending |
 | F5 | Maui | Android snapshot does a PNG round trip | – | pending |
