@@ -25,6 +25,8 @@ internal static class PageCurlViewTests
         await Rejected_command_preserves_an_active_curl();
         Pointer_press_during_settling_preserves_the_pending_completion();
         Competing_pointer_presses_remain_consumed_during_a_drag();
+        Letterboxed_fill_page_rejects_presses_outside_the_page();
+        Drag_velocity_uses_the_injected_timestamp_provider();
         await Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
         await Cancellation_handler_can_start_a_visible_replacement_turn();
         await Superseded_capture_does_not_report_a_stale_failure();
@@ -403,6 +405,67 @@ internal static class PageCurlViewTests
             view.Handler = null;
             content.Handler = null;
         }
+    }
+
+    private static void Letterboxed_fill_page_rejects_presses_outside_the_page()
+    {
+        // Fill with an explicit ratio still letterboxes: a 0.5 page in 400x500
+        // occupies x = 75..325 when centered.
+        var view = new PageTurnView
+        {
+            ContentScale = PageContentScale.Fill,
+            PageAspectRatio = 0.5f,
+            PageHorizontalPlacement = PageHorizontalPlacement.Center,
+            ReduceMotion = true,
+        };
+        ((IView)view).Arrange(new Rect(0, 0, 400, 500));
+        var touch = typeof(PageTurnView).GetMethod("OnTouch", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!;
+        try
+        {
+            var outside = new SkiaSharp.Views.Maui.SKTouchEventArgs(7, SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                new SKPoint(370, 250), true);
+            touch.Invoke(view, [view, outside]);
+            TestAssert.False(outside.Handled, "A press in the letterbox outside a Fill page was consumed.");
+            TestAssert.Equal(PageTurnState.Idle, view.Controller.Snapshot.State);
+
+            var inside = new SkiaSharp.Views.Maui.SKTouchEventArgs(8, SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                new SKPoint(300, 250), true);
+            touch.Invoke(view, [view, inside]);
+            TestAssert.True(inside.Handled, "A press inside a letterboxed Fill page did not start a drag.");
+            TestAssert.Equal(PageTurnState.Dragging, view.Controller.Snapshot.State);
+        }
+        finally { view.CancelInteraction(); }
+    }
+
+    private static void Drag_velocity_uses_the_injected_timestamp_provider()
+    {
+        // The same short drag commits only when the injected clock makes it a flick.
+        static bool? Drag(long step)
+        {
+            var timestamp = 0L;
+            var view = new PageTurnView
+            {
+                ContentScale = PageContentScale.Fill,
+                ReduceMotion = true,
+                AnimationTimestampProvider = () => timestamp,
+            };
+            bool? committed = null;
+            view.PageTurnCompleted += (_, e) => committed = e.Committed;
+            var pageSize = new System.Numerics.Vector2(400, 500);
+            TestAssert.True(view.TryBeginInteraction(new(390, 250), pageSize, view.LockedAnchor));
+            foreach (var x in new[] { 380f, 370f, 360f })
+            {
+                timestamp += step;
+                view.UpdateInteraction(new(x, 250));
+            }
+
+            TestAssert.True(view.Controller.Snapshot.Progress < 0.5f, "The probe drag crossed the page-change threshold.");
+            view.EndInteraction(cancelled: false);
+            return committed;
+        }
+
+        TestAssert.Equal<bool?>(true, Drag(Stopwatch.Frequency / 1000));
+        TestAssert.Equal<bool?>(false, Drag(0));
     }
 
     private static void Competing_pointer_presses_remain_consumed_during_a_drag()

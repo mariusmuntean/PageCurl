@@ -376,7 +376,7 @@ public sealed class PageTurnView : SKGLView
         var pageSize = _contentViewport.Size;
         if (!IsValidPageSize(pageSize))
         {
-            var canvasSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+            var canvasSize = GetFallbackCanvasSize();
             pageSize = GetContentViewport(canvasSize).Size;
         }
 
@@ -426,7 +426,7 @@ public sealed class PageTurnView : SKGLView
     {
         Controller.UpdateDrag(
             pointer,
-            Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
+            AnimationTimestampProvider() / (double)Stopwatch.Frequency);
         InvalidateSurface();
     }
 
@@ -880,6 +880,10 @@ public sealed class PageTurnView : SKGLView
         _animationLoopActive = false;
     }
 
+    // Fitted viewports may letterbox, so presses outside the page are rejected.
+    private bool UsesFittedViewport =>
+        PageAspectRatio > 0 || ContentScale == PageContentScale.AspectFit;
+
     private PageViewportRect GetContentViewport(Vector2 canvasSize)
     {
         if (!IsValidPageSize(canvasSize))
@@ -888,7 +892,7 @@ public sealed class PageTurnView : SKGLView
         }
 
         var image = FrontImage ?? UnderPageImage;
-        if (PageAspectRatio > 0 || ContentScale == PageContentScale.AspectFit)
+        if (UsesFittedViewport)
         {
             var intrinsicSize = image is null
                 ? Vector2.Zero
@@ -907,7 +911,7 @@ public sealed class PageTurnView : SKGLView
     {
         if (!_contentViewport.IsValid)
         {
-            var canvasSize = new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+            var canvasSize = GetFallbackCanvasSize();
             _contentViewport = GetContentViewport(canvasSize);
         }
 
@@ -921,7 +925,7 @@ public sealed class PageTurnView : SKGLView
         var raw = new Vector2(location.X, location.Y);
         var right = _contentViewport.Origin.X + pageSize.X;
         var bottom = _contentViewport.Origin.Y + pageSize.Y;
-        if (ContentScale == PageContentScale.AspectFit
+        if (UsesFittedViewport
             && (raw.X < _contentViewport.Origin.X
                 || raw.X > right
                 || raw.Y < _contentViewport.Origin.Y
@@ -935,11 +939,19 @@ public sealed class PageTurnView : SKGLView
         return true;
     }
 
-    private Vector2 ToPagePointer(SKPoint location)
+    private Vector2 GetFallbackCanvasSize()
+    {
+        var pixels = CanvasSize;
+        return pixels.Width > 0 && pixels.Height > 0
+            ? new Vector2(pixels.Width, pixels.Height)
+            : new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0));
+    }
+
+        private Vector2 ToPagePointer(SKPoint location)
     {
         var viewport = _contentViewport.IsValid
             ? _contentViewport
-            : GetContentViewport(new Vector2((float)Math.Max(Width, 0), (float)Math.Max(Height, 0)));
+            : GetContentViewport(GetFallbackCanvasSize());
         return new Vector2(location.X - viewport.Origin.X, location.Y - viewport.Origin.Y);
     }
 
