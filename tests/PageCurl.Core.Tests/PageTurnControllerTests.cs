@@ -57,6 +57,52 @@ internal static class PageTurnControllerTests
         Invalid_frame_times_do_not_change_a_settling_turn();
         High_finite_spring_frequencies_complete_without_non_finite_state();
         Repeated_commit_and_rollback_turns_remain_bounded_and_complete_once();
+        Locked_anchor_turn_direction_follows_the_selected_free_edge();
+        Resolved_corner_edge_sets_the_turn_direction();
+    }
+
+    private static void Locked_anchor_turn_direction_follows_the_selected_free_edge()
+    {
+        var cases = new[]
+        {
+            (Grab: new Vector2(30, 100), Anchor: PageAnchor.Left, Free: PageEdge.Right, Direction: PageTurnDirection.Forward),
+            (Grab: new Vector2(70, 100), Anchor: PageAnchor.Right, Free: PageEdge.Left, Direction: PageTurnDirection.Backward),
+            (Grab: new Vector2(60, 10), Anchor: PageAnchor.Left, Free: PageEdge.Top, Direction: PageTurnDirection.Forward),
+            (Grab: new Vector2(40, 190), Anchor: PageAnchor.Right, Free: PageEdge.Bottom, Direction: PageTurnDirection.Backward),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var controller = new PageTurnController();
+            var completions = new List<PageTurnCompletedEventArgs>();
+            controller.PageTurnCompleted += (_, args) => completions.Add(args);
+
+            TestAssert.True(controller.BeginDrag(testCase.Grab, PageSize, testCase.Anchor));
+            TestAssert.Equal(testCase.Free, controller.Snapshot.FreeEdge);
+            TestAssert.Equal(testCase.Direction, controller.Snapshot.Direction);
+            controller.EndDrag(animate: false);
+            TestAssert.Equal(1, completions.Count);
+            TestAssert.Equal(testCase.Direction, completions[0].Direction);
+        }
+    }
+
+    private static void Resolved_corner_edge_sets_the_turn_direction()
+    {
+        var cases = new[]
+        {
+            (Corner: new Vector2(0, 0), Move: new Vector2(10, 2), Free: PageEdge.Left, Direction: PageTurnDirection.Backward),
+            (Corner: new Vector2(PageSize.X, PageSize.Y), Move: new Vector2(-10, -2), Free: PageEdge.Right, Direction: PageTurnDirection.Forward),
+            (Corner: new Vector2(PageSize.X, 0), Move: new Vector2(-2, 10), Free: PageEdge.Top, Direction: PageTurnDirection.Forward),
+        };
+
+        foreach (var testCase in cases)
+        {
+            var controller = new PageTurnController();
+            TestAssert.True(controller.BeginDrag(testCase.Corner, PageSize, PageAnchor.Auto));
+            controller.UpdateDrag(testCase.Corner + testCase.Move);
+            TestAssert.Equal(testCase.Free, controller.Snapshot.FreeEdge);
+            TestAssert.Equal(testCase.Direction, controller.Snapshot.Direction);
+        }
     }
 
     private static void Invalid_frame_times_do_not_change_a_settling_turn()

@@ -12,6 +12,7 @@ internal static class PageSpreadViewTests
 {
     public static async Task RunAllAsync()
     {
+        Null_backside_colour_is_rejected();
         await Dirty_layout_snapshots_block_turns_until_recaptured();
         await Readiness_callback_cannot_use_other_dirty_direction();
         await Hiding_callback_cannot_start_a_spread_turn();
@@ -38,6 +39,7 @@ internal static class PageSpreadViewTests
         await Refresh_requested_during_a_turn_runs_after_completion();
         await Failed_capture_keeps_the_slot_dirty_and_a_later_refresh_retries_only_it();
         await Failed_capture_reports_the_physical_sheet_back_roles();
+        await Throwing_failure_handler_does_not_poison_later_refreshes();
         await Failed_optional_sheet_backs_fall_back_for_both_directions();
         await Refresh_captures_only_slots_with_changed_content();
         await Every_content_slot_blocks_only_its_turn_until_recaptured();
@@ -941,6 +943,42 @@ internal static class PageSpreadViewTests
         }
     }
 
+    private static async Task Throwing_failure_handler_does_not_poison_later_refreshes()
+    {
+        var snapshotter = new SequencedSnapshotter();
+        snapshotter.EnqueueImages(4);
+        var spread = CreateSpread(snapshotter);
+        await spread.RefreshSnapshotAsync();
+        var throwing = true;
+        spread.SnapshotFailed += (_, _) =>
+        {
+            if (throwing) throw new InvalidOperationException("subscriber failed");
+        };
+
+        // Background path: the pending refresh resumed after a turn must not
+        // crash the UI context when the subscriber throws.
+        BeginSettlingTurn(spread, PageTurnDirection.Forward);
+        spread.RightContent = new Grid();
+        snapshotter.EnqueueFailure();
+        TestAssert.TickUntilIdle(spread.Overlay.Controller);
+        await Task.Yield();
+        var background = CurrentRefreshChain(spread);
+        await TestAssert.ThrowsAsync<InvalidOperationException>(() => background);
+        await Task.Yield();
+        TestAssert.Equal(5, snapshotter.CaptureCount);
+
+        // Explicit path still surfaces the subscriber failure to its caller.
+        snapshotter.EnqueueFailure();
+        await TestAssert.ThrowsAsync<InvalidOperationException>(() => spread.RefreshSnapshotAsync());
+
+        // The faulted chain links must not fail later refreshes.
+        throwing = false;
+        snapshotter.EnqueueImages(4);
+        await spread.RefreshSnapshotAsync();
+        TestAssert.Equal(10, snapshotter.CaptureCount);
+        TestAssert.True(spread.CanTurnForward && spread.CanTurnBackward);
+    }
+
     private static async Task Failed_optional_sheet_backs_fall_back_for_both_directions()
     {
         await Failed_optional_sheet_back_falls_back(PageTurnDirection.Forward);
@@ -1242,6 +1280,9 @@ internal static class PageSpreadViewTests
 
         public void EnqueueImage() => _captures.Enqueue(_ => Task.FromResult(CreateImage()));
 
+        public void EnqueueFailure() => _captures.Enqueue(
+            _ => Task.FromException<SKImage>(new InvalidOperationException("capture failed")));
+
         public DelayedFailure EnqueueDelayedFailure()
         {
             var failure = new DelayedFailure();
@@ -1278,5 +1319,11 @@ internal static class PageSpreadViewTests
         }
 
         public void Fail(Exception exception) => _completion.SetException(exception);
+    }
+
+    private static void Null_backside_colour_is_rejected()
+    {
+        var spread = new PageSpreadView(new CountingSnapshotter());
+        PageCurlViewTests.AssertRejectsNull(spread, PageSpreadView.BacksideColorProperty);
     }
 }

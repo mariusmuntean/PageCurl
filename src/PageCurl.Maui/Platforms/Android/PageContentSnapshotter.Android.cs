@@ -28,15 +28,24 @@ public sealed class PageContentSnapshotter : IPageContentSnapshotter
         nativeView.Draw(canvas);
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var encoded = new MemoryStream();
-        if (!bitmap.Compress(Bitmap.CompressFormat.Png!, 100, encoded))
+        var info = new SKImageInfo(
+            bitmap.Width,
+            bitmap.Height,
+            SKColorType.Rgba8888,
+            bitmap.IsPremultiplied ? SKAlphaType.Premul : SKAlphaType.Unpremul);
+        var pixels = bitmap.LockPixels();
+        SKImage image;
+        try
         {
-            throw new InvalidOperationException("Android could not encode the content snapshot.");
+            // FromPixelCopy copies into Skia-owned memory, so the image outlives the bitmap.
+            image = SKImage.FromPixelCopy(info, pixels, bitmap.RowBytes)
+                ?? throw new InvalidOperationException("SkiaSharp could not copy the content snapshot.");
+        }
+        finally
+        {
+            bitmap.UnlockPixels();
         }
 
-        encoded.Position = 0;
-        var image = SKImage.FromEncodedData(encoded)
-            ?? throw new InvalidOperationException("SkiaSharp could not decode the content snapshot.");
         return Task.FromResult(image);
     }
 }

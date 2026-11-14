@@ -35,12 +35,6 @@ dotnet add package PageCurl.Maui --version 0.1.2
 To develop against source, reference `src/PageCurl.Maui/PageCurl.Maui.csproj`
 from a local checkout instead.
 
-The guides and preview follow the current source. Constructor-setting,
-spread-readiness and resize/padding fixes in the [latest review](docs/validation/holistic-review-2026-10-10/README.md)
-are included in [version 0.1.1](https://www.nuget.org/packages/PageCurl.Maui/0.1.1).
-The [0.1.2 GitHub release](https://github.com/mariusmuntean/PageCurl/releases/tag/v0.1.2)
-corrects NuGet README formatting and is also [published on NuGet.org](https://www.nuget.org/packages/PageCurl.Maui/0.1.2).
-
 Register SkiaSharp in your MAUI app:
 
 ```csharp

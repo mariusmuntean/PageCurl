@@ -2,17 +2,20 @@
 
 ## Gesture contract
 
-`PageTurnView` accepts drags from every free edge and corner. `LockedEdge`
+`PageTurnView` accepts drags from every free edge and corner. `LockedAnchor`
 selects the stationary hinge; points on that edge, including its corners, do
-not start a drag. `Auto` resolves a corner from the first meaningful inward
+not start a drag. `LockedEdge` is a legacy compatibility facade; prefer
+`LockedAnchor`. The selected free edge sets the turn direction: Right turns
+Forward, Left turns Backward. Presses outside a letterboxed page frame are
+rejected whether `PageAspectRatio` or `AspectFit` letterboxes it. `Auto` resolves a corner from the first meaningful inward
 movement. One pointer owns the gesture until release or cancellation.
 
 The page follows the pointer directly during a drag. Curl progress is
 measured from the grab point, so a drag that starts in the middle of a page
 begins flat and the sheet curls only while the pointer moves. Releasing
 before or after `PageChangeThreshold` settles to the corresponding endpoint.
-The value is a page-travel fraction from `0` to `1`; `SnapThreshold` remains
-an alias. A directional flick can override the threshold when `FlickEnabled`
+The value is a page-travel fraction from `0` to `1`; `SnapThreshold` is a legacy
+alias; prefer `PageChangeThreshold`. A directional flick can override the threshold when `FlickEnabled`
 is true.
 `FlickVelocityThreshold` controls the required normalized progress velocity.
 The controller caps only the velocity carried into settling, so a fast gesture

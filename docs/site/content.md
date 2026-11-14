@@ -54,7 +54,7 @@ bundled clip and still image; the library itself has no media-player dependency.
 
 ## Interaction settings
 
-- `LockedEdge` or `LockedAnchor` chooses the stationary edge or pinned corner.
+- `LockedAnchor` chooses the stationary edge or pinned corner.
 - `PageChangeThreshold` controls the travel required to commit on release.
 - `FlickEnabled` allows a quick gesture to finish sooner.
 - `ReduceMotion` completes releases and commands without settling animation.

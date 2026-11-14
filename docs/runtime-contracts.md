@@ -20,8 +20,8 @@
 - Commands rejected during an active turn preserve its presentation. A new
   pointer press cannot replace a settling turn; competing presses during an
   owned drag remain consumed without changing the owner.
-- Invalid enum and non-finite setting assignments leave the last valid value
-  intact. Finite backside dim factors clamp to 0–1. Binding rejection follows
+- Invalid enum, non-finite and null `BacksideColor`/`SurfaceColor` setting
+  assignments leave the last valid value intact. Finite backside dim factors clamp to 0–1. Binding rejection follows
   MAUI semantics and does not promise an exception for every invalid assignment.
 - `PageTurnView(PageCurlOptions)` preserves the supplied threshold and flick
   settings together. Its `Options` and controller share that options instance;
@@ -78,7 +78,9 @@
   until that capture completes. A provider that never completes can block later
   refreshes, including after hide/reveal.
 - `SnapshotFailed` reports the content and exception. The wrapper keeps the
-  last good frame. A missing native video layer needs an app-supplied poster.
+  last good frame. Automatic refreshes never throw; explicit
+  `RefreshSnapshotAsync` surfaces failures, including handler exceptions, and a
+  failed refresh never fails later ones. A missing native video layer needs an app-supplied poster.
   For spreads, `IsBackside` identifies the previous-right and next-left sheet
   backs; current and under-page destinations report `false`.
 - Gesture start never waits for capture. Edge and corner activation zones use

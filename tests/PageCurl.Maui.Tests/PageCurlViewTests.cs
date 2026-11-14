@@ -13,6 +13,7 @@ internal static class PageCurlViewTests
 {
     public static async Task RunAllAsync()
     {
+        Null_page_colours_are_rejected();
         await Replaced_front_snapshot_blocks_commands_and_touch_until_recaptured();
         await Explicit_refresh_survives_a_queued_automatic_refresh();
         await Content_invalidated_during_explicit_refresh_is_not_lost_by_automatic_coalescing();
@@ -25,6 +26,8 @@ internal static class PageCurlViewTests
         await Rejected_command_preserves_an_active_curl();
         Pointer_press_during_settling_preserves_the_pending_completion();
         Competing_pointer_presses_remain_consumed_during_a_drag();
+        Letterboxed_fill_page_rejects_presses_outside_the_page();
+        Drag_velocity_uses_the_injected_timestamp_provider();
         await Teardown_rejects_a_turn_requested_by_the_cancellation_handler();
         await Cancellation_handler_can_start_a_visible_replacement_turn();
         await Superseded_capture_does_not_report_a_stale_failure();
@@ -34,6 +37,7 @@ internal static class PageCurlViewTests
         await Active_curl_defers_snapshot_replacement();
         await Front_and_back_content_are_captured_independently();
         await Failed_refresh_keeps_the_last_good_snapshot();
+        await Throwing_failure_handler_does_not_crash_automatic_refresh();
         await Final_cancelled_capture_propagates_and_disposes_returned_image();
         Caller_images_survive_replacement_cancellation_and_teardown();
         Cancellation_finishes_before_a_view_is_hidden();
@@ -130,6 +134,47 @@ internal static class PageCurlViewTests
         finally
         {
             InvokeHandlerChanged(view);
+        }
+    }
+
+    private static async Task Throwing_failure_handler_does_not_crash_automatic_refresh()
+    {
+        var snapshotter = new FakeSnapshotter();
+        snapshotter.EnqueueFailure(new InvalidOperationException("capture failed"));
+        var content = new Grid();
+        var view = new PageCurlView(snapshotter) { FrontContent = content };
+        var throwing = true;
+        view.SnapshotFailed += (_, _) =>
+        {
+            if (throwing) throw new InvalidOperationException("subscriber failed");
+        };
+        try
+        {
+            content.Handler = new ManualViewHandler(content);
+            ((IView)content).Arrange(new Rect(0, 0, 4, 4));
+            view.Handler = new ManualViewHandler(view);
+
+            // The queued automatic refresh must swallow the subscriber failure.
+            for (var attempt = 0; attempt < 200 && snapshotter.CaptureCount == 0; attempt++)
+            {
+                await Task.Delay(5);
+            }
+            await Task.Yield();
+            await Task.Yield();
+            TestAssert.Equal(1, snapshotter.CaptureCount);
+
+            // Explicit refresh still surfaces it, and a later refresh succeeds.
+            snapshotter.EnqueueFailure(new InvalidOperationException("capture failed"));
+            await TestAssert.ThrowsAsync<InvalidOperationException>(() => view.RefreshSnapshotAsync());
+            throwing = false;
+            snapshotter.EnqueueImage(SKColors.White);
+            await view.RefreshSnapshotAsync();
+            TestAssert.Equal(3, snapshotter.CaptureCount);
+        }
+        finally
+        {
+            view.Handler = null;
+            content.Handler = null;
         }
     }
 
@@ -403,6 +448,67 @@ internal static class PageCurlViewTests
             view.Handler = null;
             content.Handler = null;
         }
+    }
+
+    private static void Letterboxed_fill_page_rejects_presses_outside_the_page()
+    {
+        // Fill with an explicit ratio still letterboxes: a 0.5 page in 400x500
+        // occupies x = 75..325 when centered.
+        var view = new PageTurnView
+        {
+            ContentScale = PageContentScale.Fill,
+            PageAspectRatio = 0.5f,
+            PageHorizontalPlacement = PageHorizontalPlacement.Center,
+            ReduceMotion = true,
+        };
+        ((IView)view).Arrange(new Rect(0, 0, 400, 500));
+        var touch = typeof(PageTurnView).GetMethod("OnTouch", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!;
+        try
+        {
+            var outside = new SkiaSharp.Views.Maui.SKTouchEventArgs(7, SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                new SKPoint(370, 250), true);
+            touch.Invoke(view, [view, outside]);
+            TestAssert.False(outside.Handled, "A press in the letterbox outside a Fill page was consumed.");
+            TestAssert.Equal(PageTurnState.Idle, view.Controller.Snapshot.State);
+
+            var inside = new SkiaSharp.Views.Maui.SKTouchEventArgs(8, SkiaSharp.Views.Maui.SKTouchAction.Pressed,
+                new SKPoint(300, 250), true);
+            touch.Invoke(view, [view, inside]);
+            TestAssert.True(inside.Handled, "A press inside a letterboxed Fill page did not start a drag.");
+            TestAssert.Equal(PageTurnState.Dragging, view.Controller.Snapshot.State);
+        }
+        finally { view.CancelInteraction(); }
+    }
+
+    private static void Drag_velocity_uses_the_injected_timestamp_provider()
+    {
+        // The same short drag commits only when the injected clock makes it a flick.
+        static bool? Drag(long step)
+        {
+            var timestamp = 0L;
+            var view = new PageTurnView
+            {
+                ContentScale = PageContentScale.Fill,
+                ReduceMotion = true,
+                AnimationTimestampProvider = () => timestamp,
+            };
+            bool? committed = null;
+            view.PageTurnCompleted += (_, e) => committed = e.Committed;
+            var pageSize = new System.Numerics.Vector2(400, 500);
+            TestAssert.True(view.TryBeginInteraction(new(390, 250), pageSize, view.LockedAnchor));
+            foreach (var x in new[] { 380f, 370f, 360f })
+            {
+                timestamp += step;
+                view.UpdateInteraction(new(x, 250));
+            }
+
+            TestAssert.True(view.Controller.Snapshot.Progress < 0.5f, "The probe drag crossed the page-change threshold.");
+            view.EndInteraction(cancelled: false);
+            return committed;
+        }
+
+        TestAssert.Equal<bool?>(true, Drag(Stopwatch.Frequency / 1000));
+        TestAssert.Equal<bool?>(false, Drag(0));
     }
 
     private static void Competing_pointer_presses_remain_consumed_during_a_drag()
@@ -1179,4 +1285,27 @@ internal static class PageCurlViewTests
 
         public void PlatformArrange(Rect frame) { }
     }
+
+    private static void Null_page_colours_are_rejected()
+    {
+        var turn = new PageTurnView();
+        AssertRejectsNull(turn, PageTurnView.BacksideColorProperty);
+        AssertRejectsNull(turn, PageTurnView.SurfaceColorProperty);
+        AssertRejectsNull(new PageCurlView(new FakeSnapshotter()), PageCurlView.BacksideColorProperty);
+    }
+
+    internal static void AssertRejectsNull(BindableObject bindable, BindableProperty property)
+    {
+        bindable.SetValue(property, Colors.Red);
+        try
+        {
+            bindable.SetValue(property, null);
+        }
+        catch (ArgumentException)
+        {
+        }
+
+        TestAssert.Equal(Colors.Red, (Color)bindable.GetValue(property));
+    }
+
 }
