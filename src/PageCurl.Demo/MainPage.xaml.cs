@@ -22,13 +22,15 @@ public partial class MainPage : ContentPage
     };
     private static readonly float[] RatioValues = { 0f, 0.68f, 0.75f, 1f };
 
+    private static readonly int PageCount = DemoPageCopy.Pages.Count;
+
     private readonly Dictionary<ShowcaseScene, PageNavigationState> _navigation = new()
     {
-        [ShowcaseScene.Single] = new(8),
-        [ShowcaseScene.Content] = new(8),
-        [ShowcaseScene.Backside] = new(8),
+        [ShowcaseScene.Single] = new(PageCount),
+        [ShowcaseScene.Content] = new(PageCount),
+        [ShowcaseScene.Backside] = new(PageCount),
     };
-    private readonly PageSpreadNavigationState _spreadNavigation = new(8);
+    private readonly PageSpreadNavigationState _spreadNavigation = new(PageCount);
     private readonly PageTurnHaptics _haptics = new();
     private DemoPageSet? _pageSet;
     private int? _spreadContentIndex;
@@ -361,6 +363,10 @@ public partial class MainPage : ContentPage
         {
             await RefreshContentAsync("Snapshot refreshed", reportCancellation: true);
         }
+        catch (Exception ex)
+        {
+            ReportHandlerFailure(ex);
+        }
         finally
         {
             RefreshSnapshotButton.IsEnabled = true;
@@ -486,7 +492,21 @@ public partial class MainPage : ContentPage
         var epoch = (_lifecycleRevision, _sceneRevision);
         if (_interactiveRefreshEpoch == epoch) return;
         _interactiveRefreshEpoch = epoch;
-        await (_interactiveRefreshTask = RefreshInteractiveContentAsync(epoch));
+        try
+        {
+            await (_interactiveRefreshTask = RefreshInteractiveContentAsync(epoch));
+        }
+        catch (Exception ex)
+        {
+            ReportHandlerFailure(ex);
+        }
+    }
+
+    private void ReportHandlerFailure(Exception exception)
+    {
+        if (!_pageActive) return;
+        StatusLabel.Text = "Capture failed";
+        DetailLabel.Text = $"Capture unavailable: {exception.Message}";
     }
 
     private async Task RefreshInteractiveContentAsync((int Lifecycle, int Scene) epoch)
@@ -562,7 +582,7 @@ public partial class MainPage : ContentPage
             ? CreatePageView(left + 2)
             : null;
         SpreadPageView.NextRightContent = _spreadNavigation.CanTurnForward
-            ? CreatePageView(Math.Min(left + 3, _pageSet!.Pages.Count - 1))
+            ? CreatePageViewOrNull(left + 3)
             : null;
     }
 
@@ -600,14 +620,17 @@ public partial class MainPage : ContentPage
         return new DemoPageView(pageIndex + 1, copy.Eyebrow, copy.Title, copy.Body);
     }
 
+    private static DemoPageView? CreatePageViewOrNull(int pageIndex) =>
+        pageIndex < PageCount ? CreatePageView(pageIndex) : null;
+
     private void UpdateCounter()
     {
         if (_scene == ShowcaseScene.Spread)
         {
             var right = _spreadNavigation.RightPageIndex;
             PageCounterLabel.Text = right.HasValue
-                ? $"{_spreadNavigation.LeftPageIndex + 1:00}–{right.Value + 1:00} / 08"
-                : $"{_spreadNavigation.LeftPageIndex + 1:00} / 08";
+                ? $"{_spreadNavigation.LeftPageIndex + 1:00}–{right.Value + 1:00} / {PageCount:00}"
+                : $"{_spreadNavigation.LeftPageIndex + 1:00} / {PageCount:00}";
             return;
         }
 
